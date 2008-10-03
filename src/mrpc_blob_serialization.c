@@ -12,11 +12,6 @@ int mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_stream *stream)
 	struct ff_stream *blob_stream;
 
 	blob_len = mrpc_blob_get_size(blob);
-	if (blob_len == -1)
-	{
-		/* error when determining blob length */
-		goto end;
-	}
 	ff_assert(blob_len >= 0);
 	is_success = mrpc_uint32_serialize((uint32_t) blob_len, stream);
 	if (!is_success)
@@ -60,15 +55,21 @@ int mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream)
 	if (blob_stream == NULL)
 	{
 		/* error when opening blob stream */
-		mrpc_blob_delete(new_blob);
+		mrpc_blob_dec_ref(new_blob);
 		is_success = 0;
 		goto end;
 	}
 	is_success = ff_stream_copy(stream, blob_stream, blob_len);
+	is_success = ff_stream_flush(blob_stream);
+	if (!is_success)
+	{
+		mrpc_blob_dec_ref(new_blob);
+		goto end;
+	}
 	ff_stream_close(blob_stream);
 	if (!is_success)
 	{
-		mrpc_blob_delete(new_blob);
+		mrpc_blob_dec_ref(new_blob);
 		goto end;
 	}
 	*blob = new_blob;
