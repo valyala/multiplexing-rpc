@@ -47,6 +47,8 @@ void mrpc_packet_reset(struct mrpc_packet *packet)
 {
 	packet->curr_pos = 0;
 	packet->size = 0;
+	packet->type = MRPC_PACKET_START;
+	packet->request_id = 0;
 }
 
 uint8_t mrpc_packet_get_request_id(struct mrpc_packet *packet)
@@ -93,8 +95,8 @@ int mrpc_packet_write_data(struct mrpc_packet *packet, const void *buf, int len)
 	int bytes_left;
 
 	ff_assert(len >= 0);
-	ff_assert(packet->curr_pos >= 0);
-	ff_assert(packet->size >= packet->curr_pos);
+	ff_assert(packet->curr_pos == 0);
+	ff_assert(packet->size >= 0);
 	ff_assert(packet->size <= MAX_PACKET_SIZE);
 
 	bytes_left = MAX_PACKET_SIZE - packet->size;
@@ -144,6 +146,7 @@ int mrpc_packet_write_to_stream(struct mrpc_packet *packet, struct ff_stream *st
 	int is_success;
 	uint32_t tmp;
 
+	ff_assert(packet->curr_pos == 0);
 	ff_assert(packet->size <= MAX_PACKET_SIZE);
 
 	is_success = ff_stream_write(stream, &packet->request_id, 1);
