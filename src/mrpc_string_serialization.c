@@ -2,6 +2,7 @@
 
 #include "private/mrpc_string_serialization.h"
 #include "private/mrpc_int_serialization.h"
+#include "ff/ff_string.h"
 #include "ff/ff_stream.h"
 
 /* the maximum string size.
@@ -10,13 +11,15 @@
  */
 #define MAX_STRING_SIZE 0x10000
 
-int mrpc_string_serialize(const wchar_t *str, int str_len, struct ff_stream *stream)
+int mrpc_string_serialize(const ff_string *str, struct ff_stream *stream)
 {
 	int is_success = 0;
 	int i;
+	int str_len;
+	const wchar_t *str_cstr;
 
+	str_len = ff_string_get_length(str);
 	ff_assert(str_len >= 0);
-
 	if (str_len > MAX_STRING_SIZE)
 	{
 		goto end;
@@ -27,6 +30,8 @@ int mrpc_string_serialize(const wchar_t *str, int str_len, struct ff_stream *str
 	{
 		goto end;
 	}
+
+	str_cstr = ff_string_get_cstr(str);
 	for (i = 0; i < str_len; i++)
 	{
 		uint32_t ch;
@@ -44,13 +49,13 @@ end:
 	return is_success;
 }
 
-int mrpc_string_unserialize(wchar_t **str, int *str_len, struct ff_stream *stream)
+int mrpc_string_unserialize(ff_string **str, struct ff_stream *stream)
 {
 	int is_success;
 	uint32_t i;
 	uint32_t u_str_len;
 	uint32_t str_size;
-	wchar_t *new_str;
+	wchar_t *str_cstr;
 
 	is_success = mrpc_uint32_unserialize(&u_str_len, stream);
 	if (!is_success)
@@ -68,7 +73,7 @@ int mrpc_string_unserialize(wchar_t **str, int *str_len, struct ff_stream *strea
 	 */
 	ff_assert(MAX_INT / sizeof(wchar_t) > MAX_STRING_SIZE);
 	str_size = sizeof(wchar_t) * u_str_len;
-	new_str = (wchar_t *) ff_malloc(str_size);
+	str_cstr = (wchar_t *) ff_malloc(str_size);
 
 	for (i = 0; i < u_str_len; i++)
 	{
@@ -77,20 +82,19 @@ int mrpc_string_unserialize(wchar_t **str, int *str_len, struct ff_stream *strea
 		is_success = mrpc_uint32_unserialize(&ch, stream);
 		if (!is_success)
 		{
-			ff_free(new_str);
+			ff_free(str_cstr);
 			goto end;
 		}
 		if (ch > WCHAR_MAX)
 		{
-			ff_free(new_str);
+			ff_free(str_cstr);
 			is_success = 0;
 			goto end;
 		}
-		new_str[i] = (wchar_t) ch;
+		str_cstr[i] = (wchar_t) ch;
 	}
 
-	*str = new_str;
-	*str_len = (int) u_str_len;
+	*str = ff_string_create(str_cstr, (int) u_str_len);
 
 end:
 	return is_success;
