@@ -1,106 +1,85 @@
 #include "private/mrpc_common.h"
 
 #include "private/mrpc_string_param.h"
-#include "private/mrpc_param_vtable.h"
+#include "private/mrpc_param.h"
 #include "private/mrpc_string_serialization.h"
 #include "ff/ff_string.h"
 #include "ff/ff_stream.h"
 
 struct string_param
 {
-	struct ff_string *string;
+	struct ff_string *value;
 };
 
-static void *create_string_param()
+static void delete_string_param(struct mrpc_param *param)
 {
-	struct string_param *param;
+	struct string_param *string_param;
 
-	param = (struct string_param *) ff_malloc(sizeof(*param));
-	param->string = NULL;
-	return param;
-}
-
-static void delete_string_param(void *ctx)
-{
-	struct string_param *param;
-
-	param = (struct string_param *) ctx;
-	if (param->string != NULL)
+	string_param = (struct string_param *) mrpc_param_get_ctx(param);
+	if (string_param->value != NULL)
 	{
-		ff_string_dec_ref(param->string);
+		ff_string_dec_ref(string_param->value);
 	}
-	ff_free(param);
+	ff_free(string_param);
 }
 
-static int read_string_param_from_stream(void *ctx, struct ff_stream *stream)
+static int read_string_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
-	struct string_param *param;
+	struct string_param *string_param;
 	int is_success;
 
-	param = (struct string_param *) ctx;
-	ff_assert(param->string == NULL);
-	is_success = mrpc_string_unserialize(&param->string, stream);
+	string_param = (struct string_param *) mrpc_param_get_ctx(param);
+	ff_assert(string_param->value == NULL);
+	is_success = mrpc_string_unserialize(&string_param->value, stream);
 	if (is_success)
 	{
-		ff_assert(param->string != NULL);
+		ff_assert(string_param->value != NULL);
 	}
 	return is_success;
 }
 
-static int write_string_param_to_stream(const void *ctx, struct ff_stream *stream)
+static int write_string_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
 {
-	struct string_param *param;
+	struct string_param *string_param;
 	int is_success;
 
-	param = (struct string_param *) ctx;
-	ff_assert(param->string != NULL);
-	is_success = mrpc_string_serialize(param->string, stream);
+	string_param = (struct string_param *) mrpc_param_get_ctx(param);
+	ff_assert(string_param->value != NULL);
+	is_success = mrpc_string_serialize(string_param->value, stream);
 	return is_success;
 }
 
-static void get_string_param_value(const void *ctx, void **value)
+static void get_string_param_value(const struct mrpc_param *param, void **value)
 {
-	struct string_param *param;
+	struct string_param *string_param;
 
-	param = (struct string_param *) ctx;
-	ff_assert(param->string != NULL);
-	*(struct ff_string **) value = param->string;
+	string_param = (struct string_param *) mrpc_param_get_ctx(param);
+	ff_assert(string_param->value != NULL);
+	*(struct ff_string **) value = string_param->value;
 }
 
-static void set_string_param_value(void *ctx, const void *value)
+static void set_string_param_value(struct mrpc_param *param, const void *value)
 {
-	struct string_param *param;
+	struct string_param *string_param;
 
-	param = (struct string_param *) ctx;
-	ff_assert(param->string == NULL);
-	param->string = (struct ff_string *) value;
+	string_param = (struct string_param *) mrpc_param_get_ctx(param);
+	ff_assert(string_param->value == NULL);
+	string_param->value = (struct ff_string *) value;
 }
 
-static uint32_t get_string_param_hash(const void *ctx, uint32_t start_value)
+static uint32_t get_string_param_hash(const struct mrpc_param *param, uint32_t start_value)
 {
-	struct string_param *param;
-	const wchar_t *cstr;
-	uint32_t *tmp;
-	int len;
-	uint32_t hash;
+	struct string_param *string_param;
+	uint32_t hash_value;
 
-	param = (struct string_param *) ctx;
-	ff_assert(param->string != NULL);
-	cstr = ff_string_get_cstr(param->string);
-	len = ff_string_get_length(param->string);
-	tmp = (uint32_t *) ff_malloc(len * sizeof(tmp[0]));
-	for (i = 0; i < len; i++)
-	{
-		tmp[i] = cstr[i];
-	}
-	hash = ff_hash_uint32(start_value, tmp, len);
-	ff_free(tmp);
-	return hash;
+	string_param = (struct string_param *) mrpc_param_get_ctx(param);
+	ff_assert(string_param->value != NULL);
+	hash_value = ff_string_get_hash(string_param->value, start_value);
+	return hash_value;
 }
 
 static const struct mrpc_param_vtable string_param_vtable =
 {
-	create_string_param,
 	delete_string_param,
 	read_string_param_from_stream,
 	write_string_param_to_stream,
@@ -109,7 +88,14 @@ static const struct mrpc_param_vtable string_param_vtable =
 	get_string_param_hash
 };
 
-const struct mrpc_param_vtable *mrpc_string_param_get_vtable()
+struct mrpc_param *mrpc_string_param_create()
 {
-	return &string_param_vtable;
+	struct mrpc_param *param;
+	struct string_param *string_param;
+
+	string_param = (struct string_param *) ff_malloc(sizeof(*string_param));
+	string_param->value = NULL;
+
+	param = mrpc_param_create(&string_param_vtable, string_param);
+	return param;
 }

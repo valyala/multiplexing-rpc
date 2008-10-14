@@ -1,19 +1,19 @@
 #ifndef MRPC_INT_PARAM_PUBLIC
 #define MRPC_INT_PARAM_PUBLIC
 
-#include "mrpc/mrpc_param_vtable.h"
+#include "mrpc/mrpc_param.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-MRPC_API const struct mrpc_param_vtable *mrpc_uint32_param_get_vtable();
+MRPC_API struct mrpc_param *mrpc_uint64_param_create();
 
-MRPC_API const struct mrpc_param_vtable *mrpc_uint64_param_get_vtable();
+MRPC_API struct mrpc_param *mrpc_int64_param_create();
 
-MRPC_API const struct mrpc_param_vtable *mrpc_int32_param_get_vtable();
+MRPC_API struct mrpc_param *mrpc_uint32_param_create();
 
-MRPC_API const struct mrpc_param_vtable *mrpc_int64_param_get_vtable();
+MRPC_API struct mrpc_param *mrpc_int32_param_create();
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
-#ifndef MRPC_BLOB_PARAM_PUBLIC
-#define MRPC_BLOB_PARAM_PUBLIC
+#ifndef MRPC_PARAM_PRIVATE
+#define MRPC_PARAM_PRIVATE
 
 #include "mrpc/mrpc_param.h"
 
@@ -7,7 +7,6 @@
 extern "C" {
 #endif
 
-MRPC_API struct mrpc_param *mrpc_blob_param_create();
 
 #ifdef __cplusplus
 }

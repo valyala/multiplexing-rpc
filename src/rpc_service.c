@@ -1048,16 +1048,16 @@ wait();
 mrpc_server_delete(server);
 
 
-static const struct mrpc_param_vtable *foo_request_param_vtables[] =
+static const mrpc_param_constructor *foo_request_param_constructors[] =
 {
-	&mrpc_uint32_param_vtable,
-	&mrpc_int64_param_vtable,
-	&mrpc_blob_param_vtable
+	&mrpc_uint32_param_create,
+	&mrpc_int64_param_create,
+	&mrpc_blob_param_create
 };
 
-static const struct mrpc_param_vtable *foo_response_param_vtables[] =
+static const mrpc_param_constructor *foo_response_param_constructors[] =
 {
-	&mrpc_int32_param_vtable
+	&mrpc_int32_param_create
 };
 
 static void foo_callback(struct mrpc_data *data, void *service_ctx)
@@ -1079,8 +1079,8 @@ static void foo_callback(struct mrpc_data *data, void *service_ctx)
 static const struct mrpc_method foo_method =
 {
 	foo_callback,
-	&foo_request_param_vtables,
-	&foo_response_param_vtables,
+	&foo_request_param_constructors,
+	&foo_response_param_constructors,
 	NULL,
 	foo_request_params_cnt,
 	foo_response_params_cnt
@@ -1100,24 +1100,14 @@ static const struct mrpc_interface interface =
 
 extern const struct mrpc_interface *foo_interface_extern = &interface;
 
-struct mrpc_param_vtable
-{
-	void *(*create)();
-	void (*delete)(void *param);
-	int (*read)(void *param, struct mrpc_stream *stream);
-	int (*write)(const void *param, struct mrpc_stream *stream);
-	void (*get_value)(const void *param, void **value);
-	void (*set_value)(void *param, const void *value);
-	uint32_t (*get_hash)(void *param, uint32_t start_value);
-};
-
 typedef void (*mrpc_method_callback)(struct mrpc_data *data, void *service_ctx);
+typedef struct mrpc_param *(*mrpc_param_constructor)();
 
 struct mrpc_method
 {
 	mrpc_method_callback callback;
-	struct mrpc_param_vtable **request_param_vtables;
-	struct mrpc_param_vtable **response_param_vtables;
+	mrpc_param_constructor *request_param_constructors;
+	mrpc_param_constructor *response_param_constructors;
 	int *is_key;
 	int request_params_cnt;
 	int response_params_cnt;
@@ -1125,46 +1115,47 @@ struct mrpc_method
 
 #define MAX_PARAMS_CNT 100
 
-static void **create_params(struct mrpc_param_vtable **param_vtables, int param_cnt)
+static struct mrpc_param **create_params(mrpc_param_constructor *constructors, int params_cnt)
 {
 	int i;
-	void **params;
+	struct mrpc_param **params;
 
-	ff_assert(param_cnt >= 0);
-	ff_assert(param_cnt < MAX_PARAMS_CNT);
-	params = (void **) ff_malloc(sizeof(*params) * param_cnt);
-	for (i = 0; i < param_cnt; i++)
+	ff_assert(params_cnt >= 0);
+	ff_assert(params_cnt <= MAX_PARAMS_CNT);
+	params = (struct mrpc_param **) ff_malloc(sizeof(*params) * param_cnt);
+	for (i = 0; i < params_cnt; i++)
 	{
-		struct mrpc_param_vtable *vtable;
-		void *param;
+		mrpc_param_constructor *constructor;
+		struct mrpc_param *param;
 
-		vtable = param_vtables[i];
-		param = vtable->create();
+		constructor = constructors[i];
+		ff_assert(constructor != NULL);
+		param = constructor();
+		ff_assert(param != NULL);
 		params[i] = param;
 	}
 
 	return params;
 }
 
-static void delete_params(void **params, struct mrpc_param_vtable **param_vtables, int param_cnt)
+static void delete_params(struct mrpc_param **params, int param_cnt)
 {
 	int i;
 
 	ff_assert(param_cnt >= 0);
-	ff_assert(param_cnt < MAX_PARAMS_CNT);
+	ff_assert(param_cnt <= MAX_PARAMS_CNT);
 	for (i = 0; i < param_cnt; i++)
 	{
-		struct mrpc_param_vtable *vtable;
-		void *param;
+		struct mrpc_param *param;
 
-		vtable = param_vtables[i];
 		param = params[i];
-		vtable->delete(param);
+		ff_assert(param != NULL);
+		mrpc_param_delete(param);
 	}
 	ff_free(params);
 }
 
-static int read_params(void **params, struct mrpc_param_vtable *param_vtables, int param_cnt, struct mrpc_stream *stream)
+static int read_params(struct mrpc_param **params, int param_cnt, struct mrpc_stream *stream)
 {
 	int i;
 	int is_success = 1;
@@ -1173,12 +1164,11 @@ static int read_params(void **params, struct mrpc_param_vtable *param_vtables, i
 	ff_assert(param_cnt < MAX_PARAMS_CNT);
 	for (i = 0; i < param_cnt; i++)
 	{
-		struct mrpc_param_vtable *vtable;
-		void *param;
+		struct mrpc_param *param;
 
-		vtable = param_vtables[i];
 		param = params[i];
-		is_success = vtable->read(param, stream);
+		ff_assert(param != NULL);
+		is_success = mrpc_param_read(param, stream);
 		if (!is_success)
 		{
 			break;
@@ -1188,7 +1178,7 @@ static int read_params(void **params, struct mrpc_param_vtable *param_vtables, i
 	return is_success;
 }
 
-static int write_params(void **params, struct mrpc_param_vtable *param_vtables, int param_cnt, struct mrpc_stream *stream)
+static int write_params(struct mrpc_param **params, int param_cnt, struct mrpc_stream *stream)
 {
 	int i;
 	int is_success = 1;
@@ -1197,12 +1187,10 @@ static int write_params(void **params, struct mrpc_param_vtable *param_vtables, 
 	ff_assert(param_cnt < MAX_PARAMS_CNT);
 	for (i = 0; i < param_cnt; i++)
 	{
-		struct mrpc_param_vtable *vtable;
-		void *param;
+		struct mrpc_param *param;
 
-		vtable = param_vtables[i];
 		param = params[i];
-		is_success = vtable->write(param, stream);
+		is_success = mrpc_param_write(param, stream);
 		if (!is_success)
 		{
 			break;
@@ -1212,101 +1200,97 @@ static int write_params(void **params, struct mrpc_param_vtable *param_vtables, 
 	return is_success;
 }
 
-static void get_param_value(void **params, void **value, int param_idx, struct mrpc_param_vtable *param_vtables, int params_cnt)
+static void get_param_value(struct mrpc_param **params, void **value, int param_idx, int params_cnt)
 {
-	struct mrpc_param_vtable *vtable;
-	void *param;
+	struct mrpc_param *param;
 
 	ff_assert(params_cnt >= 0);
 	ff_assert(params_cnt < MAX_PARAMS_CNT);
 	ff_assert(param_idx >= 0);
 	ff_assert(param_idx < params_cnt);
 
-	vtable = param_vtables[param_idx];
 	param = params[param_idx];
-	vtable->get_value(param, value);
+	mrpc_param_get_value(param, value);
 }
 
-static void set_param_value(void **params, const void *value, int param_idx, struct mrpc_param_vtable *param_vtables, int params_cnt)
+static void set_param_value(struct mrpc_param **params, const void *value, int param_idx, int params_cnt)
 {
-	struct mrpc_param_vtable *vtable;
-	void *param;
+	struct mrpc_param *param;
 
 	ff_assert(params_cnt >= 0);
 	ff_assert(params_cnt < MAX_PARAMS_CNT);
 	ff_assert(param_idx >= 0);
 	ff_assert(param_idx < params_cnt);
 
-	vtable = param_vtables[param_idx];
 	param = params[param_idx];
-	vtable->set_value(param, value);
+	mrpc_param_set_value(param, value);
 }
 
-void mrpc_method_create_params(struct mrpc_method *method, void ***request_params, void ***response_params)
+void mrpc_method_create_params(struct mrpc_method *method, struct mrpc_param ***request_params, struct mrpc_param ***response_params)
 {
-	*request_params = create_params(method->request_param_vtables, method->request_params_cnt);
-	*response_params = create_params(method->response_param_vtables, method->response_params_cnt);
+	*request_params = create_params(method->request_param_constructors, method->request_params_cnt);
+	*response_params = create_params(method->response_param_constructors, method->response_params_cnt);
 }
 
-void mrpc_method_delete_params(struct mrpc_method *method, void **request_params, void **response_params)
+void mrpc_method_delete_params(struct mrpc_method *method, struct mrpc_param **request_params, struct mrpc_param **response_params)
 {
-	delete_params(request_params, method->request_param_vtables, method->request_params_cnt);
-	delete_params(response_params, method->response_param_vtables, method->response_params_cnt);
+	delete_params(request_params, method->request_params_cnt);
+	delete_params(response_params, method->response_params_cnt);
 }
 
-int mrpc_method_read_request_params(struct mrpc_method *method, void **params, struct mrpc_stream *stream)
-{
-	int is_success;
-
-	is_success = read_params(params, method->request_param_vtables, method->request_params_cnt, stream);
-	return is_success;
-}
-
-int mrpc_method_read_response_params(struct mrpc_method *method, void **params, struct mrpc_stream *stream)
+int mrpc_method_read_request_params(struct mrpc_method *method, struct mrpc_param **params, struct mrpc_stream *stream)
 {
 	int is_success;
 
-	is_success = read_params(params, method->response_param_vtables, method->response_params_cnt, stream);
+	is_success = read_params(params, method->request_params_cnt, stream);
 	return is_success;
 }
 
-int mrpc_method_write_request_params(struct mrpc_method *method, void **params, struct mrpc_stream *stream)
+int mrpc_method_read_response_params(struct mrpc_method *method, struct mrpc_param **params, struct mrpc_stream *stream)
 {
 	int is_success;
 
-	is_success = write_params(params, method->request_param_vtables, method->request_params_cnt, stream);
+	is_success = read_params(params, method->response_params_cnt, stream);
 	return is_success;
 }
 
-int mrpc_method_write_response_params(struct mrpc_method *method, void **params, struct mrpc_stream *stream)
+int mrpc_method_write_request_params(struct mrpc_method *method, struct mrpc_param **params, struct mrpc_stream *stream)
 {
 	int is_success;
 
-	is_success = write_params(params, method->response_param_vtables, method->response_params_cnt, stream);
+	is_success = write_params(params, method->request_params_cnt, stream);
 	return is_success;
 }
 
-void mrpc_method_set_request_param_value(struct mrpc_method *method, int param_idx, void **params, const void *value)
+int mrpc_method_write_response_params(struct mrpc_method *method, struct mrpc_param **params, struct mrpc_stream *stream)
 {
-	set_param_value(params, value, param_idx, method->request_param_vtables, method->request_params_cnt);
+	int is_success;
+
+	is_success = write_params(params, method->response_params_cnt, stream);
+	return is_success;
 }
 
-void mrpc_method_get_request_param_value(struct mrpc_method *method, int param_idx, void **params, void **value)
+void mrpc_method_set_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **params, const void *value)
 {
-	get_param_value(params, value, param_idx, method->request_param_vtables, method->request_params_cnt);
+	set_param_value(params, value, param_idx, method->request_params_cnt);
 }
 
-void mrpc_method_set_response_param_value(struct mrpc_method *method, int param_idx, void **params, const void *value)
+void mrpc_method_get_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **params, void **value)
 {
-	set_param_value(params, value, param_idx, method->response_param_vtables, method->response_params_cnt);
+	get_param_value(params, value, param_idx, method->request_params_cnt);
 }
 
-void mrpc_method_get_response_param_value(struct mrpc_method *method, int param_idx, void **params, void **value)
+void mrpc_method_set_response_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **params, const void *value)
 {
-	get_param_value(params, value, param_idx, method->response_param_vtables, method->response_params_cnt);
+	set_param_value(params, value, param_idx, method->response_params_cnt);
 }
 
-uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start_value, void **params)
+void mrpc_method_get_response_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **params, void **value)
+{
+	get_param_value(params, value, param_idx, method->response_params_cnt);
+}
+
+uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start_value, struct mrpc_param **params)
 {
 	int params_cnt;
 	uint32_t hash_value;
@@ -1320,12 +1304,10 @@ uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start
 		is_key = method->is_key[i];
 		if (is_key)
 		{
-			struct mrpc_param_vtable *vtable;
-			void *param;
+			struct mrpc_param *param;
 
-			vtable = method->request_param_vtables[i];
 			param = params[i];
-			hash_value = vtable->get_hash(param, hash_value);
+			hash_value = mrpc_param_get_hash(param, hash_value);
 		}
 	}
 
@@ -1347,7 +1329,7 @@ struct mrpc_method *mrpc_interface_get_method(struct mrpc_interface *interface, 
 {
 	struct mrpc_method *method = NULL;
 
-	if (method_id >= 0 && method_id < serivce->methods_cnt)
+	if (method_id >= 0 && method_id < interface->methods_cnt)
 	{
 		method = interface->methods[method_id];
 	}
@@ -1357,38 +1339,32 @@ struct mrpc_method *mrpc_interface_get_method(struct mrpc_interface *interface, 
 struct mrpc_data
 {
 	struct mrpc_method *method;
-	void **request_params;
-	void **response_params;
+	struct mrpc_param **request_params;
+	struct mrpc_param **response_params;
 	uint8_t method_id;
 };
 
 static struct mrpc_data *read_request(struct mrpc_interface *interface, struct mrpc_stream *stream)
 {
 	uint8_t method_id;
-	int bytes_read;
-	struct mrpc_method *method;
 	struct mrpc_data *data = NULL;
 	int is_success;
 
-	bytes_read = mrpc_stream_read(stream, &method_id, 1);
-	if (bytes_read != 1)
+	is_success = mrpc_stream_read(stream, &method_id, 1);
+	if (is_success)
 	{
-		goto end;
-	}
-	method = mrpc_interface_get_method(interface, method_id);
-	if (method == NULL)
-	{
-		goto end;
-	}
-	data = mrpc_data_create(method, method_id);
-	is_success = mrpc_method_read_request_params(data->method, data->request_params, stream);
-	if (!is_success)
-	{
-		mrpc_data_delete(data);
-		data = NULL;
+		data = mrpc_data_create(interface, method_id);
+		if (data != NULL)
+		{
+			is_success = mrpc_method_read_request_params(data->method, data->request_params, stream);
+			if (!is_success)
+			{
+				mrpc_data_delete(data);
+				data = NULL;
+			}
+		}
 	}
 
-end:
 	return data;
 }
 
@@ -1406,11 +1382,10 @@ static int write_response(struct mrpc_data *data, struct mrpc_stream *stream)
 
 static int write_request(struct mrpc_data *data, struct mrpc_stream *stream)
 {
-	int bytes_written;
-	int is_success = 0;
+	int is_success;
 
-	bytes_written = mrpc_stream_write(stream, &data->method_id, 1);
-	if (bytes_written == 1)
+	is_success = mrpc_stream_write(stream, &data->method_id, 1);
+	if (is_success)
 	{
 		is_succes = mrpc_method_write_request_params(data->method, data->request_params, stream);
 		if (is_success)
@@ -1430,21 +1405,25 @@ static int read_response(struct mrpc_data *data, struct mrpc_stream *stream)
 	return is_success;
 }
 
-struct mrpc_data *mrpc_data_create(struct mrpc_method *method, uint8_t method_id)
+struct mrpc_data *mrpc_data_create(struct mrpc_interface *interface, uint8_t method_id)
 {
-	struct mrpc_data *data;
-	void **request_params;
-	void **response_params;
+	struct mrpc_method *method;
+	struct mrpc_data *data = NULL;
+	struct mrpc_param **request_params;
+	struct mrpc_param **response_params;
 
 	ff_assert(method_id >= 0);
-	ff_assert(method_id < MAX_METHODS_CNT);
-	mrpc_method_create_params(method, &request_params, &response_params);
+	method = mrpc_interface_get_method(interface, method_id);
+	if (method != NULL)
+	{
+		mrpc_method_create_params(method, &request_params, &response_params);
 
-	data = (struct mrpc_data *) ff_malloc(sizeof(*data));
-	data->method = method;
-	data->request_params = request_params;
-	data->response_params = response_params;
-	data->method_id = method_id;
+		data = (struct mrpc_data *) ff_malloc(sizeof(*data));
+		data->method = method;
+		data->request_params = request_params;
+		data->response_params = response_params;
+		data->method_id = method_id;
+	}
 
 	return data;
 }
