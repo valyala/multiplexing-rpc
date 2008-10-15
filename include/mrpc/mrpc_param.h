@@ -10,6 +10,8 @@ extern "C" {
 
 struct mrpc_param;
 
+typedef struct mrpc_param *(*mrpc_param_constructor)();
+
 struct mrpc_param_vtable
 {
 	void (*delete)(struct mrpc_param *param);

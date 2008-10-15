@@ -36,7 +36,7 @@ TYPE ::= "uint32" | "uint64" | "int32" | "int64" | "string" | "blob"
 
 id = [a-z_][a-z_\d]*
 
-static int read_from_packet_stream(struct mrpc_stream *stream, void *buf, int len)
+static int read_from_packet_stream(struct ff_stream *stream, void *buf, int len)
 {
 	struct mrpc_packet_stream *packet_stream;
 	int bytes_read;
@@ -46,7 +46,7 @@ static int read_from_packet_stream(struct mrpc_stream *stream, void *buf, int le
 	return bytes_read;
 }
 
-static int write_to_packet_stream(struct mrpc_stream *stream, const void *buf, int len)
+static int write_to_packet_stream(struct ff_stream *stream, const void *buf, int len)
 {
 	struct mrpc_packet_stream *packet_stream;
 	int bytes_written;
@@ -56,7 +56,7 @@ static int write_to_packet_stream(struct mrpc_stream *stream, const void *buf, i
 	return bytes_written;
 }
 
-static int flush_packet_stream(struct mrpc_stream *stream)
+static int flush_packet_stream(struct ff_stream *stream)
 {
 	struct mrpc_packet_stream *packet_stream;
 	int is_success;
@@ -66,7 +66,7 @@ static int flush_packet_stream(struct mrpc_stream *stream)
 	return is_success;
 }
 
-static void disconnect_packet_stream(struct mrpc_stream *stream)
+static void disconnect_packet_stream(struct ff_stream *stream)
 {
 	struct mrpc_packet_stream *packet_stream;
 
@@ -74,7 +74,7 @@ static void disconnect_packet_stream(struct mrpc_stream *stream)
 	mrpc_packet_stream_disconnect(packet_stream);
 }
 
-static void delete_packet_stream(struct mrpc_stream *stream)
+static void delete_packet_stream(struct ff_stream *stream)
 {
 	struct mrpc_packet_stream *packet_stream;
 
@@ -83,7 +83,7 @@ static void delete_packet_stream(struct mrpc_stream *stream)
 	ff_free(stream);
 }
 
-static struct mrpc_stream_vtable packet_stream_vtable =
+static struct ff_stream_vtable packet_stream_vtable =
 {
 	read_from_packet_stream,
 	write_to_packet_stream,
@@ -92,11 +92,11 @@ static struct mrpc_stream_vtable packet_stream_vtable =
 	delete_packet_stream
 };
 
-struct mrpc_stream *mrpc_stream_create_from_packet_stream(struct mrpc_packet_stream *packet_stream)
+struct ff_stream *ff_stream_create_from_packet_stream(struct mrpc_packet_stream *packet_stream)
 {
-	struct mrpc_stream *stream;
+	struct ff_stream *stream;
 
-	stream = (struct mrpc_stream *) ff_malloc(sizeof(*stream));
+	stream = (struct ff_stream *) ff_malloc(sizeof(*stream));
 	stream->vtalbe = &packet_stream_vtable;
 	stream->cxt = packet_stream;
 
@@ -115,7 +115,7 @@ struct mrpc_request_processor
 	struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct mrpc_packet_stream *packet_stream;
-	struct mrpc_stream *stream;
+	struct ff_stream *stream;
 	uint8_t request_id;
 };
 
@@ -159,17 +159,17 @@ struct mrpc_request_processor *mrpc_request_processor_create(mrpc_request_proces
 	request_processor->service_interface = service_interface;
 	request_processor->service_ctx = service_ctx;
 	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, acquire_packet_func, release_packet_func, packet_func_ctx);
-	request_processor->stream = mrpc_stream_create_from_packet_stream(packet_stream);
+	request_processor->stream = ff_stream_create_from_packet_stream(packet_stream);
 	request_processor->request_id = 0;
 	return request_processor;
 }
 
 void mrpc_request_processor_delete(struct mrpc_request_processor *request_processor)
 {
-	mrpc_stream_delete(request_processor->stream);
+	ff_stream_delete(request_processor->stream);
 	/* there is no need to make the call
 	 *   mrpc_packet_stream_delete(request_processor->packet_stream);
-	 * here, because it was already called by mrpc_stream_delete()
+	 * here, because it was already called by ff_stream_delete()
 	 */
 	ff_free(request_processor);
 }
@@ -182,7 +182,7 @@ void mrpc_request_processor_start(struct mrpc_request_processor *request_process
 
 void mrpc_request_processor_stop_async(struct mrpc_request_processor *request_processor)
 {
-	mrpc_stream_disconnect(request_processor->stream);
+	ff_stream_disconnect(request_processor->stream);
 }
 
 void mrpc_request_processor_push_packet(struct mrpc_request_processor *request_processor, struct mrpc_packet *packet)
@@ -202,7 +202,7 @@ struct mrpc_client_stream_processor
 	struct ff_event *request_streams_stop_event;
 	struct ff_pool *packets_pool;
 	struct mrpc_request_stream *request_streams[MAX_REQUEST_STREAMS_CNT];
-	struct mrpc_stream *stream;
+	struct ff_stream *stream;
 	int request_streams_cnt;
 };
 
@@ -323,7 +323,7 @@ static void stream_writer_func(void *ctx)
 		is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
 		if (is_success && is_empty)
 		{
-			is_success = mrpc_stream_flush(stream_processor->stream);
+			is_success = ff_stream_flush(stream_processor->stream);
 		}
 		if (!is_success)
 		{
@@ -385,7 +385,7 @@ void mrpc_client_stream_processor_delete(struct mrpc_client_stream_processor *st
 	ff_free(stream_processor);
 }
 
-void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_processor *stream_processor, struct mrpc_stream *stream)
+void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_processor *stream_processor, struct ff_stream *stream)
 {
 	ff_assert(stream_processor->stream == NULL);
 	ff_assert(stream_processor->request_streams_cnt == 0);
@@ -429,7 +429,7 @@ void mrpc_client_stream_processor_stop_async(struct mrpc_client_stream_processor
 {
 	if (stream_processor->stream != NULL)
 	{
-		mrpc_stream_disconnect(stream_processor->stream);
+		ff_stream_disconnect(stream_processor->stream);
 		stream_processor->stream = NULL;
 	}
 }
@@ -468,7 +468,7 @@ struct mrpc_server_stream_processor
 	struct ff_pool *packets_pool;
 	struct ff_blocking_queue *writer_queue;
 	struct mrpc_request_processor *request_processors[MAX_REQUEST_PROCESSORS_CNT];
-	struct mrpc_stream *stream;
+	struct ff_stream *stream;
 	int request_processors_cnt;
 };
 
@@ -515,7 +515,7 @@ static void stream_writer_func(void *ctx)
 		is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
 		if (is_success && is_empty)
 		{
-			is_success = mrpc_stream_flush(stream_processor->stream);
+			is_success = ff_stream_flush(stream_processor->stream);
 		}
 		if (!is_success)
 		{
@@ -712,7 +712,7 @@ static void stream_reader_func(void *ctx)
 	mrpc_server_stream_processor_stop_async(stream_processor);
 	stop_all_request_processors(stream_processor);
 	stop_stream_writer(stream_processor);
-	mrpc_stream_delete(stream_processor->stream);
+	ff_stream_delete(stream_processor->stream);
 	stream_processor->stream = NULL;
 	stream_processor->release_func(release_func_ctx, stream_processor);
 }
@@ -756,7 +756,7 @@ void mrpc_server_stream_processor_delete(struct mrpc_server_stream_processor *st
 	ff_free(stream_processor);
 }
 
-void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *stream_processor, struct mrpc_stream *stream)
+void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *stream_processor, struct ff_stream *stream)
 {
 	ff_assert(stream_processor->stream == NULL);
 	ff_assert(stream != NULL);
@@ -769,7 +769,7 @@ void mrpc_server_stream_processor_stop_async(struct mrpc_server_stream_processor
 {
 	ff_assert(stream_processor->stream != NULL);
 
-	mrpc_stream_disconnect(stream_processor->stream);
+	ff_stream_disconnect(stream_processor->stream);
 }
 
 #define RECONNECT_TIMEOUT 500
@@ -797,13 +797,13 @@ static void main_client_func(void *ctx)
 		is_success = ff_tcp_connect(service_tcp, client->service_addr);
 		if (is_success)
 		{
-			struct mrpc_stream *service_stream;
+			struct ff_stream *service_stream;
 
-			service_stream = mrpc_stream_create_from_tcp(service_tcp);
+			service_stream = ff_stream_create_from_tcp(service_tcp);
 			mrpc_client_stream_processor_process_stream(client->stream_processor, service_stream);
-			mrpc_stream_delete(service_stream);
+			ff_stream_delete(service_stream);
 			/* there is no need to call ff_tcp_delete(service_tcp) here,
-			 * because the mrpc_stream_delete(service_stream) already called this function
+			 * because the ff_stream_delete(service_stream) already called this function
 			 */
 		}
 		else
@@ -969,7 +969,7 @@ static void main_server_func(void *ctx)
 	{
 		struct ff_tcp *client_tcp;
 		struct mrpc_server_stream_processor *stream_processor;
-		struct mrpc_stream *client_stream;
+		struct ff_stream *client_stream;
 
 		client_tcp = ff_tcp_accept(server->accept_tcp, remote_addr);
 		if (client_tcp == NULL)
@@ -979,7 +979,7 @@ static void main_server_func(void *ctx)
 
 		stream_processor = acquire_stream_processor(server);
 
-		client_stream = mrpc_stream_create_from_tcp(client_tcp);
+		client_stream = ff_stream_create_from_tcp(client_tcp);
 		mrpc_server_stream_processor_start(stream_processor, client_stream);
 	}
 	stop_all_stream_processors(server);
@@ -1041,23 +1041,28 @@ void mrpc_server_delete(struct mrpc_server *server)
 	ff_free(server);
 }
 
+foo_interface = foo_interface_create();
 service_ctx = foo_service_create();
 
-server = mrpc_server_create(foo_interface_extern, service_ctx, listen_addr);
+server = mrpc_server_create(foo_interface, service_ctx, listen_addr);
 wait();
+
 mrpc_server_delete(server);
+mrpc_interface_delete(foo_interface);
 
 
-static const mrpc_param_constructor *foo_request_param_constructors[] =
+static const mrpc_param_constructor foo_request_param_constructors[] =
 {
-	&mrpc_uint32_param_create,
-	&mrpc_int64_param_create,
-	&mrpc_blob_param_create
+	mrpc_uint32_param_create,
+	mrpc_int64_param_create,
+	mrpc_blob_param_create,
+	NULL
 };
 
-static const mrpc_param_constructor *foo_response_param_constructors[] =
+static const mrpc_param_constructor foo_response_param_constructors[] =
 {
-	&mrpc_int32_param_create
+	mrpc_int32_param_create,
+	NULL
 };
 
 static void foo_callback(struct mrpc_data *data, void *service_ctx)
@@ -1076,417 +1081,24 @@ static void foo_callback(struct mrpc_data *data, void *service_ctx)
 	mrpc_data_set_response_param_value(data, 0, &d);
 }
 
-static const struct mrpc_method foo_method =
+static struct mrpc_method *create_foo_method()
 {
-	foo_callback,
-	&foo_request_param_constructors,
-	&foo_response_param_constructors,
-	NULL,
-	foo_request_params_cnt,
-	foo_response_params_cnt
-};
+	struct mrpc_method *method;
 
-static const struct mrpc_method *interface_methods[] =
-{
-	&foo_method,
-	&bar_method
-};
-
-static const struct mrpc_interface interface =
-{
-	interface_methods,
-	interface_methods_cnt
-};
-
-extern const struct mrpc_interface *foo_interface_extern = &interface;
-
-typedef void (*mrpc_method_callback)(struct mrpc_data *data, void *service_ctx);
-typedef struct mrpc_param *(*mrpc_param_constructor)();
-
-struct mrpc_method
-{
-	mrpc_method_callback callback;
-	mrpc_param_constructor *request_param_constructors;
-	mrpc_param_constructor *response_param_constructors;
-	int *is_key;
-	int request_params_cnt;
-	int response_params_cnt;
-};
-
-#define MAX_PARAMS_CNT 100
-
-static struct mrpc_param **create_params(mrpc_param_constructor *constructors, int params_cnt)
-{
-	int i;
-	struct mrpc_param **params;
-
-	ff_assert(params_cnt >= 0);
-	ff_assert(params_cnt <= MAX_PARAMS_CNT);
-	params = (struct mrpc_param **) ff_malloc(sizeof(*params) * param_cnt);
-	for (i = 0; i < params_cnt; i++)
-	{
-		mrpc_param_constructor *constructor;
-		struct mrpc_param *param;
-
-		constructor = constructors[i];
-		ff_assert(constructor != NULL);
-		param = constructor();
-		ff_assert(param != NULL);
-		params[i] = param;
-	}
-
-	return params;
-}
-
-static void delete_params(struct mrpc_param **params, int param_cnt)
-{
-	int i;
-
-	ff_assert(param_cnt >= 0);
-	ff_assert(param_cnt <= MAX_PARAMS_CNT);
-	for (i = 0; i < param_cnt; i++)
-	{
-		struct mrpc_param *param;
-
-		param = params[i];
-		ff_assert(param != NULL);
-		mrpc_param_delete(param);
-	}
-	ff_free(params);
-}
-
-static int read_params(struct mrpc_param **params, int param_cnt, struct mrpc_stream *stream)
-{
-	int i;
-	int is_success = 1;
-
-	ff_assert(param_cnt >= 0);
-	ff_assert(param_cnt < MAX_PARAMS_CNT);
-	for (i = 0; i < param_cnt; i++)
-	{
-		struct mrpc_param *param;
-
-		param = params[i];
-		ff_assert(param != NULL);
-		is_success = mrpc_param_read(param, stream);
-		if (!is_success)
-		{
-			break;
-		}
-	}
-
-	return is_success;
-}
-
-static int write_params(struct mrpc_param **params, int param_cnt, struct mrpc_stream *stream)
-{
-	int i;
-	int is_success = 1;
-
-	ff_assert(param_cnt >= 0);
-	ff_assert(param_cnt < MAX_PARAMS_CNT);
-	for (i = 0; i < param_cnt; i++)
-	{
-		struct mrpc_param *param;
-
-		param = params[i];
-		is_success = mrpc_param_write(param, stream);
-		if (!is_success)
-		{
-			break;
-		}
-	}
-
-	return is_success;
-}
-
-static void get_param_value(struct mrpc_param **params, void **value, int param_idx, int params_cnt)
-{
-	struct mrpc_param *param;
-
-	ff_assert(params_cnt >= 0);
-	ff_assert(params_cnt < MAX_PARAMS_CNT);
-	ff_assert(param_idx >= 0);
-	ff_assert(param_idx < params_cnt);
-
-	param = params[param_idx];
-	mrpc_param_get_value(param, value);
-}
-
-static void set_param_value(struct mrpc_param **params, const void *value, int param_idx, int params_cnt)
-{
-	struct mrpc_param *param;
-
-	ff_assert(params_cnt >= 0);
-	ff_assert(params_cnt < MAX_PARAMS_CNT);
-	ff_assert(param_idx >= 0);
-	ff_assert(param_idx < params_cnt);
-
-	param = params[param_idx];
-	mrpc_param_set_value(param, value);
-}
-
-void mrpc_method_create_params(struct mrpc_method *method, struct mrpc_param ***request_params, struct mrpc_param ***response_params)
-{
-	*request_params = create_params(method->request_param_constructors, method->request_params_cnt);
-	*response_params = create_params(method->response_param_constructors, method->response_params_cnt);
-}
-
-void mrpc_method_delete_params(struct mrpc_method *method, struct mrpc_param **request_params, struct mrpc_param **response_params)
-{
-	delete_params(request_params, method->request_params_cnt);
-	delete_params(response_params, method->response_params_cnt);
-}
-
-int mrpc_method_read_request_params(struct mrpc_method *method, struct mrpc_param **params, struct mrpc_stream *stream)
-{
-	int is_success;
-
-	is_success = read_params(params, method->request_params_cnt, stream);
-	return is_success;
-}
-
-int mrpc_method_read_response_params(struct mrpc_method *method, struct mrpc_param **params, struct mrpc_stream *stream)
-{
-	int is_success;
-
-	is_success = read_params(params, method->response_params_cnt, stream);
-	return is_success;
-}
-
-int mrpc_method_write_request_params(struct mrpc_method *method, struct mrpc_param **params, struct mrpc_stream *stream)
-{
-	int is_success;
-
-	is_success = write_params(params, method->request_params_cnt, stream);
-	return is_success;
-}
-
-int mrpc_method_write_response_params(struct mrpc_method *method, struct mrpc_param **params, struct mrpc_stream *stream)
-{
-	int is_success;
-
-	is_success = write_params(params, method->response_params_cnt, stream);
-	return is_success;
-}
-
-void mrpc_method_set_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **params, const void *value)
-{
-	set_param_value(params, value, param_idx, method->request_params_cnt);
-}
-
-void mrpc_method_get_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **params, void **value)
-{
-	get_param_value(params, value, param_idx, method->request_params_cnt);
-}
-
-void mrpc_method_set_response_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **params, const void *value)
-{
-	set_param_value(params, value, param_idx, method->response_params_cnt);
-}
-
-void mrpc_method_get_response_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **params, void **value)
-{
-	get_param_value(params, value, param_idx, method->response_params_cnt);
-}
-
-uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start_value, struct mrpc_param **params)
-{
-	int params_cnt;
-	uint32_t hash_value;
-
-	hash_value = start_value
-	params_cnt = method->request_params_cnt;
-	for (i = 0; i < params_cnt; i++)
-	{
-		int is_key;
-
-		is_key = method->is_key[i];
-		if (is_key)
-		{
-			struct mrpc_param *param;
-
-			param = params[i];
-			hash_value = mrpc_param_get_hash(param, hash_value);
-		}
-	}
-
-	return hash_value;
-}
-
-void mrpc_method_invoke_callback(struct mrpc_method *method, struct mrpc_data *data, void *service_ctx)
-{
-	method->callback(data, service_ctx);
-}
-
-struct mrpc_interface
-{
-	struct mrpc_method **methods;
-	int methods_cnt;
-};
-
-struct mrpc_method *mrpc_interface_get_method(struct mrpc_interface *interface, uint8_t method_id)
-{
-	struct mrpc_method *method = NULL;
-
-	if (method_id >= 0 && method_id < interface->methods_cnt)
-	{
-		method = interface->methods[method_id];
-	}
+	method = mrpc_method_create_server(foo_request_param_constructors, foo_response_param_constructors, foo_callback);
 	return method;
 }
 
-struct mrpc_data
+static const mrpc_method_constructor foo_method_constructors[] =
 {
-	struct mrpc_method *method;
-	struct mrpc_param **request_params;
-	struct mrpc_param **response_params;
-	uint8_t method_id;
-};
-
-static struct mrpc_data *read_request(struct mrpc_interface *interface, struct mrpc_stream *stream)
-{
-	uint8_t method_id;
-	struct mrpc_data *data = NULL;
-	int is_success;
-
-	is_success = mrpc_stream_read(stream, &method_id, 1);
-	if (is_success)
-	{
-		data = mrpc_data_create(interface, method_id);
-		if (data != NULL)
-		{
-			is_success = mrpc_method_read_request_params(data->method, data->request_params, stream);
-			if (!is_success)
-			{
-				mrpc_data_delete(data);
-				data = NULL;
-			}
-		}
-	}
-
-	return data;
+	create_foo_method,
+	NULL
 }
 
-static int write_response(struct mrpc_data *data, struct mrpc_stream *stream)
+struct mrpc_interface *foo_interface_create()
 {
-	int is_success;
+	struct mrpc_interface *interface;
 
-	is_success = mrpc_method_write_response_params(data->method, data->response_params, stream);
-	if (is_success)
-	{
-		is_success = mrpc_stream_flush(stream);
-	}
-	return is_success;
-}
-
-static int write_request(struct mrpc_data *data, struct mrpc_stream *stream)
-{
-	int is_success;
-
-	is_success = mrpc_stream_write(stream, &data->method_id, 1);
-	if (is_success)
-	{
-		is_succes = mrpc_method_write_request_params(data->method, data->request_params, stream);
-		if (is_success)
-		{
-			is_success = mrpc_stream_flush(stream);
-		}
-	}
-
-	return is_success;
-}
-
-static int read_response(struct mrpc_data *data, struct mrpc_stream *stream)
-{
-	int is_success;
-
-	is_success = mrpc_method_read_response_params(data->method, data->response_params, stream);
-	return is_success;
-}
-
-struct mrpc_data *mrpc_data_create(struct mrpc_interface *interface, uint8_t method_id)
-{
-	struct mrpc_method *method;
-	struct mrpc_data *data = NULL;
-	struct mrpc_param **request_params;
-	struct mrpc_param **response_params;
-
-	ff_assert(method_id >= 0);
-	method = mrpc_interface_get_method(interface, method_id);
-	if (method != NULL)
-	{
-		mrpc_method_create_params(method, &request_params, &response_params);
-
-		data = (struct mrpc_data *) ff_malloc(sizeof(*data));
-		data->method = method;
-		data->request_params = request_params;
-		data->response_params = response_params;
-		data->method_id = method_id;
-	}
-
-	return data;
-}
-
-void mrpc_data_delete(struct mrpc_data *data)
-{
-	mrpc_method_delete_params(data->method, data->request_params, data->response_params);
-	ff_free(data);
-}
-
-int mrpc_data_process_next_rpc(struct mrpc_interface *interface, void *service_ctx, struct mrpc_stream *stream)
-{
-	struct mrpc_data *data;
-	int is_success = 0;
-
-	data = read_request(interface, stream);
-	if (data != NULL)
-	{
-		mrpc_method_invoke_callback(data->method, data, service_ctx);
-		is_success = write_response(data, stream);
-		mrpc_data_delete(data);
-    }
-
-    return is_success;
-}
-
-int mrpc_data_invoke_remote_call(struct mrpc_data *data, struct mrpc_stream *stream)
-{
-	int is_success;
-
-	is_success = write_request(data, stream);
-	if (is_success)
-	{
-		is_success = read_response(data, stream);
-	}
-
-	return is_success;
-}
-
-void mrpc_data_get_request_param_value(struct mrpc_data *data, int param_idx, void **value)
-{
-	mrpc_method_get_request_param_value(data->method, param_idx, data->request_params, value);
-}
-
-void mrpc_data_set_response_param_value(struct mrpc_data *data, int param_idx, const void *value)
-{
-	mrpc_method_set_response_param_value(data->method, param_idx, data->response_params, value);
-}
-
-void mrpc_data_get_response_param_value(struct mrpc_data *data, int param_idx, void **value)
-{
-	mrpc_method_get_response_param_value(data->method, param_idx, data->response_params, value);
-}
-
-void mrpc_data_set_request_param_value(struct mrpc_data *data, int param_idx, const void *value)
-{
-	mrpc_method_set_request_param_value(data->method, param_idx, data->request_params, value);
-}
-
-uint32_t mrpc_data_get_request_hash(struct mrpc_data *data, uint32_t start_value)
-{
-	uint32_t hash;
-
-	hash = mrpc_method_get_request_hash(data->method, start_value, data->request_params);
-	return hash;
+	interface = mrpc_interface_create(foo_method_constructors);
+	return interface;
 }
