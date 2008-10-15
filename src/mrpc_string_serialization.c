@@ -8,8 +8,10 @@
 /* the maximum string size.
  * This limit is security-related - it doesn't allow to send extremely long strings
  * in order to trigger out of memory errors.
+ * The ((1 << 14) - 1) length was chosen, because it can be encoded into maximum two bytes
+ * by the mrpc_uint32_serialize() function
  */
-#define MAX_STRING_SIZE 0x10000
+#define MAX_STRING_SIZE ((1 << 14) - 1)
 
 int mrpc_string_serialize(const ff_string *str, struct ff_stream *stream)
 {
