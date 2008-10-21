@@ -18,25 +18,25 @@ static void delete_uint64_param(struct mrpc_param *param)
 	ff_free(uint64_param);
 }
 
-static int read_uint64_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result read_uint64_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct uint64_param *uint64_param;
-	int is_success;
+	enum ff_result result;
 
 	uint64_param = (struct uint64_param *) mrpc_param_get_ctx(param);
 	ff_assert(uint64_param->value == 0);
-	is_success = mrpc_uint64_unserialize(&uint64_param->value, stream);
-	return is_success;
+	result = mrpc_uint64_unserialize(&uint64_param->value, stream);
+	return result;
 }
 
-static int write_uint64_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_uint64_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct uint64_param *uint64_param;
-	int is_success;
+	enum ff_result result;
 
 	uint64_param = (struct uint64_param *) mrpc_param_get_ctx(param);
-	is_success = mrpc_uint64_serialize(uint64_param->value, stream);
-	return is_success;
+	result = mrpc_uint64_serialize(uint64_param->value, stream);
+	return result;
 }
 
 static void get_uint64_param_value(const struct mrpc_param *param, void **value)
@@ -105,25 +105,25 @@ static void delete_int64_param(struct mrpc_param *param)
 	ff_free(int64_param);
 }
 
-static int read_int64_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result read_int64_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct int64_param *int64_param;
-	int is_success;
+	enum ff_result result;
 
 	int64_param = (struct int64_param *) mrpc_param_get_ctx(param);
 	ff_assert(int64_param->value == 0);
-	is_success = mrpc_int64_unserialize(&int64_param->value, stream);
-	return is_success;
+	result = mrpc_int64_unserialize(&int64_param->value, stream);
+	return result;
 }
 
-static int write_int64_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_int64_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct int64_param *int64_param;
-	int is_success;
+	enum ff_result result;
 
 	int64_param = (struct int64_param *) mrpc_param_get_ctx(param);
-	is_success = mrpc_int64_serialize(int64_param->value, stream);
-	return is_success;
+	result = mrpc_int64_serialize(int64_param->value, stream);
+	return result;
 }
 
 static void get_int64_param_value(const struct mrpc_param *param, void **value)
@@ -192,25 +192,25 @@ static void delete_uint32_param(struct mrpc_param *param)
 	ff_free(uint32_param);
 }
 
-static int read_uint32_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result read_uint32_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct uint32_param *uint32_param;
-	int is_success;
+	enum ff_result result;
 
 	uint32_param = (struct uint32_param *) mrpc_param_get_ctx(param);
 	ff_assert(uint32_param->value == 0);
-	is_success = mrpc_uint32_unserialize(&uint32_param->value, stream);
-	return is_success;
+	result = mrpc_uint32_unserialize(&uint32_param->value, stream);
+	return result;
 }
 
-static int write_uint32_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_uint32_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct uint32_param *uint32_param;
-	int is_success;
+	enum ff_result result;
 
 	uint32_param = (struct uint32_param *) mrpc_param_get_ctx(param);
-	is_success = mrpc_uint32_serialize(uint32_param->value, stream);
-	return is_success;
+	result = mrpc_uint32_serialize(uint32_param->value, stream);
+	return result;
 }
 
 static void get_uint32_param_value(const struct mrpc_param *param, void **value)
@@ -276,25 +276,25 @@ static void delete_int32_param(struct mrpc_param *param)
 	ff_free(int32_param);
 }
 
-static int read_int32_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result read_int32_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct int32_param *int32_param;
-	int is_success;
+	enum ff_result result;
 
 	int32_param = (struct int32_param *) mrpc_param_get_ctx(param);
 	ff_assert(int32_param->value == 0);
-	is_success = mrpc_int32_unserialize(&int32_param->value, stream);
-	return is_success;
+	result = mrpc_int32_unserialize(&int32_param->value, stream);
+	return result;
 }
 
-static int write_int32_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_int32_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct int32_param *int32_param;
-	int is_success;
+	enum ff_result result;
 
 	int32_param = (struct int32_param *) mrpc_param_get_ctx(param);
-	is_success = mrpc_int32_serialize(int32_param->value, stream);
-	return is_success;
+	result = mrpc_int32_serialize(int32_param->value, stream);
+	return result;
 }
 
 static void get_int32_param_value(const struct mrpc_param *param, void **value)

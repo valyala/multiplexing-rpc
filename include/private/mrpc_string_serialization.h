@@ -12,16 +12,16 @@ extern "C" {
 /**
  * Serializes the string str into the stream.
  * See maximum length of the string, which can be serialized, in the mrcp_string_serialization.c file.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_string_serialize(const ff_string *str, struct ff_stream *stream);
+enum ff_result mrpc_string_serialize(const ff_string *str, struct ff_stream *stream);
 
 /**
  * Unserializes string from the stream into the newly allocated str.
  * The caller should call the ff_string_dec_ref() on the str when it is no longer required.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_string_unserialize(ff_string **str, struct ff_stream *stream);
+enum ff_result mrpc_string_unserialize(ff_string **str, struct ff_stream *stream);
 
 #ifdef __cplusplus
 }

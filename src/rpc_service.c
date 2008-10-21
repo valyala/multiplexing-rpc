@@ -36,34 +36,34 @@ TYPE ::= "uint32" | "uint64" | "int32" | "int64" | "string" | "blob"
 
 id = [a-z_][a-z_\d]*
 
-static int read_from_packet_stream(struct ff_stream *stream, void *buf, int len)
+static enum ff_result read_from_packet_stream(struct ff_stream *stream, void *buf, int len)
 {
 	struct mrpc_packet_stream *packet_stream;
-	int bytes_read;
+	enum ff_result result;
 
-	packet_stream = (struct mrpc_packet_stream *) stream->ctx;
-	bytes_read = mrpc_packet_stream_read(packet_stream, buf, len);
-	return bytes_read;
+	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
+	result = mrpc_packet_stream_read(packet_stream, buf, len);
+	return result;
 }
 
-static int write_to_packet_stream(struct ff_stream *stream, const void *buf, int len)
+static enum ff_result write_to_packet_stream(struct ff_stream *stream, const void *buf, int len)
 {
 	struct mrpc_packet_stream *packet_stream;
-	int bytes_written;
+	enum ff_result result;
 
-	packet_stream = (struct mrpc_packet_stream *) stream->ctx;
-	bytes_written = mrpc_packet_stream_write(packet_stream, buf, len);
-	return bytes_written;
+	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
+	result = mrpc_packet_stream_write(packet_stream, buf, len);
+	return result;
 }
 
-static int flush_packet_stream(struct ff_stream *stream)
+static enum ff_result flush_packet_stream(struct ff_stream *stream)
 {
 	struct mrpc_packet_stream *packet_stream;
-	int is_success;
+	enum ff_result result;
 
-	packet_stream = (struct mrpc_packet_stream *) stream->ctx;
-	is_success = mrpc_packet_stream_flush(packet_stream);
-	return is_success;
+	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
+	result = mrpc_packet_stream_flush(packet_stream);
+	return result;
 }
 
 static void disconnect_packet_stream(struct ff_stream *stream)
@@ -96,9 +96,7 @@ struct ff_stream *ff_stream_create_from_packet_stream(struct mrpc_packet_stream 
 {
 	struct ff_stream *stream;
 
-	stream = (struct ff_stream *) ff_malloc(sizeof(*stream));
-	stream->vtalbe = &packet_stream_vtable;
-	stream->cxt = packet_stream;
+	stream = ff_stream_create(&packet_stream_vtable, packet_stream);
 
 	return stream;
 }
@@ -122,15 +120,15 @@ struct mrpc_request_processor
 static void process_request_func(void *ctx)
 {
 	struct mrpc_request_processor *request_processor;
-	int is_success;
+	enum ff_result result;
 
 	request_processor = (struct mrpc_request_processor *) ctx;
 
-	is_success = mrpc_packet_stream_initialize(request_processor->packet_stream, request_processor->request_id);
-	if (is_success)
+	result = mrpc_packet_stream_initialize(request_processor->packet_stream, request_processor->request_id);
+	if (result == FF_SUCCESS)
 	{
-		is_success = mrpc_data_process_next_rpc(request_processor->service_interface, request_processor->service_ctx, request_processor->stream);
-		if (!is_success)
+		result = mrpc_data_process_next_rpc(request_processor->service_interface, request_processor->service_ctx, request_processor->stream);
+		if (result == FF_FAILURE)
 		{
 			request_processor->notify_error_func(request_processor->notify_error_func_ctx);
 		}
@@ -309,7 +307,7 @@ static void stream_writer_func(void *ctx)
 	{
 		struct mrpc_packet *packet;
 		int is_empty;
-		int is_success;
+		enum ff_result result;
 
 		ff_blocking_queue_get(stream_processor->writer_queue, &packet);
 		if (packet == NULL)
@@ -318,14 +316,14 @@ static void stream_writer_func(void *ctx)
 			ff_assert(is_empty);
 			break;
 		}
-		is_success = mrpc_packet_write_to_stream(packet, stream_processor->stream);
+		result = mrpc_packet_write_to_stream(packet, stream_processor->stream);
 		ff_pool_release_entry(stream_processor->packets_pool, packet);
 		is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
-		if (is_success && is_empty)
+		if (result == FF_SUCCESS && is_empty)
 		{
-			is_success = ff_stream_flush(stream_processor->stream);
+			result = ff_stream_flush(stream_processor->stream);
 		}
-		if (!is_success)
+		if (result == FF_FAILURE)
 		{
 			mrpc_client_stream_processor_stop_async(stream_processor);
 			skip_writer_queue_packets(stream_processor);
@@ -397,13 +395,13 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 	for (;;)
 	{
 		struct mrpc_packet *packet;
-		int is_success;
 		uint8_t request_id;
 		struct mrpc_request_stream *request_stream;
+		enum ff_result result;
 
 		packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
-		is_success = mrpc_packet_read_from_stream(packet, stream);
-		if (!is_success)
+		result = mrpc_packet_read_from_stream(packet, stream);
+		if (result == FF_FAILURE)
 		{
 			ff_pool_release_entry(stream_processor->packets_pool, packet);
 			break;
@@ -434,20 +432,20 @@ void mrpc_client_stream_processor_stop_async(struct mrpc_client_stream_processor
 	}
 }
 
-int mrpc_client_stream_processor_invoke_rpc(struct mrpc_client_stream_processor *stream_processor, struct mrpc_data *data)
+enum ff_result mrpc_client_stream_processor_invoke_rpc(struct mrpc_client_stream_processor *stream_processor, struct mrpc_data *data)
 {
-	int is_success = 0;
+	enum ff_result result = FF_FAILURE;
 
 	if (stream_processor->stream != NULL)
 	{
 		struct mrpc_request_stream *request_stream;
 
 		request_stream = acquire_request_stream(stream_processor);
-		is_success = mrpc_request_stream_invoke_rpc(request_stream, data);
+		result = mrpc_request_stream_invoke_rpc(request_stream, data);
 		release_request_stream(stream_processor, request_stream);
 	}
 
-	return is_success;
+	return result;
 }
 
 #define MAX_REQUEST_PROCESSORS_CNT 0x100
@@ -501,7 +499,7 @@ static void stream_writer_func(void *ctx)
 	{
 		struct mrpc_packet *packet;
 		int is_empty;
-		int is_success;
+		enum ff_result result;
 
 		ff_blocking_queue_get(stream_processor->writer_queue, &packet);
 		if (packet == NULL)
@@ -510,14 +508,14 @@ static void stream_writer_func(void *ctx)
 			ff_assert(is_empty);
 			break;
 		}
-		is_success = mrpc_packet_write_to_stream(packet, stream_processor->stream);
+		result = mrpc_packet_write_to_stream(packet, stream_processor->stream);
 		ff_pool_release_entry(stream_processor->packets_pool, packet);
 		is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
-		if (is_success && is_empty)
+		if (result == FF_SUCCESS && is_empty)
 		{
-			is_success = ff_stream_flush(stream_processor->stream);
+			result = ff_stream_flush(stream_processor->stream);
 		}
-		if (!is_success)
+		if (result == FF_FAILRE)
 		{
 			mrpc_server_stream_processor_stop_async(stream_processor);
 			skip_writer_queue_packets(stream_processor);
@@ -671,14 +669,14 @@ static void stream_reader_func(void *ctx)
 	for (;;)
 	{
 		struct mrpc_packet *packet;
-		int is_success;
 		enum mrpc_packet_type packet_type;
 		uint8_t request_id;
 		struct mrpc_request_processor *request_processor;
+		enum ff_result result;
 
 		packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
-		is_success = mrpc_packet_read_from_stream(packet, stream_processor->stream);
-		if (!is_success)
+		result = mrpc_packet_read_from_stream(packet, stream_processor->stream);
+		if (result == FF_FAILURE)
 		{
 			ff_pool_release_entry(stream_processor->packets_pool, packet);
 			break;
@@ -791,11 +789,11 @@ static void main_client_func(void *ctx)
 	for (;;)
 	{
 		struct ff_tcp *service_tcp;
-		int is_success;
+		enum ff_result result;
 
 		service_tcp = ff_tcp_create();
-		is_success = ff_tcp_connect(service_tcp, client->service_addr);
-		if (is_success)
+		result = ff_tcp_connect(service_tcp, client->service_addr);
+		if (result == FF_SUCCESS)
 		{
 			struct ff_stream *service_stream;
 
@@ -811,8 +809,8 @@ static void main_client_func(void *ctx)
 			ff_tcp_delete(service_tcp);
 		}
 
-		is_success = ff_event_wait_with_timeout(client->must_shutdown_event, RECONNECT_TIMEOUT);
-		if (is_success)
+		result = ff_event_wait_with_timeout(client->must_shutdown_event, RECONNECT_TIMEOUT);
+		if (result == FF_SUCCESS)
 		{
 			/* the mrpc_client_delete() was called */
 			break;
@@ -863,13 +861,12 @@ void mrpc_client_delete(struct mrpc_client *client)
 	ff_free(client);
 }
 
-int mrpc_client_invoke_rpc(struct mrpc_client *client, struct mrpc_data *data)
+enum ff_result mrpc_client_invoke_rpc(struct mrpc_client *client, struct mrpc_data *data)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = mrpc_client_stream_processor_invoke_rpc(client->stream_processor, data);
-
-	return is_success;
+	result = mrpc_client_stream_processor_invoke_rpc(client->stream_processor, data);
+	return result;
 }
 
 #define MAX_STREAM_PROCESSORS_CNT 0x100
@@ -1003,14 +1000,14 @@ static void stop_server(struct mrpc_server *server)
 struct mrpc_server *mrpc_server_create(struct mrpc_interface *service_interface, void *service_ctx, struct ff_arch_net_addr *listen_addr)
 {
 	struct mrpc_server *server;
-	int is_success;
+	enum ff_result result;
 
 	server = (struct mrpc_server *) ff_malloc(sizeof(*server));
 	server->service_interface = service_interface;
 	server->service_ctx = service_ctx;
 	server->accept_tcp = ff_tcp_create();
-	is_success = ff_tcp_bind(server->accept_tcp, params->listen_addr, FF_TCP_SERVER);
-	if (!is_success)
+	result = ff_tcp_bind(server->accept_tcp, params->listen_addr, FF_TCP_SERVER);
+	if (result == FF_FAILURE)
 	{
 		const wchar_t *addr_str;
 

@@ -19,29 +19,29 @@ struct mrpc_packet_stream *mrpc_packet_stream_create(struct ff_blocking_queue *w
 
 void mrpc_packet_stream_delete(struct mrpc_packet_stream *stream);
 
-int mrpc_packet_stream_initialize(struct mrpc_packet_stream *stream, uint8_t request_id);
+enum ff_result mrpc_packet_stream_initialize(struct mrpc_packet_stream *stream, uint8_t request_id);
 
-int mrpc_packet_stream_shutdown(struct mrpc_packet_stream *stream);
+enum ff_result mrpc_packet_stream_shutdown(struct mrpc_packet_stream *stream);
 
 void mrpc_packet_stream_clear_reader_queue(struct mrpc_packet_stream *stream);
 
 /**
  * Reads exactly len bytes from the stream into the buf.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *buf, int len);
+enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *buf, int len);
 
 /**
  * Writes exactly len bytes from the buf into the stream.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const void *buf, int len);
+enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const void *buf, int len);
 
 /**
  * Flushes the write buffer of the stream.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_packet_stream_flush(struct mrpc_packet_stream *stream);
+enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream);
 
 void mrpc_packet_stream_disconnect(struct mrpc_packet_stream *stream);
 

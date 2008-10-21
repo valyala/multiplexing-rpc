@@ -107,21 +107,21 @@ int mrpc_packet_write_data(struct mrpc_packet *packet, const void *buf, int len)
 	return bytes_written;
 }
 
-int mrpc_packet_read_from_stream(struct mrpc_packet *packet, struct ff_stream *stream)
+enum ff_result mrpc_packet_read_from_stream(struct mrpc_packet *packet, struct ff_stream *stream)
 {
-	int is_success;
 	uint32_t tmp;
+	enum ff_result result;
 
 	ff_assert(packet->curr_pos == 0);
 	ff_assert(packet->size == 0);
 
-	is_success = ff_stream_read(stream, &packet->request_id, 1);
-	if (!is_success)
+	result = ff_stream_read(stream, &packet->request_id, 1);
+	if (result == FF_FAILURE)
 	{
 		goto end;
 	}
-	is_success = mrpc_uint32_unserialize(&tmp, stream);
-	if (!is_success)
+	result = mrpc_uint32_unserialize(&tmp, stream);
+	if (result == FF_FAILURE)
 	{
 		goto end;
 	}
@@ -132,36 +132,36 @@ int mrpc_packet_read_from_stream(struct mrpc_packet *packet, struct ff_stream *s
 	packet->size = (int) (tmp >> 2);
 	if (packet->size > MAX_PACKET_SIZE)
 	{
-		is_success = 0;
+		result = FF_FAILURE;
 		goto end;
 	}
-	is_success = ff_stream_read(stream, packet->buf, packet->size);
+	result = ff_stream_read(stream, packet->buf, packet->size);
 
 end:
-	return is_success;
+	return result;
 }
 
-int mrpc_packet_write_to_stream(struct mrpc_packet *packet, struct ff_stream *stream)
+enum ff_result mrpc_packet_write_to_stream(struct mrpc_packet *packet, struct ff_stream *stream)
 {
-	int is_success;
 	uint32_t tmp;
+	enum ff_result result;
 
 	ff_assert(packet->curr_pos == 0);
 	ff_assert(packet->size <= MAX_PACKET_SIZE);
 
-	is_success = ff_stream_write(stream, &packet->request_id, 1);
-	if (!is_success)
+	result = ff_stream_write(stream, &packet->request_id, 1);
+	if (result == FF_FAILURE)
 	{
 		goto end;
 	}
 	tmp = ((uint32_t) packet->type) | (((uint32_t) packet->size) << 2);
-	is_success = mrpc_uint32_serialize(tmp, stream);
-	if (!is_success)
+	result = mrpc_uint32_serialize(tmp, stream);
+	if (result == FF_FAILURE)
 	{
 		goto end;
 	}
-	is_success = ff_stream_write(stream, packet->buf, packet->size);
+	result = ff_stream_write(stream, packet->buf, packet->size);
 
 end:
-	return is_success;
+	return result;
 }

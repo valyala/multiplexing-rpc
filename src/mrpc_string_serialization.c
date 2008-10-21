@@ -13,12 +13,12 @@
  */
 #define MAX_STRING_SIZE ((1 << 14) - 1)
 
-int mrpc_string_serialize(const ff_string *str, struct ff_stream *stream)
+enum ff_result mrpc_string_serialize(const ff_string *str, struct ff_stream *stream)
 {
-	int is_success = 0;
 	int i;
 	int str_len;
 	const wchar_t *str_cstr;
+	enum ff_result result = FF_FAILURE;
 
 	str_len = ff_string_get_length(str);
 	ff_assert(str_len >= 0);
@@ -27,8 +27,8 @@ int mrpc_string_serialize(const ff_string *str, struct ff_stream *stream)
 		goto end;
 	}
 
-	is_success = mrpc_uint32_serialize((uint32_t) str_len, stream);
-	if (!is_success)
+	result = mrpc_uint32_serialize((uint32_t) str_len, stream);
+	if (result == FF_FAILURE)
 	{
 		goto end;
 	}
@@ -40,33 +40,33 @@ int mrpc_string_serialize(const ff_string *str, struct ff_stream *stream)
 		int len;
 
 		ch = (uint32_t) str[i];
-		is_success = mrpc_uint32_serialize(ch, stream);
-		if (!is_success)
+		result = mrpc_uint32_serialize(ch, stream);
+		if (result == FF_FAILURE)
 		{
 			goto end;
 		}
 	}
 
 end:
-	return is_success;
+	return result;
 }
 
-int mrpc_string_unserialize(ff_string **str, struct ff_stream *stream)
+enum ff_result mrpc_string_unserialize(ff_string **str, struct ff_stream *stream)
 {
-	int is_success;
 	uint32_t i;
 	uint32_t u_str_len;
 	uint32_t str_size;
 	wchar_t *str_cstr;
+	enum ff_result result;
 
-	is_success = mrpc_uint32_unserialize(&u_str_len, stream);
-	if (!is_success)
+	result = mrpc_uint32_unserialize(&u_str_len, stream);
+	if (result == FF_FAILURE)
 	{
 		goto end;
 	}
 	if (u_str_len > MAX_STRING_SIZE)
 	{
-		is_success = 0;
+		result = FF_FAILURE;
 		goto end;
 	}
 
@@ -81,8 +81,8 @@ int mrpc_string_unserialize(ff_string **str, struct ff_stream *stream)
 	{
 		uint32_t ch;
 
-		is_success = mrpc_uint32_unserialize(&ch, stream);
-		if (!is_success)
+		result = mrpc_uint32_unserialize(&ch, stream);
+		if (result == FF_FAILURE)
 		{
 			ff_free(str_cstr);
 			goto end;
@@ -90,7 +90,7 @@ int mrpc_string_unserialize(ff_string **str, struct ff_stream *stream)
 		if (ch > WCHAR_MAX)
 		{
 			ff_free(str_cstr);
-			is_success = 0;
+			result = FF_FAILURE;
 			goto end;
 		}
 		str_cstr[i] = (wchar_t) ch;
@@ -99,5 +99,5 @@ int mrpc_string_unserialize(ff_string **str, struct ff_stream *stream)
 	*str = ff_string_create(str_cstr, (int) u_str_len);
 
 end:
-	return is_success;
+	return result;
 }

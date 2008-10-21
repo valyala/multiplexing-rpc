@@ -69,15 +69,15 @@ int mrpc_packet_write_data(struct mrpc_packet *packet, const void *buf, int len)
 
 /**
  * Read the next packet contents from the stream into the packet.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_packet_read_from_stream(struct mrpc_packet *packet, struct ff_stream *stream);
+enum ff_result mrpc_packet_read_from_stream(struct mrpc_packet *packet, struct ff_stream *stream);
 
 /**
  * Writes the packet contents to the stream.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_packet_write_to_stream(struct mrpc_packet *packet, struct ff_stream *stream);
+enum ff_result mrpc_packet_write_to_stream(struct mrpc_packet *packet, struct ff_stream *stream);
 
 #ifdef __cplusplus
 }

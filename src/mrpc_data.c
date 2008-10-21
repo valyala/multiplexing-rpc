@@ -36,16 +36,16 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 {
 	uint8_t method_id;
 	struct mrpc_data *data = NULL;
-	int is_success;
+	enum ff_result result;
 
-	is_success = ff_stream_read(stream, &method_id, 1);
-	if (is_success)
+	result = ff_stream_read(stream, &method_id, 1);
+	if (result == FF_SUCCESS)
 	{
 		data = try_create_mrpc_data(interface, method_id);
 		if (data != NULL)
 		{
-			is_success = mrpc_method_read_request_params(data->method, data->request_params, stream);
-			if (!is_success)
+			result = mrpc_method_read_request_params(data->method, data->request_params, stream);
+			if (result == FF_FAILURE)
 			{
 				mrpc_data_delete(data);
 				data = NULL;
@@ -56,41 +56,41 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 	return data;
 }
 
-static int read_response(struct mrpc_data *data, struct ff_stream *stream)
+static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = mrpc_method_read_response_params(data->method, data->response_params, stream);
-	return is_success;
+	result = mrpc_method_read_response_params(data->method, data->response_params, stream);
+	return result;
 }
 
-static int write_response(struct mrpc_data *data, struct ff_stream *stream)
+static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = mrpc_method_write_response_params(data->method, data->response_params, stream);
-	if (is_success)
+	result = mrpc_method_write_response_params(data->method, data->response_params, stream);
+	if (result == FF_SUCCESS)
 	{
-		is_success = ff_stream_flush(stream);
+		result = ff_stream_flush(stream);
 	}
-	return is_success;
+	return result;
 }
 
-static int write_request(struct mrpc_data *data, struct ff_stream *stream)
+static enum ff_result write_request(struct mrpc_data *data, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = ff_stream_write(stream, &data->method_id, 1);
-	if (is_success)
+	result = ff_stream_write(stream, &data->method_id, 1);
+	if (result == FF_SUCCESS)
 	{
-		is_succes = mrpc_method_write_request_params(data->method, data->request_params, stream);
-		if (is_success)
+		result = mrpc_method_write_request_params(data->method, data->request_params, stream);
+		if (result == FF_SUCCESS)
 		{
-			is_success = ff_stream_flush(stream);
+			result = ff_stream_flush(stream);
 		}
 	}
 
-	return is_success;
+	return result;
 }
 
 struct mrpc_data *mrpc_data_create(struct mrpc_interface *interface, uint8_t method_id)
@@ -109,33 +109,33 @@ void mrpc_data_delete(struct mrpc_data *data)
 	ff_free(data);
 }
 
-int mrpc_data_process_remote_call(struct mrpc_interface *interface, void *service_ctx, struct ff_stream *stream)
+enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, void *service_ctx, struct ff_stream *stream)
 {
 	struct mrpc_data *data;
-	int is_success = 0;
+	enum ff_result result = FF_FAILURE;
 
 	data = read_request(interface, stream);
 	if (data != NULL)
 	{
 		mrpc_method_invoke_callback(data->method, data, service_ctx);
-		is_success = write_response(data, stream);
+		result = write_response(data, stream);
 		mrpc_data_delete(data);
     }
 
-    return is_success;
+    return result;
 }
 
-int mrpc_data_invoke_remote_call(struct mrpc_data *data, struct ff_stream *stream)
+enum ff_result mrpc_data_invoke_remote_call(struct mrpc_data *data, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = write_request(data, stream);
-	if (is_success)
+	result = write_request(data, stream);
+	if (result == FF_SUCCESS)
 	{
-		is_success = read_response(data, stream);
+		result = read_response(data, stream);
 	}
 
-	return is_success;
+	return result;
 }
 
 void mrpc_data_get_request_param_value(struct mrpc_data *data, int param_idx, void **value)

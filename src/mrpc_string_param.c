@@ -23,30 +23,30 @@ static void delete_string_param(struct mrpc_param *param)
 	ff_free(string_param);
 }
 
-static int read_string_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result read_string_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct string_param *string_param;
-	int is_success;
+	enum ff_result result;
 
 	string_param = (struct string_param *) mrpc_param_get_ctx(param);
 	ff_assert(string_param->value == NULL);
-	is_success = mrpc_string_unserialize(&string_param->value, stream);
-	if (is_success)
+	result = mrpc_string_unserialize(&string_param->value, stream);
+	if (result == FF_SUCCESS)
 	{
 		ff_assert(string_param->value != NULL);
 	}
-	return is_success;
+	return result;
 }
 
-static int write_string_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_string_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct string_param *string_param;
-	int is_success;
+	enum ff_result result;
 
 	string_param = (struct string_param *) mrpc_param_get_ctx(param);
 	ff_assert(string_param->value != NULL);
-	is_success = mrpc_string_serialize(string_param->value, stream);
-	return is_success;
+	result = mrpc_string_serialize(string_param->value, stream);
+	return result;
 }
 
 static void get_string_param_value(const struct mrpc_param *param, void **value)

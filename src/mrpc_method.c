@@ -73,10 +73,10 @@ static void delete_params(struct mrpc_param **params, int param_cnt)
 	ff_free(params);
 }
 
-static int read_params(struct mrpc_param **params, int param_cnt, struct ff_stream *stream)
+static enum ff_result read_params(struct mrpc_param **params, int param_cnt, struct ff_stream *stream)
 {
 	int i;
-	int is_success = 1;
+	enum ff_result result = FF_SUCCESS;
 
 	ff_assert(param_cnt >= 0);
 	ff_assert(param_cnt < MAX_PARAMS_CNT);
@@ -86,20 +86,20 @@ static int read_params(struct mrpc_param **params, int param_cnt, struct ff_stre
 
 		param = params[i];
 		ff_assert(param != NULL);
-		is_success = mrpc_param_read(param, stream);
-		if (!is_success)
+		result = mrpc_param_read(param, stream);
+		if (result == FF_FAILURE)
 		{
 			break;
 		}
 	}
 
-	return is_success;
+	return result;
 }
 
-static int write_params(struct mrpc_param **params, int param_cnt, struct ff_stream *stream)
+static enum ff_result write_params(struct mrpc_param **params, int param_cnt, struct ff_stream *stream)
 {
 	int i;
-	int is_success = 1;
+	enum ff_result result = FF_SUCCESS;
 
 	ff_assert(param_cnt >= 0);
 	ff_assert(param_cnt < MAX_PARAMS_CNT);
@@ -108,14 +108,14 @@ static int write_params(struct mrpc_param **params, int param_cnt, struct ff_str
 		struct mrpc_param *param;
 
 		param = params[i];
-		is_success = mrpc_param_write(param, stream);
-		if (!is_success)
+		result = mrpc_param_write(param, stream);
+		if (result == FF_FAILURE)
 		{
 			break;
 		}
 	}
 
-	return is_success;
+	return result;
 }
 
 static void get_param_value(struct mrpc_param **params, void **value, int param_idx, int params_cnt)
@@ -215,36 +215,36 @@ void mrpc_method_delete_response_params(struct mrpc_method *method, struct mrpc_
 	delete_params(response_params, method->response_params_cnt);
 }
 
-int mrpc_method_read_request_params(struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream)
+enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = read_params(request_params, method->request_params_cnt, stream);
-	return is_success;
+	result = read_params(request_params, method->request_params_cnt, stream);
+	return result;
 }
 
-int mrpc_method_read_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream)
+enum ff_result mrpc_method_read_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = read_params(response_params, method->response_params_cnt, stream);
-	return is_success;
+	result = read_params(response_params, method->response_params_cnt, stream);
+	return result;
 }
 
-int mrpc_method_write_request_params(struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream)
+enum ff_result mrpc_method_write_request_params(struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = write_params(request_params, method->request_params_cnt, stream);
-	return is_success;
+	result = write_params(request_params, method->request_params_cnt, stream);
+	return result;
 }
 
-int mrpc_method_write_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream)
+enum ff_result mrpc_method_write_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = write_params(response_params, method->response_params_cnt, stream);
-	return is_success;
+	result = write_params(response_params, method->response_params_cnt, stream);
+	return result;
 }
 
 void mrpc_method_set_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **request_params, const void *value)

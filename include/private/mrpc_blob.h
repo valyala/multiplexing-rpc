@@ -49,8 +49,9 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
  * Moves the given blob from the current path to the new_file_path path.
  * This function should be called only if the blob has a single reference,
  * and no open streams.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_blob_move(struct mrpc_blob *blob, struct ff_string *new_file_path);
+enum ff_result mrpc_blob_move(struct mrpc_blob *blob, struct ff_string *new_file_path);
 
 #ifdef __cplusplus
 }

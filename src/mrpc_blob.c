@@ -41,11 +41,11 @@ static void delete_blob_stream(struct ff_stream *stream)
 	ff_free(data);
 }
 
-static int read_from_blob_stream(struct ff_stream *stream, void *buf, int len)
+static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf, int len)
 {
 	struct blob_stream_data *data;
 	int bytes_left;
-	int is_success = 0;
+	enum ff_result result = FF_FAILURE;
 
 	ff_assert(len >= 0);
 
@@ -58,16 +58,16 @@ static int read_from_blob_stream(struct ff_stream *stream, void *buf, int len)
 	bytes_left = data->blob->size - data->curr_pos;
 	if (len <= bytes_left)
 	{
-		is_success = ff_file_read(data->file, buf, len);
+		result = ff_file_read(data->file, buf, len);
 		data->curr_pos += len;
 	}
-	return is_success;
+	return result;
 }
 
-static int write_to_blob_stream(struct ff_stream *stream, const void *buf, int len)
+static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void *buf, int len)
 {
 	struct blob_stream_data *data;
-	int is_success = 0;
+	enum ff_result result = FF_FAILURE;
 
 	ff_assert(len >= 0);
 
@@ -80,27 +80,27 @@ static int write_to_blob_stream(struct ff_stream *stream, const void *buf, int l
 	bytes_left = data->blob->size - data->curr_pos;
 	if (len <= bytes_left)
 	{
-		is_success = ff_file_write(data->file, buf, len);
+		result = ff_file_write(data->file, buf, len);
 		data->curr_pos += len;
 	}
 	if (data->curr_pos == data->blob->size)
 	{
 		data->blob->state = BLOB_COMPLETE;
 	}
-	return is_success;
+	return result;
 }
 
-static int flush_blob_stream(struct ff_stream *stream)
+static enum ff_result flush_blob_stream(struct ff_stream *stream)
 {
 	struct blob_stream_data *data;
-	int is_success;
+	enum ff_result result;
 
 	data = (Struct blob_stream_data *) ff_stream_get_cts(stream);
 
 	ff_assert(data->mode == MRPC_BLOB_WRITE);
 	ff_assert(data->blob->state == BLOB_INCOMPLETE);
-	is_success = ff_file_flush(data->file);
-	return is_success;
+	result = ff_file_flush(data->file);
+	return result;
 }
 
 static void disconnect_blob_stream(struct ff_stream *stream)
@@ -149,11 +149,11 @@ static void delete_blob(struct mrpc_blob *blob)
 	if (blob->state != BLOB_EMPTY)
 	{
 		const wchar_t *file_path_cstr;
-		int is_success;
+		enum ff_result result;
 
 		file_path_cstr = ff_string_get_cstr(file_path);
-		is_success = ff_file_erase(file_path_cstr);
-		if (!is_success)
+		result = ff_file_erase(file_path_cstr);
+		if (result == FF_FAILURE)
 		{
 			ff_log_warning(L"cannot delete the blob backing file [%ls]", file_path_cstr);
 		}
@@ -241,19 +241,19 @@ end:
 	return stream;
 }
 
-int mrpc_blob_move(struct mrpc_blob *blob, struct ff_string *new_file_path)
+enum ff_result mrpc_blob_move(struct mrpc_blob *blob, struct ff_string *new_file_path)
 {
 	const wchar_t *src_path;
 	const wchar_t *dst_path;
-	int is_success;
+	enum ff_result result;
 
 	ff_assert(blob->state == BLOB_COMPLETE);
 	ff_assert(blob->ref_cnt == 1);
 
 	src_path = ff_string_get_cstr(blob->file_path);
 	dst_path = ff_string_get_cstr(new_file_path);
-	is_success = ff_file_move(src_path, dst_path);
-	if (is_success)
+	result = ff_file_move(src_path, dst_path);
+	if (result == FF_SUCCESS)
 	{
 		ff_string_dec_ref(blob->file_path);
 		blob->file_path = dst_filename;
@@ -264,5 +264,5 @@ int mrpc_blob_move(struct mrpc_blob *blob, struct ff_string *new_file_path)
 		ff_log_warning(L"cannot move the blob backing file from the [%ls] to the [%ls]", src_path, dst_path);
 	}
 
-	return is_success;
+	return result;
 }

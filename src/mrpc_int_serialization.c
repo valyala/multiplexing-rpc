@@ -10,11 +10,11 @@
 #define OCTET_MASK ((1 << BITS_PER_OCTET) - 1)
 #define CONTINUE_NUMBER_FLAG (1 << BITS_PER_OCTET)
 
-int mrpc_uint32_serialize(uint32_t data, struct ff_stream *stream)
+enum ff_result mrpc_uint32_serialize(uint32_t data, struct ff_stream *stream)
 {
-	int is_success;
 	int len = 0;
 	uint8_t buf[MAX_UINT32_OCTETS];
+	enum ff_result result;
 
 	do
 	{
@@ -29,26 +29,26 @@ int mrpc_uint32_serialize(uint32_t data, struct ff_stream *stream)
 	}
 	while (data != 0);
 
-	is_success = ff_stream_write(stream, buf, len);
-	return is_success;
+	result = ff_stream_write(stream, buf, len);
+	return result;
 }
 
-int mrpc_uint32_unserialize(uint32_t *data, struct ff_stream *stream)
+enum ff_result mrpc_uint32_unserialize(uint32_t *data, struct ff_stream *stream)
 {
-	int is_success = 0;
 	int len = 0;
 	uint32_t u_data = 0;
 	uint8_t octet;
+	enum ff_result result = FF_FAILURE;
 
 	do
 	{
 		if (len >= MAX_UINT32_OCTETS)
 		{
-			is_success = 0;
+			result = FF_FAILURE;
 			goto end;
 		}
-		is_success = ff_stream_read(stream, &octet, 1);
-		if (!is_success)
+		result = ff_stream_read(stream, &octet, 1);
+		if (result == FF_FAILURE)
 		{
 			goto end;
 		}
@@ -59,17 +59,17 @@ int mrpc_uint32_unserialize(uint32_t *data, struct ff_stream *stream)
 	while ((octet & CONTINUE_NUMBER_FLAG) != 0);
 
 	*data = u_data;
-	is_success = 1;
+	result = FF_SUCCESS;
 
 end:
-	return is_success;
+	return result;
 }
 
-int mrpc_uint64_serialize(uint64_t data, struct ff_stream *stream)
+enum ff_result mrpc_uint64_serialize(uint64_t data, struct ff_stream *stream)
 {
-	int is_success;
 	int len;
 	uint8_t buf[MAX_UINT64_OCTETS];
+	enum ff_result result;
 
 	len = 0;
 	do
@@ -85,26 +85,26 @@ int mrpc_uint64_serialize(uint64_t data, struct ff_stream *stream)
 	}
 	while (data != 0);
 
-	is_success = ff_stream_write(stream, buf, len);
-	return is_success;
+	result = ff_stream_write(stream, buf, len);
+	return result;
 }
 
-int mrpc_uint64_unserialize(uint64_t *data, struct ff_stream *stream)
+enum ff_result mrpc_uint64_unserialize(uint64_t *data, struct ff_stream *stream)
 {
-	int is_success = 0;
 	int len = 0;
 	uint64_t u_data = 0;
 	uint8_t octet;
+	enum ff_result result = FF_FAILURE;
 
 	do
 	{
 		if (len >= MAX_UINT64_OCTETS)
 		{
-			is_success = 0;
+			result = FF_FAILURE;
 			goto end;
 		}
-		is_success = ff_stream_read(stream, &octet, 1);
-		if (!is_success)
+		result = ff_stream_read(stream, &octet, 1);
+		if (result == FF_FAILURE)
 		{
 			goto end;
 		}
@@ -115,54 +115,62 @@ int mrpc_uint64_unserialize(uint64_t *data, struct ff_stream *stream)
 	while ((octet & CONTINUE_NUMBER_FLAG) != 0);
 
 	*data = u_data;
-	is_success = 1;
+	result = FF_SUCCESS;
 
 end:
-	return is_success;
+	return result;
 }
 
-int mrpc_int32_serialize(int32_t data, struct ff_stream *stream)
+enum ff_result mrpc_int32_serialize(int32_t data, struct ff_stream *stream)
 {
-	int is_success;
 	uint32_t u_data;
+	enum ff_result result;
 
 	u_data = (data << 1) ^ (data >> 31);
-	is_success = uint32_serialize(u_data, stream);
+	result = uint32_serialize(u_data, stream);
 
-	return is_success;
+	return result;
 }
 
-int mrpc_int32_unserialize(int32_t *data, struct ff_stream *stream)
+enum ff_result mrpc_int32_unserialize(int32_t *data, struct ff_stream *stream)
 {
-	int is_success;
-	uint32_t u_data;
+	enum ff_result result;
 
-	is_success = uint32_unserialize(&u_data, stream);
-	u_data = (u_data >> 1) ^ (-(u_data & 0x01));
-	*data = (int32_t) u_data;
+	result = uint32_unserialize(&u_data, stream);
+	if (result == FF_SUCCESS)
+	{
+		uint32_t u_data;
 
-	return is_success;
+		u_data = (u_data >> 1) ^ (-(u_data & 0x01));
+		*data = (int32_t) u_data;
+	}
+
+	return result;
 }
 
-int mrpc_int64_serialize(int64_t data, struct ff_stream *stream)
+enum ff_result mrpc_int64_serialize(int64_t data, struct ff_stream *stream)
 {
-	int is_success;
 	uint64_t u_data;
+	enum ff_result result;
 
 	u_data = (data << 1) ^ (data >> 63);
-	is_success = uint64_serialize(u_data, stream);
+	result = uint64_serialize(u_data, stream);
 
-	return is_success;
+	return result;
 }
 
-int mrpc_int64_unserialize(int64_t *data, struct ff_stream *stream)
+enum ff_result mrpc_int64_unserialize(int64_t *data, struct ff_stream *stream)
 {
-	int is_success;
-	uint64_t u_data;
+	enum ff_result result;
 
-	is_success = uint64_unserialize(&u_data, stream);
-	u_data = (u_data >> 1) ^ (-(u_data & 0x01));
-	*data = (int64_t) u_data;
+	result = uint64_unserialize(&u_data, stream);
+	if (result == FF_SUCCESS)
+	{
+		uint64_t u_data;
 
-	return is_success;
+		u_data = (u_data >> 1) ^ (-(u_data & 0x01));
+		*data = (int64_t) u_data;
+	}
+
+	return result;
 }

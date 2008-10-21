@@ -28,20 +28,20 @@ void *mrpc_param_get_ctx(struct mrpc_param *param)
 	return param->ctx;
 }
 
-int mrpc_param_read_from_stream(struct mrpc_param *param, struct ff_stream *stream)
+enum ff_result mrpc_param_read_from_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = param->vtable->read_from_stream(param->stream);
-	return is_success;
+	result = param->vtable->read_from_stream(param->stream);
+	return result;
 }
 
-int mrpc_param_write_to_stream(struct mrpc_param *param, struct ff_stream *stream)
+enum ff_result mrpc_param_write_to_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
-	int is_success;
+	enum ff_result result;
 
-	is_success = param->vtable->write_to_stream(param->stream);
-	return is_success;
+	result = param->vtable->write_to_stream(param->stream);
+	return result;
 }
 
 void mrpc_param_get_value(struct mrpc_param *param, void **value)

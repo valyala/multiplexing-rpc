@@ -11,17 +11,17 @@ extern "C" {
 
 /**
  * Serializes the blob into the stream.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_stream *stream);
+enum ff_result mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_stream *stream);
 
 /**
  * Unserializes blob from the stream.
  * Sets the blob to newly created blob, which contains unserialized data from the stream.
  * The caller must call mrpc_blob_delete() for the returned blob.
- * Returns 1 on success, 0 on error.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-int mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream);
+enum ff_result mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream);
 
 #ifdef __cplusplus
 }

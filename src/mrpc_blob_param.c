@@ -24,30 +24,30 @@ static void delete_blob_param(struct mrpc_param *param)
 	ff_free(blob_param);
 }
 
-static int read_blob_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result read_blob_param_from_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct blob_param *blob_param;
-	int is_success;
+	enum ff_result result;
 
 	blob_param = (struct blob_param *) mrpc_param_get_ctx(param);
 	ff_assert(blob_param->value == NULL);
-	is_success = mrpc_blob_unserialize(&blob_param->value, stream);
-	if (is_success)
+	result = mrpc_blob_unserialize(&blob_param->value, stream);
+	if (result == FF_SUCCESS)
 	{
 		ff_assert(blob_param->value != NULL);
 	}
-	return is_success;
+	return result;
 }
 
-static int write_blob_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_blob_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct blob_param *blob_param;
-	int is_success;
+	enum ff_result result;
 
 	blob_param = (struct blob_param *) mrpc_param_get_ctx(param);
 	ff_assert(blob_param->value != NULL);
-	is_success = mrpc_blob_serialize(blob_param->value, stream);
-	return is_success;
+	result = mrpc_blob_serialize(blob_param->value, stream);
+	return result;
 }
 
 static void get_blob_param_value(const struct mrpc_param *param, void **value)
@@ -73,7 +73,7 @@ static uint32_t get_blob_param_hash(const struct mrpc_param *param, uint32_t sta
 	struct blob_param *blob_param;
 	struct ff_stream *stream;
 	uint32_t hash_value;
-	int is_success = 0;
+	enum ff_result result = FF_FAILURE;
 
 	blob_param = (struct blob_param *) mrpc_param_get_ctx(param);
 	ff_assert(blob_param->value != NULL);
@@ -84,11 +84,11 @@ static uint32_t get_blob_param_hash(const struct mrpc_param *param, uint32_t sta
 		int blob_size;
 
 		blob_size = mrpc_blob_get_size(blob_param->value);
-		is_success = ff_stream_get_hash(stream, blob_size, hash_value, &hash_value);
+		result = ff_stream_get_hash(stream, blob_size, hash_value, &hash_value);
 		ff_stream_delete(stream);
 	}
 
-	if (!is_success)
+	if (result == FF_FAILURE)
 	{
 		ff_log_warning(L"cannot calculate hash value for the blob. See previous message for details");
 	}

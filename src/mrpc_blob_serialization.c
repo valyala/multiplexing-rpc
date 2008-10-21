@@ -5,16 +5,16 @@
 #include "private/mrpc_blob.h"
 #include "ff/ff_stream.h"
 
-int mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_stream *stream)
+enum ff_result mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_stream *stream)
 {
-	int is_success = 0;
 	int blob_len;
 	struct ff_stream *blob_stream;
+	enum ff_result result = FF_FAILURE;
 
 	blob_len = mrpc_blob_get_size(blob);
 	ff_assert(blob_len >= 0);
-	is_success = mrpc_uint32_serialize((uint32_t) blob_len, stream);
-	if (!is_success)
+	result = mrpc_uint32_serialize((uint32_t) blob_len, stream);
+	if (result == FF_FAILURE)
 	{
 		goto end;
 	}
@@ -22,26 +22,25 @@ int mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_stream *stream)
 	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
 	if (blob_stream == NULL)
 	{
-		/* error when opening blob stream */
-		is_success = 0;
+		result = FF_FAILURE;
 		goto end;
 	}
-	is_success = ff_stream_copy(blob_stream, stream, blob_len);
+	result = ff_stream_copy(blob_stream, stream, blob_len);
 	ff_stream_close(blob_stream);
 
 end:
-	return is_success;
+	return result;
 }
 
-int mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream)
+enum ff_result mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream)
 {
-	int is_success;
 	int blob_len;
 	struct blob *new_blob;
 	struct ff_stream *blob_stream;
+	enum ff_result result;
 
-	is_success = mrpc_uint32_unserialize((uint32_t *) &blob_len, stream);
-	if (!is_success)
+	result = mrpc_uint32_unserialize((uint32_t *) &blob_len, stream);
+	if (result == FF_FAILURE)
 	{
 		goto end;
 	}
@@ -54,26 +53,27 @@ int mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream)
 	blob_stream = mrpc_blob_open_stream(new_blob, MRPC_BLOB_WRITE);
 	if (blob_stream == NULL)
 	{
-		/* error when opening blob stream */
 		mrpc_blob_dec_ref(new_blob);
-		is_success = 0;
+		result = FF_FAILURE;
 		goto end;
 	}
-	is_success = ff_stream_copy(stream, blob_stream, blob_len);
-	is_success = ff_stream_flush(blob_stream);
-	if (!is_success)
+	result = ff_stream_copy(stream, blob_stream, blob_len);
+	if (result == FF_FAILURE)
 	{
+		ff_stream_close(blob_stream);
+		mrpc_blob_dec_ref(new_blob);
+		goto end;
+	}
+	result = ff_stream_flush(blob_stream);
+	if (result == FF_FAILURE)
+	{
+		ff_stream_close(blob_stream);
 		mrpc_blob_dec_ref(new_blob);
 		goto end;
 	}
 	ff_stream_close(blob_stream);
-	if (!is_success)
-	{
-		mrpc_blob_dec_ref(new_blob);
-		goto end;
-	}
 	*blob = new_blob;
 
 end:
-	return is_success;
+	return result;
 }
