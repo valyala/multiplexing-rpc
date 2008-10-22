@@ -48,7 +48,7 @@ enum ff_result mrpc_uint32_unserialize(uint32_t *data, struct ff_stream *stream)
 			goto end;
 		}
 		result = ff_stream_read(stream, &octet, 1);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			goto end;
 		}
@@ -104,7 +104,7 @@ enum ff_result mrpc_uint64_unserialize(uint64_t *data, struct ff_stream *stream)
 			goto end;
 		}
 		result = ff_stream_read(stream, &octet, 1);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			goto end;
 		}

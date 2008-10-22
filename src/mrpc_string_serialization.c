@@ -28,7 +28,7 @@ enum ff_result mrpc_string_serialize(const ff_string *str, struct ff_stream *str
 	}
 
 	result = mrpc_uint32_serialize((uint32_t) str_len, stream);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		goto end;
 	}
@@ -41,7 +41,7 @@ enum ff_result mrpc_string_serialize(const ff_string *str, struct ff_stream *str
 
 		ch = (uint32_t) str[i];
 		result = mrpc_uint32_serialize(ch, stream);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			goto end;
 		}
@@ -60,7 +60,7 @@ enum ff_result mrpc_string_unserialize(ff_string **str, struct ff_stream *stream
 	enum ff_result result;
 
 	result = mrpc_uint32_unserialize(&u_str_len, stream);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		goto end;
 	}
@@ -82,7 +82,7 @@ enum ff_result mrpc_string_unserialize(ff_string **str, struct ff_stream *stream
 		uint32_t ch;
 
 		result = mrpc_uint32_unserialize(&ch, stream);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			ff_free(str_cstr);
 			goto end;

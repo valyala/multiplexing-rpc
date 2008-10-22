@@ -153,7 +153,7 @@ static void delete_blob(struct mrpc_blob *blob)
 
 		file_path_cstr = ff_string_get_cstr(file_path);
 		result = ff_file_erase(file_path_cstr);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			ff_log_warning(L"cannot delete the blob backing file [%ls]", file_path_cstr);
 		}

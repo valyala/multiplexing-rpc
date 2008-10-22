@@ -88,7 +88,7 @@ static uint32_t get_blob_param_hash(const struct mrpc_param *param, uint32_t sta
 		ff_stream_delete(stream);
 	}
 
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		ff_log_warning(L"cannot calculate hash value for the blob. See previous message for details");
 	}

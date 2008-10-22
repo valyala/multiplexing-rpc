@@ -45,7 +45,7 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 		if (data != NULL)
 		{
 			result = mrpc_method_read_request_params(data->method, data->request_params, stream);
-			if (result == FF_FAILURE)
+			if (result != FF_SUCCESS)
 			{
 				mrpc_data_delete(data);
 				data = NULL;

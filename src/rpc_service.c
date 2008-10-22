@@ -128,7 +128,7 @@ static void process_request_func(void *ctx)
 	if (result == FF_SUCCESS)
 	{
 		result = mrpc_data_process_next_rpc(request_processor->service_interface, request_processor->service_ctx, request_processor->stream);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			request_processor->notify_error_func(request_processor->notify_error_func_ctx);
 		}
@@ -323,7 +323,7 @@ static void stream_writer_func(void *ctx)
 		{
 			result = ff_stream_flush(stream_processor->stream);
 		}
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			mrpc_client_stream_processor_stop_async(stream_processor);
 			skip_writer_queue_packets(stream_processor);
@@ -401,7 +401,7 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 
 		packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
 		result = mrpc_packet_read_from_stream(packet, stream);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			ff_pool_release_entry(stream_processor->packets_pool, packet);
 			break;
@@ -676,7 +676,7 @@ static void stream_reader_func(void *ctx)
 
 		packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
 		result = mrpc_packet_read_from_stream(packet, stream_processor->stream);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			ff_pool_release_entry(stream_processor->packets_pool, packet);
 			break;
@@ -1007,7 +1007,7 @@ struct mrpc_server *mrpc_server_create(struct mrpc_interface *service_interface,
 	server->service_ctx = service_ctx;
 	server->accept_tcp = ff_tcp_create();
 	result = ff_tcp_bind(server->accept_tcp, params->listen_addr, FF_TCP_SERVER);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		const wchar_t *addr_str;
 

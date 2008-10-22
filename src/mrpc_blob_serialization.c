@@ -14,7 +14,7 @@ enum ff_result mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_strea
 	blob_len = mrpc_blob_get_size(blob);
 	ff_assert(blob_len >= 0);
 	result = mrpc_uint32_serialize((uint32_t) blob_len, stream);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		goto end;
 	}
@@ -40,7 +40,7 @@ enum ff_result mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *
 	enum ff_result result;
 
 	result = mrpc_uint32_unserialize((uint32_t *) &blob_len, stream);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		goto end;
 	}
@@ -58,14 +58,14 @@ enum ff_result mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *
 		goto end;
 	}
 	result = ff_stream_copy(stream, blob_stream, blob_len);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		ff_stream_close(blob_stream);
 		mrpc_blob_dec_ref(new_blob);
 		goto end;
 	}
 	result = ff_stream_flush(blob_stream);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		ff_stream_close(blob_stream);
 		mrpc_blob_dec_ref(new_blob);

@@ -116,12 +116,12 @@ enum ff_result mrpc_packet_read_from_stream(struct mrpc_packet *packet, struct f
 	ff_assert(packet->size == 0);
 
 	result = ff_stream_read(stream, &packet->request_id, 1);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		goto end;
 	}
 	result = mrpc_uint32_unserialize(&tmp, stream);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		goto end;
 	}
@@ -150,13 +150,13 @@ enum ff_result mrpc_packet_write_to_stream(struct mrpc_packet *packet, struct ff
 	ff_assert(packet->size <= MAX_PACKET_SIZE);
 
 	result = ff_stream_write(stream, &packet->request_id, 1);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		goto end;
 	}
 	tmp = ((uint32_t) packet->type) | (((uint32_t) packet->size) << 2);
 	result = mrpc_uint32_serialize(tmp, stream);
-	if (result == FF_FAILURE)
+	if (result != FF_SUCCESS)
 	{
 		goto end;
 	}

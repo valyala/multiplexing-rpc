@@ -87,7 +87,7 @@ static enum ff_result read_params(struct mrpc_param **params, int param_cnt, str
 		param = params[i];
 		ff_assert(param != NULL);
 		result = mrpc_param_read(param, stream);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			break;
 		}
@@ -109,7 +109,7 @@ static enum ff_result write_params(struct mrpc_param **params, int param_cnt, st
 
 		param = params[i];
 		result = mrpc_param_write(param, stream);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			break;
 		}

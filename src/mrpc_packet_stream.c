@@ -209,7 +209,7 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 			}
 
 			result = ff_blocking_queue_get_with_timeout(stream->reader_queue, &packet, READ_TIMEOUT);
-			if (result == FF_FAILURE)
+			if (result != FF_SUCCESS)
 			{
 				goto end;
 			}
@@ -262,7 +262,7 @@ enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const
 		if (len > 0)
 		{
 			result = ff_blocking_queue_put_with_timeout(stream->writer_queue, stream->current_write_packet, WRITE_TIMEOUT);
-			if (result == FF_FAILURE)
+			if (result != FF_SUCCESS)
 			{
 				goto end;
 			}
@@ -295,7 +295,7 @@ enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 		}
 		mrpc_packet_set_type(stream->current_write_packet, packet_type);
 		result = ff_blocking_queue_put_with_timeout(stream->writer_queue, stream->current_write_packet, WRITE_TIMEOUT);
-		if (result == FF_FAILURE)
+		if (result != FF_SUCCESS)
 		{
 			release_packet(stream, stream->current_write_packet);
 		}
