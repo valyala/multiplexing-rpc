@@ -34,7 +34,7 @@ struct mrpc_interface *mrpc_interface_create(const mrpc_method_constructor *meth
 
 	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
 	interface->methods_cnt = get_constructors_cnt(method_constructors);
-	interface->methods = (struct mrpc_method **) ff_malloc(sizeof(*methods) * methods_cnt);
+	interface->methods = (struct mrpc_method **) ff_calloc(methods_cnt, sizeof(methods[0]));
 	for (i = 0; i < interface->methods_cnt; i++)
 	{
 		mrpc_method_constructor method_constructor;

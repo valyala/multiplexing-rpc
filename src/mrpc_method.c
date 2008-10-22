@@ -40,7 +40,7 @@ static struct mrpc_param **create_params(const mrpc_param_constructor *param_con
 
 	ff_assert(params_cnt >= 0);
 	ff_assert(params_cnt <= MAX_PARAMS_CNT);
-	params = (struct mrpc_param **) ff_malloc(sizeof(*params) * param_cnt);
+	params = (struct mrpc_param **) ff_calloc(params_cnt, sizeof(params[0]));
 	for (i = 0; i < params_cnt; i++)
 	{
 		mrpc_param_constructor param_constructor;

@@ -55,7 +55,6 @@ enum ff_result mrpc_string_unserialize(ff_string **str, struct ff_stream *stream
 {
 	uint32_t i;
 	uint32_t u_str_len;
-	uint32_t str_size;
 	wchar_t *str_cstr;
 	enum ff_result result;
 
@@ -70,13 +69,7 @@ enum ff_result mrpc_string_unserialize(ff_string **str, struct ff_stream *stream
 		goto end;
 	}
 
-	/* integer overflow is impossible here, because MAX_STRING_SIZE and, consequently,
-	 * u_str_len is guaranteed to be less than MAX_INT / sizeof(wchar_t)
-	 */
-	ff_assert(MAX_INT / sizeof(wchar_t) > MAX_STRING_SIZE);
-	str_size = sizeof(wchar_t) * u_str_len;
-	str_cstr = (wchar_t *) ff_malloc(str_size);
-
+	str_cstr = (wchar_t *) ff_calloc(u_str_len, sizeof(str_cstr[0]));
 	for (i = 0; i < u_str_len; i++)
 	{
 		uint32_t ch;

@@ -25,7 +25,7 @@ struct mrpc_packet *mrpc_packet_create()
 	struct mrpc_packet *packet;
 
 	packet = (struct mrpc_packet *) ff_malloc(sizeof(*packet));
-	packet->buf = (char *) ff_malloc(MAX_PACKET_SIZE);
+	packet->buf = (char *) ff_calloc(MAX_PACKET_SIZE, sizeof(packet->buf[0]));
 	packet->curr_pos = 0;
 	packet->size = 0;
 	packet->type = MRPC_PACKET_START;
