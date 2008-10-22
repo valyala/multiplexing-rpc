@@ -36,71 +36,6 @@ TYPE ::= "uint32" | "uint64" | "int32" | "int64" | "string" | "blob"
 
 id = [a-z_][a-z_\d]*
 
-static enum ff_result read_from_packet_stream(struct ff_stream *stream, void *buf, int len)
-{
-	struct mrpc_packet_stream *packet_stream;
-	enum ff_result result;
-
-	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
-	result = mrpc_packet_stream_read(packet_stream, buf, len);
-	return result;
-}
-
-static enum ff_result write_to_packet_stream(struct ff_stream *stream, const void *buf, int len)
-{
-	struct mrpc_packet_stream *packet_stream;
-	enum ff_result result;
-
-	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
-	result = mrpc_packet_stream_write(packet_stream, buf, len);
-	return result;
-}
-
-static enum ff_result flush_packet_stream(struct ff_stream *stream)
-{
-	struct mrpc_packet_stream *packet_stream;
-	enum ff_result result;
-
-	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
-	result = mrpc_packet_stream_flush(packet_stream);
-	return result;
-}
-
-static void disconnect_packet_stream(struct ff_stream *stream)
-{
-	struct mrpc_packet_stream *packet_stream;
-
-	packet_stream = (struct mrpc_packet_stream *) stream->ctx;
-	mrpc_packet_stream_disconnect(packet_stream);
-}
-
-static void delete_packet_stream(struct ff_stream *stream)
-{
-	struct mrpc_packet_stream *packet_stream;
-
-	packet_stream = (struct mrpc_packet_stream *) stream->ctx;
-	mrpc_packet_stream_delete(packet_stream);
-	ff_free(stream);
-}
-
-static struct ff_stream_vtable packet_stream_vtable =
-{
-	read_from_packet_stream,
-	write_to_packet_stream,
-	flush_packet_stream,
-	disconnect_packet_stream,
-	delete_packet_stream
-};
-
-struct ff_stream *ff_stream_create_from_packet_stream(struct mrpc_packet_stream *packet_stream)
-{
-	struct ff_stream *stream;
-
-	stream = ff_stream_create(&packet_stream_vtable, packet_stream);
-
-	return stream;
-}
-
 typedef void (*mrpc_request_processor_release_func)(void *release_func_ctx, struct mrpc_request_processor *request_processor, uint8_t request_id);
 typedef void (*mrpc_request_processor_notify_error_func)(void *notify_error_func_ctx);
 
@@ -157,7 +92,7 @@ struct mrpc_request_processor *mrpc_request_processor_create(mrpc_request_proces
 	request_processor->service_interface = service_interface;
 	request_processor->service_ctx = service_ctx;
 	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, acquire_packet_func, release_packet_func, packet_func_ctx);
-	request_processor->stream = ff_stream_create_from_packet_stream(packet_stream);
+	request_processor->stream = mrpc_packet_stream_factory_create_stream(packet_stream);
 	request_processor->request_id = 0;
 	return request_processor;
 }
