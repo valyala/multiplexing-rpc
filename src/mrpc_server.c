@@ -123,18 +123,6 @@ static void main_server_func(void *ctx)
 	ff_event_set(server->stop_event);
 }
 
-static void start_server(struct mrpc_server *server)
-{
-	ff_core_fiberpool_execute_async(main_server_func, server);
-}
-
-static void stop_server(struct mrpc_server *server)
-{
-	ff_tcp_disconnect(server->accept_tcp);
-	ff_event_wait(server->stop_event);
-	ff_assert(server->stream_processors_cnt == 0);
-}
-
 struct mrpc_server *mrpc_server_create(struct mrpc_interface *service_interface, void *service_ctx, struct ff_arch_net_addr *listen_addr)
 {
 	struct mrpc_server *server;
@@ -160,18 +148,28 @@ struct mrpc_server *mrpc_server_create(struct mrpc_interface *service_interface,
 	server->stream_processors = ff_pool_create(MAX_STREAM_PROCESSORS_CNT, create_stream_processor, server, delete_stream_processor);
 	server->stream_processors_cnt = 0;
 
-	start_server(server);
-
 	return server;
 }
 
 void mrpc_server_delete(struct mrpc_server *server)
 {
-	stop_server(server);
+	ff_assert(server->stream_processors_cnt == 0);
 
 	ff_pool_delete(server->stream_processors);
 	ff_event_delete(server->stream_processors_stop_event);
 	ff_event_delete(server->stop_event);
 	ff_tcp_delete(server->accept_tcp);
 	ff_free(server);
+}
+
+void mrpc_server_start(struct mrpc_server *server)
+{
+	ff_core_fiberpool_execute_async(main_server_func, server);
+}
+
+void mrpc_server_stop(struct mrpc_server *server)
+{
+	ff_tcp_disconnect(server->accept_tcp);
+	ff_event_wait(server->stop_event);
+	ff_assert(server->stream_processors_cnt == 0);
 }

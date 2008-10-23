@@ -15,6 +15,10 @@ MRPC_API struct mrpc_server *mrpc_server_create(struct mrpc_interface *service_i
 
 MRPC_API void mrpc_server_delete(struct mrpc_server *server);
 
+MRPC_API void mrpc_server_start(struct mrpc_server *server);
+
+MRPC_API void mrpc_server_stop(struct mrpc_server *server);
+
 #ifdef __cplusplus
 }
 #endif
