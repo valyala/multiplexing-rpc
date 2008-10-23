@@ -3,7 +3,7 @@
 
 #include "mrpc/mrpc_common.h"
 #include "mrpc/mrpc_interface.h"
-#include "ff/arch/ff_arch_net_addr.h"
+#include "ff/ff_endpoint.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,7 +11,7 @@ extern "C" {
 
 struct mrpc_server;
 
-MRPC_API struct mrpc_server *mrpc_server_create(struct mrpc_interface *service_interface, void *service_ctx, struct ff_arch_net_addr *listen_addr);
+MRPC_API struct mrpc_server *mrpc_server_create(struct mrpc_interface *service_interface, void *service_ctx, struct ff_endpoint *endpoint);
 
 MRPC_API void mrpc_server_delete(struct mrpc_server *server);
 
