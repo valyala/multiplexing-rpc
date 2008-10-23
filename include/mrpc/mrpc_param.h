@@ -22,7 +22,7 @@ struct mrpc_param_vtable
 	uint32_t (*get_hash)(struct mrpc_param *param, uint32_t start_value);
 };
 
-MRPC_API struct mrpc_param *mrpc_param_create(struct mrpc_param_vtable *vtable, void *ctx);
+MRPC_API struct mrpc_param *mrpc_param_create(const struct mrpc_param_vtable *vtable, void *ctx);
 
 MRPC_API void mrpc_param_delete(struct mrpc_param *param);
 

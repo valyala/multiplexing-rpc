@@ -4,11 +4,11 @@
 
 struct mrpc_param
 {
-	struct mrpc_param_vtable *vtable;
+	const struct mrpc_param_vtable *vtable;
 	void *ctx;
 };
 
-struct mrpc_param *mrpc_param_create(struct mrpc_param_vtable *vtable, void *ctx)
+struct mrpc_param *mrpc_param_create(const struct mrpc_param_vtable *vtable, void *ctx)
 {
 	struct mrpc_param *param;
 
