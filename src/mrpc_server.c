@@ -5,6 +5,7 @@
 #include "ff/ff_endpoint.h"
 #include "ff/ff_event.h"
 #include "ff/ff_pool.h"
+#include "ff/ff_log.h"
 
 #define MAX_STREAM_PROCESSORS_CNT 0x100
 
@@ -91,11 +92,17 @@ static void delete_stream_processor(void *ctx)
 static void main_server_func(void *ctx)
 {
 	struct mrpc_server *server;
+	enum ff_result result;
 
 	server = (struct mrpc_server *) ctx;
 
 	ff_assert(server->stream_processors_cnt == 0);
 	ff_event_set(server->stream_processors_stop_event);
+	result = ff_endpoint_initialize(server->endpoint);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_fatal_error(L"cannot initialize the service endpoint");
+	}
 	for (;;)
 	{
 		struct mrpc_server_stream_processor *stream_processor;
@@ -149,7 +156,7 @@ void mrpc_server_start(struct mrpc_server *server)
 
 void mrpc_server_stop(struct mrpc_server *server)
 {
-	ff_endpoint_disconnect(server->endpoint);
+	ff_endpoint_shutdown(server->endpoint);
 	ff_event_wait(server->stop_event);
 	ff_assert(server->stream_processors_cnt == 0);
 }
