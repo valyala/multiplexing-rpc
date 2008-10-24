@@ -296,12 +296,13 @@ enum ff_result mrpc_client_stream_processor_invoke_rpc(struct mrpc_client_stream
 	return result;
 }
 
-#define RECONNECT_TIMEOUT 500
-#define RPC_INVOKATION_TIMEOUT 2000
+#define RECONNECT_TIMEOUT 100
+#define MAX_RPC_TRIES_CNT 3
+#define RPC_RETRY_TIMEOUT 200
 
 struct mrpc_client
 {
-	struct ff_arch_net_addr *service_addr;
+	struct ff_stream_connector *stream_connector;
 	struct ff_event *stop_event;
 	struct ff_event *must_shutdown_event;
 	struct mrpc_client_stream_processor *stream_processor;
@@ -314,25 +315,13 @@ static void main_client_func(void *ctx)
 	client = (struct mrpc_client *) ctx;
 	for (;;)
 	{
-		struct ff_tcp *service_tcp;
-		enum ff_result result;
+		struct ff_stream *stream;
 
-		service_tcp = ff_tcp_create();
-		result = ff_tcp_connect(service_tcp, client->service_addr);
-		if (result == FF_SUCCESS)
+		stream = ff_stream_connector_connect(client->stream_connector);
+		if (stream != NULL)
 		{
-			struct ff_stream *service_stream;
-
-			service_stream = ff_stream_create_from_tcp(service_tcp);
-			mrpc_client_stream_processor_process_stream(client->stream_processor, service_stream);
-			ff_stream_delete(service_stream);
-			/* there is no need to call ff_tcp_delete(service_tcp) here,
-			 * because the ff_stream_delete(service_stream) already called this function
-			 */
-		}
-		else
-		{
-			ff_tcp_delete(service_tcp);
+			mrpc_client_stream_processor_process_stream(client->stream_processor, stream);
+			ff_stream_delete(stream);
 		}
 
 		result = ff_event_wait_with_timeout(client->must_shutdown_event, RECONNECT_TIMEOUT);
@@ -345,53 +334,68 @@ static void main_client_func(void *ctx)
 	ff_event_set(client->stop_event);
 }
 
-static void start_client(struct mrpc_client *client)
-{
-	ff_core_fiberpool_execute_async(main_client_func, client);
-}
-
-static void stop_client(struct mrpc_client *client)
-{
-	ff_event_set(client->must_shutdown_event);
-	mrpc_client_stream_processor_stop_async(client->stream_processor);
-	ff_event_wait(client->stop_event);
-}
-
-struct mrpc_client *mrpc_client_create(struct ff_arch_net_addr *service_addr)
+struct mrpc_client *mrpc_client_create(struct ff_stream_connector *stream_connector)
 {
 	struct mrpc_client *client;
 
-	ff_assert(service_interface != NULL);
-	ff_assert(service_addr != NULL);
+	ff_assert(stream_connector != NULL);
 
 	client = (struct mrpc_client *) ff_malloc(sizeof(*client));
-	client->service_addr = service_addr;
+	client->stream_connector = stream_connector;
 	client->stop_event = ff_event_create(FF_EVENT_AUTO);
-	client->must_shutdown_event = ff_event_create(FF_EVENT_AUTO);
+	client->must_shutdown_event = ff_event_create(FF_EVENT_MANUAL);
 	client->stream_processor = mrpc_client_stream_processor_create();
-
-	start_client(client);
 
 	return client;
 }
 
 void mrpc_client_delete(struct mrpc_client *client)
 {
-	ff_assert(client->service_addr != NULL);
-
-	stop_client(client);
-
 	mrpc_client_stream_processor_delete(client->stream_processor);
 	ff_event_delete(client->must_shutdown_event);
 	ff_event_delete(client->stop_event);
+	ff_stream_connector_delete(client->stream_connector);
 	ff_free(client);
+}
+
+void mrpc_client_start(struct mrpc_client *client)
+{
+	ff_event_set(client->must_shutdown_event);
+	ff_core_fiberpool_execute_async(main_client_func, client);
+}
+
+void mrpc_client_stop(struct mrpc_client *client)
+{
+	ff_event_set(client->must_shutdown_event);
+	mrpc_client_stream_processor_stop_async(client->stream_processor);
+	ff_event_wait(client->stop_event);
 }
 
 enum ff_result mrpc_client_invoke_rpc(struct mrpc_client *client, struct mrpc_data *data)
 {
 	enum ff_result result;
+	int tries_cnt = 0;
 
-	result = mrpc_client_stream_processor_invoke_rpc(client->stream_processor, data);
+	for (;;)
+	{
+		tries_cnt++;
+		result = mrpc_client_stream_processor_invoke_rpc(client->stream_processor, data);
+		if (result == FF_SUCCESS)
+		{
+			break;
+		}
+		if (tries_cnt >= MAX_RPC_TRIES_CNT)
+		{
+			break;
+		}
+		result = ff_event_wait_with_timeout(client->must_shutdown_event, RPC_RETRY_TIMEOUT);
+		if (result == FF_SUCCESS)
+		{
+			/* mrpc_client_delete() was called */
+			result = FF_FAILURE;
+			break;
+		}
+	}
 	return result;
 }
 
