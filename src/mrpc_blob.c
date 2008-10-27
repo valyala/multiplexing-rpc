@@ -95,7 +95,7 @@ static enum ff_result flush_blob_stream(struct ff_stream *stream)
 	struct blob_stream_data *data;
 	enum ff_result result;
 
-	data = (Struct blob_stream_data *) ff_stream_get_cts(stream);
+	data = (struct blob_stream_data *) ff_stream_get_cts(stream);
 
 	ff_assert(data->mode == MRPC_BLOB_WRITE);
 	ff_assert(data->blob->state == BLOB_INCOMPLETE);
