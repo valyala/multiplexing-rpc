@@ -7,6 +7,7 @@
 #include "ff/ff_pool.h"
 #include "ff/ff_blocking_queue.h"
 #include "ff/ff_stream.h"
+#include "ff/ff_core.h"
 
 #define MAX_REQUEST_PROCESSORS_CNT 0x100
 #define MAX_WRITER_QUEUE_SIZE 1000

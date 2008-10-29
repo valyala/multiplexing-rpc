@@ -5,6 +5,7 @@
 #include "private/mrpc_packet_stream.h"
 #include "ff/ff_stream.h"
 #include "ff/ff_blocking_queue.h"
+#include "ff/ff_core.h"
 
 struct mrpc_server_request_processor
 {

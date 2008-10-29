@@ -5,6 +5,7 @@
 #include "ff/ff_endpoint.h"
 #include "ff/ff_event.h"
 #include "ff/ff_pool.h"
+#include "ff/ff_core.h"
 
 #define MAX_STREAM_PROCESSORS_CNT (UCHAR_MAX + 1)
 
