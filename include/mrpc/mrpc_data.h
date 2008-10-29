@@ -3,7 +3,6 @@
 
 #include "mrpc/mrpc_common.h"
 #include "mrpc/mrpc_interface.h"
-#include "ff/ff_stream.h"
 
 #ifdef __cplusplus
 extern "C" {
