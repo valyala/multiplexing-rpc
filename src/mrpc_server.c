@@ -151,6 +151,9 @@ void mrpc_server_start(struct mrpc_server *server, struct mrpc_interface *servic
 	ff_assert(server->endpoint == NULL);
 	ff_assert(server->stream_processors_cnt == 0);
 
+	ff_assert(service_interface != NULL);
+	ff_assert(endpoint != NULL);
+
 	server->service_interface = service_interface;
 	server->service_ctx = service_ctx;
 	server->endpoint = endpoint;
@@ -159,6 +162,9 @@ void mrpc_server_start(struct mrpc_server *server, struct mrpc_interface *servic
 
 void mrpc_server_stop(struct mrpc_server *server)
 {
+	ff_assert(server->service_interface != NULL);
+	ff_assert(server->endpoint != NULL);
+
 	ff_endpoint_shutdown(server->endpoint);
 	ff_event_wait(server->stop_event);
 	ff_assert(server->stream_processors_cnt == 0);
