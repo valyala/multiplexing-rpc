@@ -66,6 +66,7 @@ static void set_blob_param_value(struct mrpc_param *param, const void *value)
 	blob_param = (struct blob_param *) mrpc_param_get_ctx(param);
 	ff_assert(blob_param->value == NULL);
 	blob_param->value = (struct ff_blob *) value;
+	mrpc_blob_inc_ref(blob_param->value);
 }
 
 static uint32_t get_blob_param_hash(const struct mrpc_param *param, uint32_t start_value)
