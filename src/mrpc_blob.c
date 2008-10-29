@@ -151,7 +151,7 @@ static void delete_blob(struct mrpc_blob *blob)
 		const wchar_t *file_path_cstr;
 		enum ff_result result;
 
-		file_path_cstr = ff_string_get_cstr(file_path);
+		file_path_cstr = ff_string_get_cstr(blob->file_path);
 		result = ff_file_erase(file_path_cstr);
 		if (result != FF_SUCCESS)
 		{
