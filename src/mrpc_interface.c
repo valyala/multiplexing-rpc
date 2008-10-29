@@ -3,7 +3,7 @@
 #include "private/mrpc_interface.h"
 #include "private/mrpc_method.h"
 
-#define MAX_METHODS_CNT 0xff
+#define MAX_METHODS_CNT (UCHAR_MAX + 1)
 
 struct mrpc_interface
 {
@@ -66,7 +66,7 @@ struct mrpc_method *mrpc_interface_get_method(struct mrpc_interface *interface, 
 {
 	struct mrpc_method *method = NULL;
 
-	ff_assert(method_id <= MAX_METHODS_CNT);
+	ff_assert(method_id < MAX_METHODS_CNT);
 
 	if (method_id >= 0 && method_id < interface->methods_cnt)
 	{
