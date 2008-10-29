@@ -12,8 +12,11 @@ extern "C" {
 
 struct mrpc_client_request_processor;
 
+typedef void (*mrpc_client_request_processor_release_request_id_func)(void *request_id_func_ctx, uint8_t request_id);
+
 struct mrpc_client_request_processor *mrpc_client_request_processor_create(mrpc_packet_stream_acquire_packet_func acquire_packet_func,
 	mrpc_packet_stream_release_packet_func release_packet_func, void *packet_func_ctx,
+	mrpc_client_request_processor_release_request_id_func release_request_id_func, void *request_id_func_ctx,
 	struct ff_blocking_queue *writer_queue, uint8_t request_id);
 
 void mrpc_client_request_processor_delete(struct mrpc_client_request_processor *request_processor);
