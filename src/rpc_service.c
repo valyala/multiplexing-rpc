@@ -401,13 +401,15 @@ enum ff_result mrpc_client_invoke_rpc(struct mrpc_client *client, struct mrpc_da
 
 foo_interface = foo_interface_create();
 service_ctx = foo_service_create();
+endpint = ff_endpoint_tcp_create(addr);
 
-server = mrpc_server_create(foo_interface, service_ctx, endpoint);
-mrpc_server_start(server);
+server = mrpc_server_create();
+mrpc_server_start(server, foo_interface, service_ctx, endpoint);
 wait();
 mrpc_server_stop(server);
 mrpc_server_delete(server);
 
+ff_endpoint_delete(endpoint);
 foo_service_delete(service_ctx);
 mrpc_interface_delete(foo_interface);
 
