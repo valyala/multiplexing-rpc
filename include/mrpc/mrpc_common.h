@@ -3,12 +3,6 @@
 
 #include "ff/ff_common.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef __cplusplus
-}
-#endif
+#include "mrpc/mrpc_api.h"
 
 #endif
