@@ -26,24 +26,13 @@ static void process_request_func(void *ctx)
 
 	request_processor = (struct mrpc_server_request_processor *) ctx;
 
-	result = mrpc_packet_stream_initialize(request_processor->packet_stream, request_processor->request_id);
-	if (result == FF_SUCCESS)
-	{
-		enum ff_result call_result;
-		enum ff_result shutdown_result;
-
-		call_result = mrpc_data_process_remote_call(request_processor->service_interface, request_processor->service_ctx, request_processor->stream);
-		shutdown_result = mrpc_packet_stream_shutdown(request_processor->packet_stream);
-		if (call_result != FF_SUCCESS || shutdown_result != FF_SUCCESS)
-		{
-			request_processor->notify_error_func(request_processor->notify_error_func_ctx);
-		}
-	}
-	else
+	mrpc_packet_stream_initialize(request_processor->packet_stream, request_processor->request_id);
+	result = mrpc_data_process_remote_call(request_processor->service_interface, request_processor->service_ctx, request_processor->stream);
+	mrpc_packet_stream_shutdown(request_processor->packet_stream);
+	if (result != FF_SUCCESS)
 	{
 		request_processor->notify_error_func(request_processor->notify_error_func_ctx);
 	}
-	mrpc_packet_stream_clear_reader_queue(request_processor->packet_stream);
 	request_processor->release_func(request_processor->release_func_ctx, request_processor, request_processor->request_id);
 }
 

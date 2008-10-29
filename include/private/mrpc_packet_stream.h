@@ -19,11 +19,9 @@ struct mrpc_packet_stream *mrpc_packet_stream_create(struct ff_blocking_queue *w
 
 void mrpc_packet_stream_delete(struct mrpc_packet_stream *stream);
 
-enum ff_result mrpc_packet_stream_initialize(struct mrpc_packet_stream *stream, uint8_t request_id);
+void mrpc_packet_stream_initialize(struct mrpc_packet_stream *stream, uint8_t request_id);
 
-enum ff_result mrpc_packet_stream_shutdown(struct mrpc_packet_stream *stream);
-
-void mrpc_packet_stream_clear_reader_queue(struct mrpc_packet_stream *stream);
+void mrpc_packet_stream_shutdown(struct mrpc_packet_stream *stream);
 
 /**
  * Reads exactly len bytes from the stream into the buf.
