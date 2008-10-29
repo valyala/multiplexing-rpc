@@ -15,8 +15,6 @@ MRPC_API struct mrpc_data *mrpc_data_create(struct mrpc_interface *interface, ui
 
 MRPC_API void mrpc_data_delete(struct mrpc_data *data);
 
-MRPC_API enum ff_result mrpc_data_invoke_remote_call(struct mrpc_data *data, struct ff_stream *stream);
-
 MRPC_API void mrpc_data_get_request_param_value(struct mrpc_data *data, int param_idx, void **value);
 
 MRPC_API void mrpc_data_get_response_param_value(struct mrpc_data *data, int param_idx, void **value);

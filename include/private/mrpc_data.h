@@ -11,6 +11,8 @@ extern "C" {
 
 enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, void *service_ctx, struct ff_stream *stream);
 
+enum ff_result mrpc_data_invoke_remote_call(struct mrpc_data *data, struct ff_stream *stream);
+
 #ifdef __cplusplus
 }
 #endif
