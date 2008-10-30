@@ -7,6 +7,9 @@
 #include "ff/ff_log.h"
 #include "ff/arch/ff_arch_misc.h"
 
+#define BLOB_FILENAME_PREFIX L"blob."
+#define BLOB_FILENAME_PREFIX_LEN (sizeof(BLOB_FILENAME_PREFIX) / sizeof(BLOB_FILENAME_PREFIX[0]))
+
 enum blob_state
 {
 	BLOB_EMPTY,
@@ -120,12 +123,22 @@ static const struct ff_stream_vtable blob_stream_vtable =
 
 static struct ff_string *create_temporary_file_path()
 {
-	struct ff_string *file_path;
+	struct ff_string *tmp_file_path;
+	const wchar_t *tmp_dir_path;
+	const wchar_t *file_path;
+	int tmp_dir_path_len;
+	int file_path_len;
 
-	file_path = ff_arch_misc_get_tmp_dir();
-	ff_string_append_cstr(file_path, L"random_str");
+	ff_arch_misc_get_tmp_dir_path(&tmp_dir_path, &tmp_dir_path_len);
+	ff_assert(tmp_dir_path != NULL);
+	ff_assert(tmp_dir_path[tmp_dir_path_len] == 0);
+	ff_assert(tmp_dir_path[tmp_dir_path_len - 1] == L'/' || tmp_dir_path[tmp_dir_path_len - 1] == L'\\');
+	ff_arch_misc_create_unique_file_file_path(tmp_dir_path, tmp_dir_path_len, BLOB_FILENAME_PREFIX, BLOB_FILENAME_PREFIX_LEN, &file_path, &file_path_len);
+	ff_assert(file_path != NULL);
 
-	return file_path;
+	tmp_file_path = ff_string_create_from_cstr(file_path, file_path_len);
+
+	return tmp_file_path;
 }
 
 static struct mrpc_blob *create_blob(int size)
