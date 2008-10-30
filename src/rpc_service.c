@@ -32,7 +32,7 @@ REQUEST_PARAMS ::= "request" "{" PARAMS_LIST "}"
 RESPONSE_PARAMS ::= "response" "{" PARAMS_LIST "}"
 PARAMS_LIST ::= PARAM { PARAM }
 PARAM ::= TYPE id
-TYPE ::= "uint32" | "uint64" | "int32" | "int64" | "string" | "blob"
+TYPE ::= "uint32" | "uint64" | "int32" | "int64" | "wchar_array" | "char_array" | "blob"
 
 id = [a-z_][a-z_\d]*
 
