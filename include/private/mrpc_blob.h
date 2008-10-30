@@ -3,7 +3,6 @@
 
 #include "private/mrpc_common.h"
 #include "ff/ff_stream.h"
-#include "ff/ff_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,7 +50,7 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
  * and no open streams.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-enum ff_result mrpc_blob_move(struct mrpc_blob *blob, struct ff_string *new_file_path);
+enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *new_file_path);
 
 #ifdef __cplusplus
 }

@@ -2,7 +2,6 @@
 
 #include "private/mrpc_blob.h"
 #include "ff/ff_stream.h"
-#include "ff/ff_string.h"
 #include "ff/ff_file.h"
 #include "ff/ff_log.h"
 #include "ff/arch/ff_arch_misc.h"
@@ -19,7 +18,7 @@ enum blob_state
 
 struct mrpc_blob
 {
-	struct ff_string *file_path;
+	const wchar_t *file_path;
 	int ref_cnt;
 	int size;
 	enum blob_state state;
@@ -121,11 +120,11 @@ static const struct ff_stream_vtable blob_stream_vtable =
 	disconnect_blob_stream
 };
 
-static struct ff_string *create_temporary_file_path()
+static const wchar_t *create_temporary_file_path()
 {
-	struct ff_string *tmp_file_path;
 	const wchar_t *tmp_dir_path;
 	const wchar_t *file_path;
+	const wchar_t *tmp_file_path;
 	int tmp_dir_path_len;
 	int file_path_len;
 
@@ -133,10 +132,12 @@ static struct ff_string *create_temporary_file_path()
 	ff_assert(tmp_dir_path != NULL);
 	ff_assert(tmp_dir_path[tmp_dir_path_len] == 0);
 	ff_assert(tmp_dir_path[tmp_dir_path_len - 1] == L'/' || tmp_dir_path[tmp_dir_path_len - 1] == L'\\');
-	ff_arch_misc_create_unique_file_file_path(tmp_dir_path, tmp_dir_path_len, BLOB_FILENAME_PREFIX, BLOB_FILENAME_PREFIX_LEN, &file_path, &file_path_len);
+	ff_arch_misc_create_unique_file_path(tmp_dir_path, tmp_dir_path_len, BLOB_FILENAME_PREFIX, BLOB_FILENAME_PREFIX_LEN, &file_path, &file_path_len);
 	ff_assert(file_path != NULL);
 
-	tmp_file_path = ff_string_create_from_cstr(file_path, file_path_len);
+	tmp_file_path = (wchar_t *) ff_calloc(file_path_len + 1, sizeof(tmp_file_path[0]));
+	memcpy(tmp_file_path, file_path, file_path_len * sizeof(file_path[0]));
+	ff_arch_misc_delete_unique_file_path(file_path);
 
 	return tmp_file_path;
 }
@@ -161,18 +162,16 @@ static void delete_blob(struct mrpc_blob *blob)
 
 	if (blob->state != BLOB_EMPTY)
 	{
-		const wchar_t *file_path_cstr;
 		enum ff_result result;
 
-		file_path_cstr = ff_string_get_cstr(blob->file_path);
-		result = ff_file_erase(file_path_cstr);
+		result = ff_file_erase(blob->file_path);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_warning(L"cannot delete the blob backing file [%ls]", file_path_cstr);
+			ff_log_warning(L"cannot delete the blob backing file [%ls]", blob->file_path);
 		}
 	}
 
-	ff_string_dec_ref(blob->file_path);
+	ff_free(blob->file_path);
 	ff_free(blob);
 }
 
@@ -215,16 +214,14 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
 	struct ff_stream *stream = NULL;
 	struct blob_stream_data *data;
 	struct ff_file *file;
-	const wchar_t *file_path_cstr;
 
-	file_path_cstr = ff_string_get_cstr(blob->file_path);
 	if (mode == MRPC_BLOB_READ)
 	{
 		ff_assert(blob->state == BLOB_COMPLETE);
-		file = ff_file_open(file_path_cstr, FF_FILE_READ);
+		file = ff_file_open(blob->file_path, FF_FILE_READ);
 		if (file == NULL)
 		{
-			ff_log_warning(L"cannot open the blob backing file [%ls] for reading", file_path_cstr);
+			ff_log_warning(L"cannot open the blob backing file [%ls] for reading", blob->file_path);
 			goto end;
 		}
 	}
@@ -232,10 +229,10 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
 	{
 		ff_assert(mode == MRPC_BLOB_WRITE);
 		ff_assert(blob->state == BLOB_EMPTY);
-		file = ff_file_open(file_path_cstr, FF_FILE_WRITE);
+		file = ff_file_open(blob->file_path, FF_FILE_WRITE);
 		if (file == NULL)
 		{
-			ff_log_warning(L"cannot open the blob backing file [%ls] for writing", file_path_cstr);
+			ff_log_warning(L"cannot open the blob backing file [%ls] for writing", blob->file_path);
 			goto end;
 		}
 		blob->state = BLOB_INCOMPLETE;
@@ -254,23 +251,22 @@ end:
 	return stream;
 }
 
-enum ff_result mrpc_blob_move(struct mrpc_blob *blob, struct ff_string *new_file_path)
+enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *new_file_path)
 {
-	const wchar_t *src_path;
-	const wchar_t *dst_path;
 	enum ff_result result;
 
 	ff_assert(blob->state == BLOB_COMPLETE);
 	ff_assert(blob->ref_cnt == 1);
 
-	src_path = ff_string_get_cstr(blob->file_path);
-	dst_path = ff_string_get_cstr(new_file_path);
-	result = ff_file_move(src_path, dst_path);
+	result = ff_file_move(blob->file_path, new_file_path);
 	if (result == FF_SUCCESS)
 	{
-		ff_string_dec_ref(blob->file_path);
-		blob->file_path = dst_filename;
-		ff_string_inc_ref(dst_filename);
+		int new_file_path_len;
+
+		ff_free(blob->file_path);
+		new_file_path_len = wcslen(new_file_path);
+		blob->file_path = (wchar_t *) ff_calloc(new_file_path_len + 1, sizeof(blob->file_path[0]));
+		memcpy(blob->file_path, new_file_path, new_file_path_len * sizeof(new_file_path[0]));
 	}
 	else
 	{
