@@ -6,6 +6,7 @@
 #include "ff/ff_stream.h"
 #include "ff/ff_event.h"
 #include "ff/ff_core.h"
+#include "ff/ff_log.h"
 
 #define RECONNECT_TIMEOUT 100
 #define MAX_RPC_TRIES_CNT 3
@@ -24,9 +25,13 @@ static void main_client_func(void *ctx)
 	struct mrpc_client *client;
 
 	client = (struct mrpc_client *) ctx;
+
+	ff_assert(client->stream_connector != NULL);
+
 	for (;;)
 	{
 		struct ff_stream *stream;
+		enum ff_result result;
 
 		stream = ff_stream_connector_connect(client->stream_connector);
 		if (stream != NULL)
@@ -75,7 +80,6 @@ void mrpc_client_delete(struct mrpc_client *client)
 void mrpc_client_start(struct mrpc_client *client, struct ff_stream_connector *stream_connector)
 {
 	ff_assert(client->stream_connector == NULL);
-
 	ff_assert(stream_connector != NULL);
 
 	client->stream_connector = stream_connector;
