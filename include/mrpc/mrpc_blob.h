@@ -69,6 +69,8 @@ MRPC_API struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mr
  * Moves the given blob from the current path to the new_file_path path.
  * This function should be called only if the blob has a single reference,
  * and has no open streams.
+ * Usually this function is called just after the blob was filled with content in order
+ * to move the blob contents from temporary file into the well-known file.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
 MRPC_API enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *new_file_path);
