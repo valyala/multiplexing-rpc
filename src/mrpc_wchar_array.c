@@ -10,6 +10,21 @@ struct mrpc_wchar_array
 	int ref_cnt;
 };
 
+static struct mrpc_wchar_array *create_wchar_array(const wchar_t *value, int len)
+{
+	struct mrpc_wchar_array *wchar_array;
+
+	ff_assert(len >= 0);
+	ff_assert(value != NULL);
+
+	wchar_array = (struct mrpc_wchar_array *) ff_malloc(sizeof(*wchar_array));
+	wchar_array->value = value;
+	wchar_array->len = len;
+	wchar_array->ref_cnt = 1;
+
+	return wchar_array;
+}
+
 static void delete_wchar_array(struct mrpc_wchar_array *wchar_array)
 {
 	ff_free(wchar_array->value);
@@ -23,10 +38,7 @@ struct mrpc_wchar_array *mrpc_wchar_array_create(const wchar_t *value, int len)
 	ff_assert(len >= 0);
 	ff_assert(value != NULL);
 
-	wchar_array = (struct mrpc_wchar_array *) ff_malloc(sizeof(*wchar_array));
-	wchar_array->value = value;
-	wchar_array->len = len;
-	wchar_array->ref_cnt = 1;
+	wchar_array = create_wchar_array(value, len);
 
 	return wchar_array;
 }

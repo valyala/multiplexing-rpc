@@ -10,6 +10,21 @@ struct mrpc_char_array
 	int ref_cnt;
 };
 
+static struct mrpc_char_array *create_char_array(const char *value, int len)
+{
+	struct mrpc_char_array *char_array;
+
+	ff_assert(len >= 0);
+	ff_assert(value != NULL);
+
+	char_array = (struct mrpc_char_array *) ff_malloc(sizeof(*char_array));
+	char_array->value = value;
+	char_array->len = len;
+	char_array->ref_cnt = 1;
+
+	return char_array;
+}
+
 static void delete_char_array(struct mrpc_char_array *char_array)
 {
 	ff_free(char_array->value);
@@ -23,11 +38,7 @@ struct mrpc_char_array *mrpc_char_array_create(const char *value, int len)
 	ff_assert(len >= 0);
 	ff_assert(value != NULL);
 
-	char_array = (struct mrpc_char_array *) ff_malloc(sizeof(*char_array));
-	char_array->value = value;
-	char_array->len = len;
-	char_array->ref_cnt = 1;
-
+	char_array = create_char_array(value, len);
 	return char_array;
 }
 
