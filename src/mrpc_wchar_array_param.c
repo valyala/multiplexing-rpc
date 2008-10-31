@@ -56,6 +56,10 @@ static void get_wchar_array_param_value(struct mrpc_param *param, void **value)
 	wchar_array_param = (struct wchar_array_param *) mrpc_param_get_ctx(param);
 	ff_assert(wchar_array_param->value != NULL);
 	*(struct mrpc_wchar_array **) value = wchar_array_param->value;
+	/* there is no need to call the mrpc_wchar_array_inc_ref() here,
+	 * because the caller should be responsible for doing so
+	 * only is such cases as passing the blob out of the caller's scope.
+	 */
 }
 
 static void set_wchar_array_param_value(struct mrpc_param *param, const void *value)
@@ -64,10 +68,14 @@ static void set_wchar_array_param_value(struct mrpc_param *param, const void *va
 
 	wchar_array_param = (struct wchar_array_param *) mrpc_param_get_ctx(param);
 	ff_assert(wchar_array_param->value == NULL);
+	/* there is no need to call the mrpc_wchar_array_inc_ref() here,
+	 * because the caller should be responsible for doing so
+	 * only is such cases as passing the blob out of the caller's scope.
+	 */
 	wchar_array_param->value = (struct mrpc_wchar_array *) value;
 }
 
-static uint32_t get_wchar_array_param_hash(const struct mrpc_param *param, uint32_t start_value)
+static uint32_t get_wchar_array_param_hash(struct mrpc_param *param, uint32_t start_value)
 {
 	struct wchar_array_param *wchar_array_param;
 	uint32_t hash_value;

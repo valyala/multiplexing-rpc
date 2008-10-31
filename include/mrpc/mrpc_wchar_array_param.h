@@ -7,6 +7,10 @@
 extern "C" {
 #endif
 
+/**
+ * Returns the mrpc_param structure for the mrpc_char_array.
+ * Always returns correct result.
+ */
 MRPC_API struct mrpc_param *mrpc_wchar_array_param_create();
 
 #ifdef __cplusplus

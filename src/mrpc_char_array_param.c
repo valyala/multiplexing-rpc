@@ -56,6 +56,10 @@ static void get_char_array_param_value(struct mrpc_param *param, void **value)
 	char_array_param = (struct char_array_param *) mrpc_param_get_ctx(param);
 	ff_assert(char_array_param->value != NULL);
 	*(struct mrpc_char_array **) value = char_array_param->value;
+	/* there is no need to call the mrpc_char_array_inc_ref() here,
+	 * because the caller should be responsible for doing so
+	 * only is such cases as passing the blob out of the caller's scope.
+	 */
 }
 
 static void set_char_array_param_value(struct mrpc_param *param, const void *value)
@@ -64,10 +68,14 @@ static void set_char_array_param_value(struct mrpc_param *param, const void *val
 
 	char_array_param = (struct char_array_param *) mrpc_param_get_ctx(param);
 	ff_assert(char_array_param->value == NULL);
+	/* there is no need to call the mrpc_char_array_inc_ref() here,
+	 * because the caller should be responsible for doing so
+	 * only is such cases as passing the blob out of the caller's scope.
+	 */
 	char_array_param->value = (struct mrpc_char_array *) value;
 }
 
-static uint32_t get_char_array_param_hash(const struct mrpc_param *param, uint32_t start_value)
+static uint32_t get_char_array_param_hash(struct mrpc_param *param, uint32_t start_value)
 {
 	struct char_array_param *char_array_param;
 	uint32_t hash_value;
