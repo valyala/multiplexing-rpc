@@ -3,6 +3,8 @@
 #include "private/mrpc_client_request_processor.h"
 #include "private/mrpc_packet.h"
 #include "private/mrpc_packet_stream.h"
+#include "private/mrpc_packet_stream_factory.h"
+#include "private/mrpc_data.h"
 #include "ff/ff_stream.h"
 #include "ff/ff_blocking_queue.h"
 
@@ -24,7 +26,7 @@ struct mrpc_client_request_processor *mrpc_client_request_processor_create(mrpc_
 
 	request_processor = (struct mrpc_client_request_processor *) ff_malloc(sizeof(*request_processor));
 	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, acquire_packet_func, release_packet_func, packet_func_ctx);
-	request_processor->stream = mrpc_packet_stream_factory_create_stream(packet_stream);
+	request_processor->stream = mrpc_packet_stream_factory_create_stream(request_processor->packet_stream);
 	request_processor->release_request_id_func = release_request_id_func;
 	request_processor->request_id_func_ctx = request_id_func_ctx;
 	request_processor->request_id = request_id;
