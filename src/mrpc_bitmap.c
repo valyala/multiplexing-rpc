@@ -12,7 +12,6 @@ struct mrpc_bitmap
 struct mrpc_bitmap *mrpc_bitmap_create(int size)
 {
 	struct mrpc_bitmap *bitmap;
-	int uints_size;
 
 	ff_assert(size > 0);
 
