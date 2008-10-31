@@ -10,8 +10,16 @@ extern "C" {
 
 struct mrpc_interface;
 
+/**
+ * Creates a mrpc_interface.
+ * method_constructors must be a NULL-terminated array of method constructors, which implement interface's methods.
+ * Always returns correct result.
+ */
 MRPC_API struct mrpc_interface *mrpc_interface_create(const mrpc_method_constructor *method_constructors);
 
+/**
+ * Deletes the given interface.
+ */
 MRPC_API void mrpc_interface_delete(struct mrpc_interface *interface);
 
 #ifdef __cplusplus

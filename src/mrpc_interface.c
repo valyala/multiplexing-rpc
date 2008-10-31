@@ -1,9 +1,14 @@
 #include "private/mrpc_common.h"
 
 #include "private/mrpc_interface.h"
+#include "private/mrpc_method_factory.h"
 #include "private/mrpc_method.h"
 
-#define MAX_METHODS_CNT (UCHAR_MAX + 1)
+/**
+ * the maximum number of methods in the interface.
+ * This number is limited by 0x100, because method_id field is encoded in one byte in the rpc client-server protocol.
+ */
+#define MAX_METHODS_CNT 0x100
 
 struct mrpc_interface
 {
@@ -34,7 +39,7 @@ struct mrpc_interface *mrpc_interface_create(const mrpc_method_constructor *meth
 
 	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
 	interface->methods_cnt = get_constructors_cnt(method_constructors);
-	interface->methods = (struct mrpc_method **) ff_calloc(methods_cnt, sizeof(methods[0]));
+	interface->methods = (struct mrpc_method **) ff_calloc(interface->methods_cnt, sizeof(interface->methods[0]));
 	for (i = 0; i < interface->methods_cnt; i++)
 	{
 		mrpc_method_constructor method_constructor;
@@ -50,7 +55,7 @@ void mrpc_interface_delete(struct mrpc_interface *interface)
 {
 	int i;
 
-	for (int i = 0; i < interface->methods_cnt; i++)
+	for (i = 0; i < interface->methods_cnt; i++)
 	{
 		struct mrpc_method *method;
 
