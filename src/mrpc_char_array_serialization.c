@@ -13,11 +13,10 @@
  */
 #define MAX_CHAR_ARRAY_SIZE ((1 << 14) - 1)
 
-enum ff_result mrpc_char_array_serialize(const struct mrpc_char_array *char_array, struct ff_stream *stream)
+enum ff_result mrpc_char_array_serialize(struct mrpc_char_array *char_array, struct ff_stream *stream)
 {
-	int i;
 	int len;
-	const wchar_t *value;
+	const char *value;
 	enum ff_result result = FF_FAILURE;
 
 	len = mrpc_char_array_get_len(char_array);
@@ -42,9 +41,8 @@ end:
 
 enum ff_result mrpc_char_array_unserialize(struct mrpc_char_array **char_array, struct ff_stream *stream)
 {
-	uint32_t i;
 	uint32_t u_len;
-	wchar_t *value;
+	char *value;
 	enum ff_result result;
 
 	result = mrpc_uint32_unserialize(&u_len, stream);
@@ -58,7 +56,7 @@ enum ff_result mrpc_char_array_unserialize(struct mrpc_char_array **char_array, 
 		goto end;
 	}
 
-	value = (wchar_t *) ff_calloc(u_len, sizeof(value[0]));
+	value = (char *) ff_calloc(u_len, sizeof(value[0]));
 	result = ff_stream_read(stream, value, (int) u_len);
 	if (result != FF_SUCCESS)
 	{

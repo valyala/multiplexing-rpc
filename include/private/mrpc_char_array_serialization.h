@@ -14,7 +14,7 @@ extern "C" {
  * See maximum length of the char_array, which can be serialized, is in the mrcp_char_array_serialization.c file.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-enum ff_result mrpc_char_array_serialize(const struct mrpc_char_array *char_array, struct ff_stream *stream);
+enum ff_result mrpc_char_array_serialize(struct mrpc_char_array *char_array, struct ff_stream *stream);
 
 /**
  * Unserializes char_array from the stream into the newly allocated char_array.

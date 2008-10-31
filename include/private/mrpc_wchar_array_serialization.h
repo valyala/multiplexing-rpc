@@ -14,7 +14,7 @@ extern "C" {
  * See maximum length of the wchar_array, which can be serialized, is in the mrcp_wchar_array_serialization.c file.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-enum ff_result mrpc_wchar_array_serialize(const struct mrpc_wchar_array *wchar_array, struct ff_stream *stream);
+enum ff_result mrpc_wchar_array_serialize(struct mrpc_wchar_array *wchar_array, struct ff_stream *stream);
 
 /**
  * Unserializes wchar_array from the stream into the newly allocated wchar_array.

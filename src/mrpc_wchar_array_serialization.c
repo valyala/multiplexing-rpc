@@ -13,7 +13,7 @@
  */
 #define MAX_WCHAR_ARRAY_SIZE ((1 << 14) - 1)
 
-enum ff_result mrpc_wchar_array_serialize(const struct mrpc_wchar_array *wchar_array, struct ff_stream *stream)
+enum ff_result mrpc_wchar_array_serialize(struct mrpc_wchar_array *wchar_array, struct ff_stream *stream)
 {
 	int i;
 	int len;
@@ -37,9 +37,9 @@ enum ff_result mrpc_wchar_array_serialize(const struct mrpc_wchar_array *wchar_a
 	for (i = 0; i < len; i++)
 	{
 		uint32_t ch;
-		int len;
 
 		ch = (uint32_t) value[i];
+		ff_assert(ch < 0x10000);
 		result = mrpc_uint32_serialize(ch, stream);
 		if (result != FF_SUCCESS)
 		{
@@ -80,8 +80,12 @@ enum ff_result mrpc_wchar_array_unserialize(struct mrpc_wchar_array **wchar_arra
 			ff_free(value);
 			goto end;
 		}
-		if (ch > WCHAR_MAX)
+		if (ch >= 0x10000)
 		{
+			/* characters with the value higher than or equal to 0x10000
+			 * should be treated as invalid, because they cannot be represented
+			 * on architectures where sizeof(whcar_t) == 2.
+			 */
 			ff_free(value);
 			result = FF_FAILURE;
 			goto end;
