@@ -26,7 +26,7 @@ struct mrpc_blob;
  *   {
  *     write_blob_contents_into_stream(blob_stream, blob_size);
  *     ff_stream_flush(blob_stream);
- *     ff_stream_close(blob_stream);
+ *     ff_stream_delete(blob_stream);
  *     // now the blob is filled with contents and can be opened for contents reading
  *     // or moved to another file using the mrpc_blob_open_stream(blob, MRPC_BLOB_READ)
  *     // and mrpc_blob_move(blob, new_file_path);

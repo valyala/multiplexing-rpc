@@ -12,7 +12,7 @@
  *   blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
  *   write_blob_contents_to_the_stream(blob_stream);
  *   ff_stream_flush(blob_stream);
- *   ff_stream_close(blob_stream);
+ *   ff_stream_delete(blob_stream);
  *
  * then the blob content is written into separate unique file in the temporary directory.
  * The unique file name will start with the BLOB_FILENAME_PREFIX.

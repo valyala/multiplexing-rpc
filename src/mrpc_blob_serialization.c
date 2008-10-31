@@ -26,7 +26,7 @@ enum ff_result mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_strea
 		goto end;
 	}
 	result = ff_stream_copy(blob_stream, stream, blob_len);
-	ff_stream_close(blob_stream);
+	ff_stream_delete(blob_stream);
 
 end:
 	return result;
@@ -60,18 +60,18 @@ enum ff_result mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *
 	result = ff_stream_copy(stream, blob_stream, blob_len);
 	if (result != FF_SUCCESS)
 	{
-		ff_stream_close(blob_stream);
+		ff_stream_delete(blob_stream);
 		mrpc_blob_dec_ref(new_blob);
 		goto end;
 	}
 	result = ff_stream_flush(blob_stream);
 	if (result != FF_SUCCESS)
 	{
-		ff_stream_close(blob_stream);
+		ff_stream_delete(blob_stream);
 		mrpc_blob_dec_ref(new_blob);
 		goto end;
 	}
-	ff_stream_close(blob_stream);
+	ff_stream_delete(blob_stream);
 	*blob = new_blob;
 
 end:
