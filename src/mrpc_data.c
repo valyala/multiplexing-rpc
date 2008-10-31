@@ -98,6 +98,9 @@ struct mrpc_data *mrpc_data_create(struct mrpc_interface *interface, uint8_t met
 	struct mrpc_data *data;
 
 	data = try_create_mrpc_data(interface, method_id);
+	/* it is expected that the method_id, which was passed to the mrpc_data_create(), is valid,
+	 * so the try_create_mrpc_data() must return non-NULL data.
+	 */
 	ff_assert(data != NULL);
 	return data;
 }
