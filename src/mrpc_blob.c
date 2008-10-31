@@ -30,9 +30,9 @@ enum blob_state
 struct mrpc_blob
 {
 	const wchar_t *file_path;
-	int ref_cnt;
 	int size;
 	enum blob_state state;
+	int ref_cnt;
 };
 
 struct blob_stream_data
@@ -169,9 +169,9 @@ static struct mrpc_blob *create_blob(int size)
 
 	blob = (struct mrpc_blob *) ff_malloc(sizeof(*blob));
 	blob->file_path = create_temporary_file_path();
-	blob->ref_cnt = 1;
 	blob->size = size;
 	blob->state = BLOB_EMPTY;
+	blob->ref_cnt = 1;
 	return blob;
 }
 
