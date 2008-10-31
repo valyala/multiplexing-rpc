@@ -56,7 +56,11 @@ static void get_blob_param_value(struct mrpc_param *param, void **value)
 
 	blob_param = (struct blob_param *) mrpc_param_get_ctx(param);
 	ff_assert(blob_param->value != NULL);
-	*(struct ff_blob **) value = blob_param->value;
+	*(struct mrpc_blob **) value = blob_param->value;
+	/* there is no need to call the mrpc_blob_inc_ref() here,
+	 * because the caller should be responsible for doing so
+	 * only is such cases as passing the blob out of the caller's scope.
+	 */
 }
 
 static void set_blob_param_value(struct mrpc_param *param, const void *value)
@@ -65,33 +69,21 @@ static void set_blob_param_value(struct mrpc_param *param, const void *value)
 
 	blob_param = (struct blob_param *) mrpc_param_get_ctx(param);
 	ff_assert(blob_param->value == NULL);
-	blob_param->value = (struct ff_blob *) value;
+	/* there is no need to call the mrpc_blob_inc_ref() here,
+	 * because the caller should be responsible for doing so
+	 * only in such cases as passing the blob out of the caller's scope.
+	 */
+	blob_param->value = (struct mrpc_blob *) value;
 }
 
-static uint32_t get_blob_param_hash(const struct mrpc_param *param, uint32_t start_value)
+static uint32_t get_blob_param_hash(struct mrpc_param *param, uint32_t start_value)
 {
 	struct blob_param *blob_param;
-	struct ff_stream *stream;
 	uint32_t hash_value;
-	enum ff_result result = FF_FAILURE;
 
 	blob_param = (struct blob_param *) mrpc_param_get_ctx(param);
 	ff_assert(blob_param->value != NULL);
-	hash_value = start_value;
-	stream = mrpc_blob_open_stream(blob_param->value, MRPC_BLOB_READ);
-	if (stream != NULL)
-	{
-		int blob_size;
-
-		blob_size = mrpc_blob_get_size(blob_param->value);
-		result = ff_stream_get_hash(stream, blob_size, hash_value, &hash_value);
-		ff_stream_delete(stream);
-	}
-
-	if (result != FF_SUCCESS)
-	{
-		ff_log_warning(L"cannot calculate hash value for the blob. See previous message for details");
-	}
+	hash_value = mrpc_blob_get_hash(blob_param->value, start_value);
 	return hash_value;
 }
 
