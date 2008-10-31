@@ -297,3 +297,25 @@ enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *new_file_pa
 
 	return result;
 }
+
+uint32_t mrpc_blob_get_hash(struct mrpc_blob *blob, uint32_t start_value)
+{
+	struct ff_stream *stream;
+	uint32_t hash_value;
+	enum ff_result result = FF_FAILURE;
+
+	ff_assert(blob->state == BLOB_COMPLETE);
+
+	hash_value = start_value;
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	if (stream != NULL)
+	{
+		result = ff_stream_get_hash(stream, blob->size, start_value, &hash_value);
+		ff_stream_delete(stream);
+	}
+	if (result != FF_SUCCESS)
+	{
+		ff_log_warning(L"cannot calculate hash value for the blob. See previous message for details");
+	}
+	return hash_value;
+}
