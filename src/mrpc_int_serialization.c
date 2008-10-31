@@ -72,22 +72,27 @@ enum ff_result mrpc_int64_serialize(int64_t data, struct ff_stream *stream)
 	uint64_t u_data;
 	enum ff_result result;
 
+	/* such an encoding allows to minimize the size of serialized signed integers
+	 * See ZigZag encoding on the http://code.google.com/apis/protocolbuffers/docs/encoding.html for reference.
+	 */
 	u_data = (data << 1) ^ (data >> 63);
-	result = uint64_serialize(u_data, stream);
+	result = mrpc_uint64_serialize(u_data, stream);
 
 	return result;
 }
 
 enum ff_result mrpc_int64_unserialize(int64_t *data, struct ff_stream *stream)
 {
+	uint64_t u_data;
 	enum ff_result result;
 
-	result = uint64_unserialize(&u_data, stream);
+	result = mrpc_uint64_unserialize(&u_data, stream);
 	if (result == FF_SUCCESS)
 	{
-		uint64_t u_data;
-
-		u_data = (u_data >> 1) ^ (-(u_data & 0x01));
+		/* such an encoding allows to minimize the size of serialized signed integers
+		* See ZigZag encoding on the http://code.google.com/apis/protocolbuffers/docs/encoding.html for reference.
+		*/
+		u_data = (u_data >> 1) ^ (-((int64_t)(u_data & 0x01)));
 		*data = (int64_t) u_data;
 	}
 
@@ -105,9 +110,9 @@ enum ff_result mrpc_uint32_serialize(uint32_t data, struct ff_stream *stream)
 enum ff_result mrpc_uint32_unserialize(uint32_t *data, struct ff_stream *stream)
 {
 	enum ff_result result;
-	uint64_t u64_data;
+	uint64_t u_data;
 
-	result = mrpc_uint64_unserialize(&u64_data, stream);
+	result = mrpc_uint64_unserialize(&u_data, stream);
 	if (result == FF_SUCCESS)
 	{
 		if (u_data < MAX_UINT32_VALUE)
@@ -127,22 +132,27 @@ enum ff_result mrpc_int32_serialize(int32_t data, struct ff_stream *stream)
 	uint32_t u_data;
 	enum ff_result result;
 
+	/* such an encoding allows to minimize the size of serialized signed integers
+	 * See ZigZag encoding on the http://code.google.com/apis/protocolbuffers/docs/encoding.html for reference.
+	 */
 	u_data = (data << 1) ^ (data >> 31);
-	result = uint32_serialize(u_data, stream);
+	result = mrpc_uint32_serialize(u_data, stream);
 
 	return result;
 }
 
 enum ff_result mrpc_int32_unserialize(int32_t *data, struct ff_stream *stream)
 {
+	uint32_t u_data;
 	enum ff_result result;
 
-	result = uint32_unserialize(&u_data, stream);
+	result = mrpc_uint32_unserialize(&u_data, stream);
 	if (result == FF_SUCCESS)
 	{
-		uint32_t u_data;
-
-		u_data = (u_data >> 1) ^ (-(u_data & 0x01));
+		/* such an encoding allows to minimize the size of serialized signed integers
+		* See ZigZag encoding on the http://code.google.com/apis/protocolbuffers/docs/encoding.html for reference.
+		*/
+		u_data = (u_data >> 1) ^ (-(int32_t)((u_data & 0x01)));
 		*data = (int32_t) u_data;
 	}
 
