@@ -6,6 +6,17 @@
 #include "ff/ff_log.h"
 #include "ff/arch/ff_arch_misc.h"
 
+/**
+ * when the blob is created using the following sequence:
+ *
+ *   blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
+ *   write_blob_contents_to_the_stream(blob_stream);
+ *   ff_stream_flush(blob_stream);
+ *   ff_stream_close(blob_stream);
+ *
+ * then the blob content is written into separate unique file in the temporary directory.
+ * The unique file name will start with the BLOB_FILENAME_PREFIX.
+ */
 #define BLOB_FILENAME_PREFIX L"blob."
 #define BLOB_FILENAME_PREFIX_LEN (sizeof(BLOB_FILENAME_PREFIX) / sizeof(BLOB_FILENAME_PREFIX[0]))
 
@@ -61,7 +72,10 @@ static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf,
 	if (len <= bytes_left)
 	{
 		result = ff_file_read(data->file, buf, len);
-		data->curr_pos += len;
+		if (result == FF_SUCCESS)
+		{
+			data->curr_pos += len;
+		}
 	}
 	return result;
 }
@@ -69,6 +83,7 @@ static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf,
 static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void *buf, int len)
 {
 	struct blob_stream_data *data;
+	int bytes_left;
 	enum ff_result result = FF_FAILURE;
 
 	ff_assert(len >= 0);
@@ -83,11 +98,14 @@ static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void 
 	if (len <= bytes_left)
 	{
 		result = ff_file_write(data->file, buf, len);
-		data->curr_pos += len;
-	}
-	if (data->curr_pos == data->blob->size)
-	{
-		data->blob->state = BLOB_COMPLETE;
+		if (result == FF_SUCCESS)
+		{
+			data->curr_pos += len;
+			if (data->curr_pos == data->blob->size)
+			{
+				data->blob->state = BLOB_COMPLETE;
+			}
+		}
 	}
 	return result;
 }
@@ -97,10 +115,10 @@ static enum ff_result flush_blob_stream(struct ff_stream *stream)
 	struct blob_stream_data *data;
 	enum ff_result result;
 
-	data = (struct blob_stream_data *) ff_stream_get_cts(stream);
+	data = (struct blob_stream_data *) ff_stream_get_ctx(stream);
 
 	ff_assert(data->mode == MRPC_BLOB_WRITE);
-	ff_assert(data->blob->state == BLOB_INCOMPLETE);
+	ff_assert(data->blob->state != BLOB_EMPTY);
 	result = ff_file_flush(data->file);
 	return result;
 }
@@ -124,7 +142,7 @@ static const wchar_t *create_temporary_file_path()
 {
 	const wchar_t *tmp_dir_path;
 	const wchar_t *file_path;
-	const wchar_t *tmp_file_path;
+	wchar_t *tmp_file_path;
 	int tmp_dir_path_len;
 	int file_path_len;
 
@@ -132,7 +150,8 @@ static const wchar_t *create_temporary_file_path()
 	ff_assert(tmp_dir_path != NULL);
 	ff_assert(tmp_dir_path[tmp_dir_path_len] == 0);
 	ff_assert(tmp_dir_path[tmp_dir_path_len - 1] == L'/' || tmp_dir_path[tmp_dir_path_len - 1] == L'\\');
-	ff_arch_misc_create_unique_file_path(tmp_dir_path, tmp_dir_path_len, BLOB_FILENAME_PREFIX, BLOB_FILENAME_PREFIX_LEN, &file_path, &file_path_len);
+	ff_arch_misc_create_unique_file_path(tmp_dir_path, tmp_dir_path_len,
+		BLOB_FILENAME_PREFIX, BLOB_FILENAME_PREFIX_LEN, &file_path, &file_path_len);
 	ff_assert(file_path != NULL);
 
 	tmp_file_path = (wchar_t *) ff_calloc(file_path_len + 1, sizeof(tmp_file_path[0]));
@@ -158,20 +177,18 @@ static struct mrpc_blob *create_blob(int size)
 
 static void delete_blob(struct mrpc_blob *blob)
 {
+	enum ff_result result;
+
 	ff_assert(blob->ref_cnt == 0);
+	ff_assert(blob->state != BLOB_EMPTY);
 
-	if (blob->state != BLOB_EMPTY)
+	result = ff_file_erase(blob->file_path);
+	if (result != FF_SUCCESS)
 	{
-		enum ff_result result;
-
-		result = ff_file_erase(blob->file_path);
-		if (result != FF_SUCCESS)
-		{
-			ff_log_warning(L"cannot delete the blob backing file [%ls]", blob->file_path);
-		}
+		ff_log_warning(L"cannot delete the blob backing file [%ls]", blob->file_path);
 	}
 
-	ff_free(blob->file_path);
+	ff_free((void *) blob->file_path);
 	ff_free(blob);
 }
 
@@ -187,7 +204,6 @@ struct mrpc_blob *mrpc_blob_create(int size)
 
 void mrpc_blob_inc_ref(struct mrpc_blob *blob)
 {
-	ff_assert(blob->ref_cnt > 0);
 	blob->ref_cnt++;
 	ff_assert(blob->ref_cnt > 0);
 }
@@ -204,6 +220,7 @@ void mrpc_blob_dec_ref(struct mrpc_blob *blob)
 
 int mrpc_blob_get_size(struct mrpc_blob *blob)
 {
+	ff_assert(blob->ref_cnt > 0);
 	ff_assert(blob->size >= 0);
 
 	return blob->size;
@@ -214,6 +231,8 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
 	struct ff_stream *stream = NULL;
 	struct blob_stream_data *data;
 	struct ff_file *file;
+
+	ff_assert(blob->ref_cnt > 0);
 
 	if (mode == MRPC_BLOB_READ)
 	{
@@ -228,6 +247,7 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
 	else
 	{
 		ff_assert(mode == MRPC_BLOB_WRITE);
+		ff_assert(blob->ref_cnt == 1);
 		ff_assert(blob->state == BLOB_EMPTY);
 		file = ff_file_open(blob->file_path, FF_FILE_WRITE);
 		if (file == NULL)
@@ -261,16 +281,18 @@ enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *new_file_pa
 	result = ff_file_move(blob->file_path, new_file_path);
 	if (result == FF_SUCCESS)
 	{
+		wchar_t *buf;
 		int new_file_path_len;
 
-		ff_free(blob->file_path);
+		ff_free((void *) blob->file_path);
 		new_file_path_len = wcslen(new_file_path);
-		blob->file_path = (wchar_t *) ff_calloc(new_file_path_len + 1, sizeof(blob->file_path[0]));
-		memcpy(blob->file_path, new_file_path, new_file_path_len * sizeof(new_file_path[0]));
+		buf = (wchar_t *) ff_calloc(new_file_path_len + 1, sizeof(blob->file_path[0]));
+		memcpy(buf, new_file_path, new_file_path_len * sizeof(new_file_path[0]));
+		blob->file_path = buf;
 	}
 	else
 	{
-		ff_log_warning(L"cannot move the blob backing file from the [%ls] to the [%ls]", src_path, dst_path);
+		ff_log_warning(L"cannot move the blob backing file from the [%ls] to the [%ls]", blob->file_path, new_file_path);
 	}
 
 	return result;
