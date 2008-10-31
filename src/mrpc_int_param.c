@@ -4,6 +4,7 @@
 #include "private/mrpc_param.h"
 #include "private/mrpc_int_serialization.h"
 #include "ff/ff_stream.h"
+#include "ff/ff_hash.h"
 
 struct uint64_param
 {
@@ -56,7 +57,7 @@ static void set_uint64_param_value(struct mrpc_param *param, const void *value)
 	uint64_param->value = *(uint64_t *) value;
 }
 
-static uint32_t get_uint64_param_hash(const struct mrpc_param *param, uint32_t start_value)
+static uint32_t get_uint64_param_hash(struct mrpc_param *param, uint32_t start_value)
 {
 	struct uint64_param *uint64_param;
 	uint32_t hash_value;
@@ -76,7 +77,7 @@ static const struct mrpc_param_vtable uint64_param_vtable =
 	write_uint64_param_to_stream,
 	get_uint64_param_value,
 	set_uint64_param_value,
-	get_uin64_param_hash
+	get_uint64_param_hash
 };
 
 struct mrpc_param *mrpc_uint64_param_create()
@@ -84,7 +85,7 @@ struct mrpc_param *mrpc_uint64_param_create()
 	struct mrpc_param *param;
 	struct uint64_param *uint64_param;
 
-	uint64_param = (struct uint64_param *) ff_malloc(sizeof(*param));
+	uint64_param = (struct uint64_param *) ff_malloc(sizeof(*uint64_param));
 	uint64_param->value = 0;
 
 	param = mrpc_param_create(&uint64_param_vtable, uint64_param);
@@ -143,7 +144,7 @@ static void set_int64_param_value(struct mrpc_param *param, const void *value)
 	int64_param->value = *(int64_t *) value;
 }
 
-static uint32_t get_int64_param_hash(const struct mrpc_param *param, uint32_t start_value)
+static uint32_t get_int64_param_hash(struct mrpc_param *param, uint32_t start_value)
 {
 	struct int64_param *int64_param;
 	uint32_t hash_value;
@@ -163,7 +164,7 @@ static const struct mrpc_param_vtable int64_param_vtable =
 	write_int64_param_to_stream,
 	get_int64_param_value,
 	set_int64_param_value,
-	get_uin64_param_hash
+	get_uint64_param_hash
 };
 
 struct mrpc_param *mrpc_int64_param_create()
@@ -171,7 +172,7 @@ struct mrpc_param *mrpc_int64_param_create()
 	struct mrpc_param *param;
 	struct int64_param *int64_param;
 
-	int64_param = (struct int64_param *) ff_malloc(sizeof(*param));
+	int64_param = (struct int64_param *) ff_malloc(sizeof(*int64_param));
 	int64_param->value = 0;
 
 	param = mrpc_param_create(&int64_param_vtable, int64_param);
@@ -230,7 +231,7 @@ static void set_uint32_param_value(struct mrpc_param *param, const void *value)
 	uint32_param->value = *(uint32_t *) value;
 }
 
-static uint32_t get_uint32_param_hash(const struct mrpc_param *param, uint32_t start_value)
+static uint32_t get_uint32_param_hash(struct mrpc_param *param, uint32_t start_value)
 {
 	struct uint32_param *uint32_param;
 	uint32_t hash_value;
@@ -247,7 +248,7 @@ static const struct mrpc_param_vtable uint32_param_vtable =
 	write_uint32_param_to_stream,
 	get_uint32_param_value,
 	set_uint32_param_value,
-	get_uin32_param_hash
+	get_uint32_param_hash
 };
 
 struct mrpc_param *mrpc_uint32_param_create()
@@ -255,7 +256,7 @@ struct mrpc_param *mrpc_uint32_param_create()
 	struct mrpc_param *param;
 	struct uint32_param *uint32_param;
 
-	uint32_param = (struct uint32_param *) ff_malloc(sizeof(*param));
+	uint32_param = (struct uint32_param *) ff_malloc(sizeof(*uint32_param));
 	uint32_param->value = 0;
 
 	param = mrpc_param_create(&uint32_param_vtable, uint32_param);
@@ -314,7 +315,7 @@ static void set_int32_param_value(struct mrpc_param *param, const void *value)
 	int32_param->value = *(int32_t *) value;
 }
 
-static uint32_t get_int32_param_hash(const struct mrpc_param *param, uint32_t start_value)
+static uint32_t get_int32_param_hash(struct mrpc_param *param, uint32_t start_value)
 {
 	struct int32_param *int32_param;
 	uint32_t hash_value;
@@ -331,7 +332,7 @@ static const struct mrpc_param_vtable int32_param_vtable =
 	write_int32_param_to_stream,
 	get_int32_param_value,
 	set_int32_param_value,
-	get_uin32_param_hash
+	get_uint32_param_hash
 };
 
 struct mrpc_param *mrpc_int32_param_create()
@@ -339,7 +340,7 @@ struct mrpc_param *mrpc_int32_param_create()
 	struct mrpc_param *param;
 	struct int32_param *int32_param;
 
-	int32_param = (struct int32_param *) ff_malloc(sizeof(*param));
+	int32_param = (struct int32_param *) ff_malloc(sizeof(*int32_param));
 	int32_param->value = 0;
 
 	param = mrpc_param_create(&int32_param_vtable, int32_param);
