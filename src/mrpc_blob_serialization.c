@@ -5,7 +5,7 @@
 #include "private/mrpc_blob.h"
 #include "ff/ff_stream.h"
 
-enum ff_result mrpc_blob_serialize(const struct mrpc_blob *blob, struct ff_stream *stream)
+enum ff_result mrpc_blob_serialize(struct mrpc_blob *blob, struct ff_stream *stream)
 {
 	int blob_len;
 	struct ff_stream *blob_stream;
@@ -35,7 +35,7 @@ end:
 enum ff_result mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream)
 {
 	int blob_len;
-	struct blob *new_blob;
+	struct mrpc_blob *new_blob;
 	struct ff_stream *blob_stream;
 	enum ff_result result;
 
