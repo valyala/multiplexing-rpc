@@ -16,8 +16,8 @@ struct mrpc_param_vtable
 {
 	void (*delete)(struct mrpc_param *param);
 	enum ff_result (*read_from_stream)(struct mrpc_param *param, struct ff_stream *stream);
-	enum ff_result (*write_to_stream)(const struct mrpc_param *param, struct ff_stream *stream);
-	void (*get_value)(const struct mrpc_param *param, void **value);
+	enum ff_result (*write_to_stream)(struct mrpc_param *param, struct ff_stream *stream);
+	void (*get_value)(struct mrpc_param *param, void **value);
 	void (*set_value)(struct mrpc_param *param, const void *value);
 	uint32_t (*get_hash)(struct mrpc_param *param, uint32_t start_value);
 };

@@ -39,7 +39,7 @@ static enum ff_result read_blob_param_from_stream(struct mrpc_param *param, stru
 	return result;
 }
 
-static enum ff_result write_blob_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_blob_param_to_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct blob_param *blob_param;
 	enum ff_result result;
@@ -50,7 +50,7 @@ static enum ff_result write_blob_param_to_stream(const struct mrpc_param *param,
 	return result;
 }
 
-static void get_blob_param_value(const struct mrpc_param *param, void **value)
+static void get_blob_param_value(struct mrpc_param *param, void **value)
 {
 	struct blob_param *blob_param;
 

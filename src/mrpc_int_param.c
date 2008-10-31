@@ -29,7 +29,7 @@ static enum ff_result read_uint64_param_from_stream(struct mrpc_param *param, st
 	return result;
 }
 
-static enum ff_result write_uint64_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_uint64_param_to_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct uint64_param *uint64_param;
 	enum ff_result result;
@@ -39,7 +39,7 @@ static enum ff_result write_uint64_param_to_stream(const struct mrpc_param *para
 	return result;
 }
 
-static void get_uint64_param_value(const struct mrpc_param *param, void **value)
+static void get_uint64_param_value(struct mrpc_param *param, void **value)
 {
 	struct uint64_param *uint64_param;
 
@@ -116,7 +116,7 @@ static enum ff_result read_int64_param_from_stream(struct mrpc_param *param, str
 	return result;
 }
 
-static enum ff_result write_int64_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_int64_param_to_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct int64_param *int64_param;
 	enum ff_result result;
@@ -126,7 +126,7 @@ static enum ff_result write_int64_param_to_stream(const struct mrpc_param *param
 	return result;
 }
 
-static void get_int64_param_value(const struct mrpc_param *param, void **value)
+static void get_int64_param_value(struct mrpc_param *param, void **value)
 {
 	struct int64_param *int64_param;
 
@@ -203,7 +203,7 @@ static enum ff_result read_uint32_param_from_stream(struct mrpc_param *param, st
 	return result;
 }
 
-static enum ff_result write_uint32_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_uint32_param_to_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct uint32_param *uint32_param;
 	enum ff_result result;
@@ -213,7 +213,7 @@ static enum ff_result write_uint32_param_to_stream(const struct mrpc_param *para
 	return result;
 }
 
-static void get_uint32_param_value(const struct mrpc_param *param, void **value)
+static void get_uint32_param_value(struct mrpc_param *param, void **value)
 {
 	struct uint32_param *uint32_param;
 
@@ -287,7 +287,7 @@ static enum ff_result read_int32_param_from_stream(struct mrpc_param *param, str
 	return result;
 }
 
-static enum ff_result write_int32_param_to_stream(const struct mrpc_param *param, struct ff_stream *stream)
+static enum ff_result write_int32_param_to_stream(struct mrpc_param *param, struct ff_stream *stream)
 {
 	struct int32_param *int32_param;
 	enum ff_result result;
@@ -297,7 +297,7 @@ static enum ff_result write_int32_param_to_stream(const struct mrpc_param *param
 	return result;
 }
 
-static void get_int32_param_value(const struct mrpc_param *param, void **value)
+static void get_int32_param_value(struct mrpc_param *param, void **value)
 {
 	struct int32_param *int32_param;
 
