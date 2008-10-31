@@ -27,7 +27,9 @@ static struct mrpc_wchar_array *create_wchar_array(const wchar_t *value, int len
 
 static void delete_wchar_array(struct mrpc_wchar_array *wchar_array)
 {
-	ff_free(wchar_array->value);
+	ff_assert(wchar_array->ref_cnt == 0);
+
+	ff_free((void *) wchar_array->value);
 	ff_free(wchar_array);
 }
 
@@ -39,7 +41,6 @@ struct mrpc_wchar_array *mrpc_wchar_array_create(const wchar_t *value, int len)
 	ff_assert(value != NULL);
 
 	wchar_array = create_wchar_array(value, len);
-
 	return wchar_array;
 }
 
@@ -61,11 +62,15 @@ void mrpc_wchar_array_dec_ref(struct mrpc_wchar_array *wchar_array)
 
 const wchar_t *mrpc_wchar_array_get_value(struct mrpc_wchar_array *wchar_array)
 {
+	ff_assert(wchar_array->ref_cnt > 0);
+
 	return wchar_array->value;
 }
 
 int mrpc_wchar_array_get_len(struct mrpc_wchar_array *wchar_array)
 {
+	ff_assert(wchar_array->ref_cnt > 0);
+
 	return wchar_array->len;
 }
 
@@ -73,10 +78,16 @@ uint32_t mrpc_wchar_array_get_hash(struct mrpc_wchar_array *wchar_array, uint32_
 {
 	uint32_t hash_value;
 
+	ff_assert(wchar_array->ref_cnt > 0);
+
 	if (sizeof(wchar_t) == 4)
 	{
 		uint16_t *buf;
+		int i;
 
+		/* this code is required for receiving the same hash value for the
+		 * wchar_array as on the architectures where sizeof(wchar_t) == 2.
+		 */
 		buf = (uint16_t *) ff_calloc(wchar_array->len, sizeof(buf[0]));
 		for (i = 0; i < wchar_array->len; i++)
 		{

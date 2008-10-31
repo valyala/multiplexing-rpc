@@ -27,7 +27,9 @@ static struct mrpc_char_array *create_char_array(const char *value, int len)
 
 static void delete_char_array(struct mrpc_char_array *char_array)
 {
-	ff_free(char_array->value);
+	ff_assert(char_array->ref_cnt == 0);
+
+	ff_free((void *) char_array->value);
 	ff_free(char_array);
 }
 
@@ -60,11 +62,15 @@ void mrpc_char_array_dec_ref(struct mrpc_char_array *char_array)
 
 const char *mrpc_char_array_get_value(struct mrpc_char_array *char_array)
 {
+	ff_assert(char_array->ref_cnt > 0);
+
 	return char_array->value;
 }
 
 int mrpc_char_array_get_len(struct mrpc_char_array *char_array)
 {
+	ff_assert(char_array->ref_cnt > 0);
+
 	return char_array->len;
 }
 
@@ -72,6 +78,8 @@ uint32_t mrpc_char_array_get_hash(struct mrpc_char_array *char_array, uint32_t s
 {
 	uint32_t hash_value;
 
-	hash_vlaue = ff_hash_uint8(start_value, char_array->value, char_array->len);
+	ff_assert(char_array->ref_cnt > 0);
+
+	hash_value = ff_hash_uint8(start_value, char_array->value, char_array->len);
 	return hash_value;
 }
