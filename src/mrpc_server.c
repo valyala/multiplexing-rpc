@@ -7,7 +7,7 @@
 #include "ff/ff_pool.h"
 #include "ff/ff_core.h"
 
-#define MAX_STREAM_PROCESSORS_CNT (UCHAR_MAX + 1)
+#define MAX_STREAM_PROCESSORS_CNT 0x100
 
 struct mrpc_server
 {

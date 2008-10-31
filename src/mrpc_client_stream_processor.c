@@ -17,7 +17,7 @@
  * and is used for association with the corresponding asynchronous response.
  * So there are 0x100 maximum request processors can be invoked in parallel.
  */
-#define MAX_REQUEST_PROCESSORS_CNT (UCHAR_MAX + 1)
+#define MAX_REQUEST_PROCESSORS_CNT 0x100
 
 /**
  * the maximum number of mrpc_packet packets pending in the writer queue.
