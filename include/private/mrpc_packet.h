@@ -20,6 +20,7 @@ struct mrpc_packet;
 
 /**
  * Creates a packet.
+ * Always returns correct result.
  */
 struct mrpc_packet *mrpc_packet_create();
 
