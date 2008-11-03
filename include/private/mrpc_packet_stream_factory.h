@@ -9,6 +9,10 @@
 extern "C" {
 #endif
 
+/**
+ * Creates the ff_stream wrapper for the mrpc_packet_stream.
+ * Always returns correct result.
+ */
 struct ff_stream *mrpc_packet_stream_factory_create_stream(struct mrpc_packet_stream *packet_stream);
 
 #ifdef __cplusplus

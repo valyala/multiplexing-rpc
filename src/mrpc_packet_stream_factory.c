@@ -8,7 +8,7 @@ static void delete_packet_stream(struct ff_stream *stream)
 {
 	struct mrpc_packet_stream *packet_stream;
 
-	packet_stream = (struct mrpc_packet_stream *) stream->ctx;
+	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
 	mrpc_packet_stream_delete(packet_stream);
 }
 
@@ -50,7 +50,7 @@ static void disconnect_packet_stream(struct ff_stream *stream)
 {
 	struct mrpc_packet_stream *packet_stream;
 
-	packet_stream = (struct mrpc_packet_stream *) stream->ctx;
+	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
 	mrpc_packet_stream_disconnect(packet_stream);
 }
 
