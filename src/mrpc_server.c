@@ -1,13 +1,20 @@
 #include "private/mrpc_common.h"
 
 #include "private/mrpc_server.h"
+#include "private/mrpc_server_stream_processor.h"
 #include "private/mrpc_interface.h"
 #include "ff/ff_endpoint.h"
 #include "ff/ff_event.h"
 #include "ff/ff_pool.h"
 #include "ff/ff_core.h"
 
-#define MAX_STREAM_PROCESSORS_CNT 0x100
+/**
+ * maximum number of simultaneously working server stream processors.
+ * Actually this is equivalent to the maximum number of distinct connections,
+ * which the server is able to process in parallel.
+ * Value of this parameter was chosen arbitrarly.
+ */
+#define MAX_STREAM_PROCESSORS_CNT 200
 
 struct mrpc_server
 {
@@ -43,10 +50,11 @@ static struct mrpc_server_stream_processor *acquire_stream_processor(struct mrpc
 	struct mrpc_server_stream_processor *stream_processor;
 
 	ff_assert(server->stream_processors_cnt >= 0);
-	ff_assert(server->stream_processors_cnt < MAX_STREAM_PROCESSORS_CNT);
+	ff_assert(server->stream_processors_cnt <= MAX_STREAM_PROCESSORS_CNT);
 
 	stream_processor = (struct mrpc_server_stream_processor *) ff_pool_acquire_entry(server->stream_processors);
 	server->stream_processors_cnt++;
+	ff_assert(server->stream_processors_cnt <= MAX_STREAM_PROCESSORS_CNT);
 	if (server->stream_processors_cnt == 1)
 	{
 		ff_event_reset(server->stream_processors_stop_event);
@@ -61,7 +69,7 @@ static void release_stream_processor(void *ctx, struct mrpc_server_stream_proces
 	server = (struct mrpc_server *) ctx;
 
 	ff_assert(server->stream_processors_cnt > 0);
-	ff_assert(server->stream_processors <= MAX_STREAM_PROCESSORS_CNT);
+	ff_assert(server->stream_processors_cnt <= MAX_STREAM_PROCESSORS_CNT);
 
 	ff_pool_release_entry(server->stream_processors, stream_processor);
 	server->stream_processors_cnt--;
