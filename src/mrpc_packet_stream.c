@@ -4,8 +4,24 @@
 #include "private/mrpc_packet.h"
 #include "ff/ff_blocking_queue.h"
 
+/**
+ * the maximum size of mrpc_packet packets pending in the reader_queue.
+ * these packets are consumed by the mrpc_packet_stream_read() function.
+ * TODO: determine optimal value for this parameter.
+ */
 #define MAX_READER_QUEUE_SIZE 100
+
+/**
+ * Timeout (in milliseconds) for the mrpc_packet_stream_read() function.
+ * TODO: determine optimal value for this parameter.
+ */
 #define READ_TIMEOUT 2000
+
+/**
+ * Timeout (in milliseconds) for the mrpc_packet_stream_write() and
+ * mrpc_packet_stream_flush() functions.
+ * TODO: determine optimal value for this parameter.
+ */
 #define WRITE_TIMEOUT 2000
 
 struct mrpc_packet_stream
@@ -53,7 +69,7 @@ static enum ff_result prefetch_current_read_packet(struct mrpc_packet_stream *st
 		{
 			release_packet(stream, stream->current_read_packet);
 			stream->current_read_packet = NULL;
-			result = FF_FAILURE
+			result = FF_FAILURE;
 		}
 	}
 	else
@@ -261,9 +277,9 @@ enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const
 	{
 		int bytes_written;
 
-		bytes_written = mrpc_packet_write_data(stream->current_write_packet, p, bytes_to_write);
+		bytes_written = mrpc_packet_write_data(stream->current_write_packet, p, len);
 		ff_assert(bytes_written >= 0);
-		ff_assert(bytes_written <= bytes_to_write);
+		ff_assert(bytes_written <= len);
 		len -= bytes_written;
 		p += bytes_written;
 
@@ -318,7 +334,7 @@ enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 	{
 		release_packet(stream, stream->current_write_packet);
 	}
-	stream->current_write_packet = acqiure_packet(stream, MRPC_PACKET_END);
+	stream->current_write_packet = acquire_packet(stream, MRPC_PACKET_END);
 
 end:
 	return result;
