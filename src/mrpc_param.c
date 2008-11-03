@@ -15,6 +15,8 @@ struct mrpc_param *mrpc_param_create(const struct mrpc_param_vtable *vtable, voi
 	param = (struct mrpc_param *) ff_malloc(sizeof(*param));
 	param->vtable = vtable;
 	param->ctx = ctx;
+
+	return param;
 }
 
 void mrpc_param_delete(struct mrpc_param *param)
@@ -32,7 +34,7 @@ enum ff_result mrpc_param_read_from_stream(struct mrpc_param *param, struct ff_s
 {
 	enum ff_result result;
 
-	result = param->vtable->read_from_stream(param->stream);
+	result = param->vtable->read_from_stream(param, stream);
 	return result;
 }
 
@@ -40,7 +42,7 @@ enum ff_result mrpc_param_write_to_stream(struct mrpc_param *param, struct ff_st
 {
 	enum ff_result result;
 
-	result = param->vtable->write_to_stream(param->stream);
+	result = param->vtable->write_to_stream(param, stream);
 	return result;
 }
 
@@ -58,6 +60,6 @@ uint32_t mrpc_param_get_hash(struct mrpc_param *param, uint32_t start_value)
 {
 	uint32_t hash_value;
 
-	hash_value = param->vtable->get_hash(param);
+	hash_value = param->vtable->get_hash(param, start_value);
 	return hash_value;
 }
