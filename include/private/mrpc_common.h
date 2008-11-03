@@ -3,6 +3,8 @@
 
 #include "mrpc/mrpc_common.h"
 
+#include <string.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
