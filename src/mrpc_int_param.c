@@ -164,7 +164,7 @@ static const struct mrpc_param_vtable int64_param_vtable =
 	write_int64_param_to_stream,
 	get_int64_param_value,
 	set_int64_param_value,
-	get_uint64_param_hash
+	get_int64_param_hash
 };
 
 struct mrpc_param *mrpc_int64_param_create()
@@ -321,7 +321,7 @@ static uint32_t get_int32_param_hash(struct mrpc_param *param, uint32_t start_va
 	uint32_t hash_value;
 
 	int32_param = (struct int32_param *) mrpc_param_get_ctx(param);
-	hash_value = ff_hash_uint32(start_value, &int32_param->value, 1);
+	hash_value = ff_hash_uint32(start_value, (uint32_t *) &int32_param->value, 1);
 	return hash_value;
 }
 
@@ -332,7 +332,7 @@ static const struct mrpc_param_vtable int32_param_vtable =
 	write_int32_param_to_stream,
 	get_int32_param_value,
 	set_int32_param_value,
-	get_uint32_param_hash
+	get_int32_param_hash
 };
 
 struct mrpc_param *mrpc_int32_param_create()

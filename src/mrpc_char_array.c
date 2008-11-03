@@ -80,6 +80,6 @@ uint32_t mrpc_char_array_get_hash(struct mrpc_char_array *char_array, uint32_t s
 
 	ff_assert(char_array->ref_cnt > 0);
 
-	hash_value = ff_hash_uint8(start_value, char_array->value, char_array->len);
+	hash_value = ff_hash_uint8(start_value, (uint8_t *) char_array->value, char_array->len);
 	return hash_value;
 }

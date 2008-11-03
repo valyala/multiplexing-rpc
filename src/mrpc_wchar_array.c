@@ -103,7 +103,7 @@ uint32_t mrpc_wchar_array_get_hash(struct mrpc_wchar_array *wchar_array, uint32_
 	else
 	{
 		ff_assert(sizeof(wchar_t) == 2);
-		hash_value = ff_hash_uint16(start_value, wchar_array->value, wchar_array->len);
+		hash_value = ff_hash_uint16(start_value, (uint16_t *) wchar_array->value, wchar_array->len);
 	}
 	return hash_value;
 }

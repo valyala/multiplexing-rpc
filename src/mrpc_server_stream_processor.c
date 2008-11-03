@@ -58,7 +58,7 @@ static void skip_writer_queue_packets(struct mrpc_server_stream_processor *strea
 	{
 		struct mrpc_packet *packet;
 
-		ff_blocking_queue_get(stream_processor->writer_queue, &packet);
+		ff_blocking_queue_get(stream_processor->writer_queue, (const void **) &packet);
 		if (packet == NULL)
 		{
 			int is_empty;
@@ -83,7 +83,7 @@ static void stream_writer_func(void *ctx)
 		int is_empty;
 		enum ff_result result;
 
-		ff_blocking_queue_get(stream_processor->writer_queue, &packet);
+		ff_blocking_queue_get(stream_processor->writer_queue, (const void **) &packet);
 		if (packet == NULL)
 		{
 			is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);

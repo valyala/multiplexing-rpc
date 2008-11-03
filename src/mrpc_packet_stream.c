@@ -58,7 +58,7 @@ static enum ff_result prefetch_current_read_packet(struct mrpc_packet_stream *st
 	enum ff_result result;
 
 	ff_assert(stream->current_read_packet == NULL);
-	result = ff_blocking_queue_get_with_timeout(stream->reader_queue, &stream->current_read_packet, READ_TIMEOUT);
+	result = ff_blocking_queue_get_with_timeout(stream->reader_queue, (const void **) &stream->current_read_packet, READ_TIMEOUT);
 	if (result == FF_SUCCESS)
 	{
 		enum mrpc_packet_type packet_type;
@@ -120,7 +120,7 @@ static void clear_reader_queue(struct mrpc_packet_stream *stream)
 		{
 			break;
 		}
-		ff_blocking_queue_get(stream->reader_queue, &packet);
+		ff_blocking_queue_get(stream->reader_queue, (const void **) &packet);
 		release_packet(stream, packet);
 	}
 }
@@ -225,7 +225,7 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 				goto end;
 			}
 
-			result = ff_blocking_queue_get_with_timeout(stream->reader_queue, &packet, READ_TIMEOUT);
+			result = ff_blocking_queue_get_with_timeout(stream->reader_queue, (const void **) &packet, READ_TIMEOUT);
 			if (result != FF_SUCCESS)
 			{
 				goto end;

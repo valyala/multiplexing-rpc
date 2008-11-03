@@ -71,9 +71,10 @@ struct mrpc_method *mrpc_interface_get_method(struct mrpc_interface *interface, 
 {
 	struct mrpc_method *method = NULL;
 
-	ff_assert(method_id < MAX_METHODS_CNT);
-
-	if (method_id >= 0 && method_id < interface->methods_cnt)
+	/* there is no need to check if method_id >= 0 and method_id <= MAX_METHODS_CNT,
+	 * because uint8_t range is limited between 0 and MAX_METHODS_CNT (256)
+	 */
+	if (method_id < interface->methods_cnt)
 	{
 		method = interface->methods[method_id];
 	}
