@@ -3,6 +3,8 @@
 #include "private/mrpc_server_request_processor.h"
 #include "private/mrpc_interface.h"
 #include "private/mrpc_packet_stream.h"
+#include "private/mrpc_packet_stream_factory.h"
+#include "private/mrpc_data.h"
 #include "ff/ff_stream.h"
 #include "ff/ff_blocking_queue.h"
 #include "ff/ff_core.h"
@@ -52,7 +54,7 @@ struct mrpc_server_request_processor *mrpc_server_request_processor_create(mrpc_
 	request_processor->service_interface = service_interface;
 	request_processor->service_ctx = service_ctx;
 	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, acquire_packet_func, release_packet_func, packet_func_ctx);
-	request_processor->stream = mrpc_packet_stream_factory_create_stream(packet_stream);
+	request_processor->stream = mrpc_packet_stream_factory_create_stream(request_processor->packet_stream);
 	request_processor->request_id = 0;
 	return request_processor;
 }
