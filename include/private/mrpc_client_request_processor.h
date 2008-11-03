@@ -4,6 +4,7 @@
 #include "private/mrpc_common.h"
 #include "private/mrpc_packet.h"
 #include "private/mrpc_packet_stream.h"
+#include "private/mrpc_data.h"
 #include "ff/ff_blocking_queue.h"
 
 #ifdef __cplusplus
