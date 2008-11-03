@@ -30,7 +30,6 @@ typedef void (*mrpc_server_request_processor_notify_error_func)(void *notify_err
  * acquire_packet_func and release_packet_func are used for acquiring packets required for serializing rpc response
  * and for releasing packets received from the mrpc_server_request_processor_push_packet()
  * after they were parsed into request.
- * service_interface and service_ctx are used for invoking corresponding server callback.
  * writer_queue is used for pushing serialized response packets. Packets from the writer_queue must
  * be released using the same technique as used by the release_packet_func() callback.
  * Always returns correct result.
@@ -38,7 +37,7 @@ typedef void (*mrpc_server_request_processor_notify_error_func)(void *notify_err
 struct mrpc_server_request_processor *mrpc_server_request_processor_create(mrpc_server_request_processor_release_func release_func, void *release_func_ctx,
 	mrpc_server_request_processor_notify_error_func notify_error_func, void *notify_error_func_ctx,
 	mrpc_packet_stream_acquire_packet_func acquire_packet_func, mrpc_packet_stream_release_packet_func release_packet_func, void *packet_func_ctx,
-	struct mrpc_interface *service_interface, void *service_ctx, struct ff_blocking_queue *writer_queue);
+	struct ff_blocking_queue *writer_queue);
 
 /**
  * Deletes the given request_processor.
@@ -47,8 +46,9 @@ void mrpc_server_request_processor_delete(struct mrpc_server_request_processor *
 
 /**
  * Starts processing request with the given request_id using the given request_processor.
+ * service_interface and service_ctx are used for invoking corresponding server callback.
  */
-void mrpc_server_request_processor_start(struct mrpc_server_request_processor *request_processor, uint8_t request_id);
+void mrpc_server_request_processor_start(struct mrpc_server_request_processor *request_processor, struct mrpc_interface *service_interface, void *service_ctx, uint8_t request_id);
 
 /**
  * Notifies the given request_processor that it must stop processing the current request ASAP.

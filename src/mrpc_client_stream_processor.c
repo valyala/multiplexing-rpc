@@ -95,7 +95,7 @@ static void stream_writer_func(void *ctx)
 		 * usually expensive ff_stream_flush() calls. These calls are invoked only
 		 * if the writer_queue is empty at the moment. If we won't flush the stream
 		 * this moment moment, then potential deadlock can occur:
-		 * 1) client serializes rpc request into the mrpc_packets and pushs them into the writer_queue.
+		 * 1) client serializes rpc request into the mrpc_packets and pushes them into the writer_queue.
 		 * 2) this function writes these packets into the stream.
 		 *    Usually this means that the packets' content is buffered in the underlying stream buffer
 		 *    and not sent to the remote side (i.e. server).

@@ -85,7 +85,7 @@ static void *create_stream_processor(void *ctx)
 	struct mrpc_server_stream_processor *stream_processor;
 
 	server = (struct mrpc_server *) ctx;
-	stream_processor = mrpc_server_stream_processor_create(release_stream_processor, server, server->service_interface, server->service_ctx);
+	stream_processor = mrpc_server_stream_processor_create(release_stream_processor, server);
 	return stream_processor;
 }
 
@@ -117,7 +117,7 @@ static void main_server_func(void *ctx)
 			break;
 		}
 		stream_processor = acquire_stream_processor(server);
-		mrpc_server_stream_processor_start(stream_processor, client_stream);
+		mrpc_server_stream_processor_start(stream_processor, server->service_interface, server->service_ctx, client_stream);
 	}
 	stop_all_stream_processors(server);
 

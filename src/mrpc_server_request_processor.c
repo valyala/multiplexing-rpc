@@ -15,10 +15,10 @@ struct mrpc_server_request_processor
 	void *release_func_ctx;
 	mrpc_server_request_processor_notify_error_func notify_error_func;
 	void *notify_error_func_ctx;
-	struct mrpc_interface *service_interface;
-	void *service_ctx;
 	struct mrpc_packet_stream *packet_stream;
 	struct ff_stream *stream;
+	struct mrpc_interface *service_interface;
+	void *service_ctx;
 	uint8_t request_id;
 };
 
@@ -29,6 +29,8 @@ static void process_request_func(void *ctx)
 
 	request_processor = (struct mrpc_server_request_processor *) ctx;
 
+	ff_assert(request_processor->service_interface != NULL);
+
 	mrpc_packet_stream_initialize(request_processor->packet_stream, request_processor->request_id);
 	result = mrpc_data_process_remote_call(request_processor->service_interface, request_processor->service_ctx, request_processor->stream);
 	mrpc_packet_stream_shutdown(request_processor->packet_stream);
@@ -36,13 +38,15 @@ static void process_request_func(void *ctx)
 	{
 		request_processor->notify_error_func(request_processor->notify_error_func_ctx);
 	}
+	request_processor->service_interface = NULL;
+	request_processor->service_ctx = NULL;
 	request_processor->release_func(request_processor->release_func_ctx, request_processor, request_processor->request_id);
 }
 
 struct mrpc_server_request_processor *mrpc_server_request_processor_create(mrpc_server_request_processor_release_func release_func, void *release_func_ctx,
 	mrpc_server_request_processor_notify_error_func notify_error_func, void *notify_error_func_ctx,
 	mrpc_packet_stream_acquire_packet_func acquire_packet_func, mrpc_packet_stream_release_packet_func release_packet_func, void *packet_func_ctx,
-	struct mrpc_interface *service_interface, void *service_ctx, struct ff_blocking_queue *writer_queue)
+	struct ff_blocking_queue *writer_queue)
 {
 	struct mrpc_server_request_processor *request_processor;
 
@@ -51,16 +55,21 @@ struct mrpc_server_request_processor *mrpc_server_request_processor_create(mrpc_
 	request_processor->release_func_ctx = release_func_ctx;
 	request_processor->notify_error_func = notify_error_func;
 	request_processor->notify_error_func_ctx = notify_error_func_ctx;
-	request_processor->service_interface = service_interface;
-	request_processor->service_ctx = service_ctx;
 	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, acquire_packet_func, release_packet_func, packet_func_ctx);
 	request_processor->stream = mrpc_packet_stream_factory_create_stream(request_processor->packet_stream);
+
+	request_processor->service_interface = NULL;
+	request_processor->service_ctx = NULL;
 	request_processor->request_id = 0;
+
 	return request_processor;
 }
 
 void mrpc_server_request_processor_delete(struct mrpc_server_request_processor *request_processor)
 {
+	ff_assert(request_processor->service_interface == NULL);
+	ff_assert(request_processor->service_ctx == NULL);
+
 	ff_stream_delete(request_processor->stream);
 	/* there is no need to make the call
 	 *   mrpc_packet_stream_delete(request_processor->packet_stream);
@@ -69,14 +78,23 @@ void mrpc_server_request_processor_delete(struct mrpc_server_request_processor *
 	ff_free(request_processor);
 }
 
-void mrpc_server_request_processor_start(struct mrpc_server_request_processor *request_processor, uint8_t request_id)
+void mrpc_server_request_processor_start(struct mrpc_server_request_processor *request_processor, struct mrpc_interface *service_interface, void *service_ctx, uint8_t request_id)
 {
+	ff_assert(request_processor->service_interface == NULL);
+	ff_assert(request_processor->service_ctx == NULL);
+
+	ff_assert(service_interface != NULL);
+
+	request_processor->service_interface = service_interface;
+	request_processor->service_ctx = service_ctx;
 	request_processor->request_id = request_id;
 	ff_core_fiberpool_execute_async(process_request_func, request_processor);
 }
 
 void mrpc_server_request_processor_stop_async(struct mrpc_server_request_processor *request_processor)
 {
+	ff_assert(request_processor->service_interface != NULL);
+
 	ff_stream_disconnect(request_processor->stream);
 }
 
