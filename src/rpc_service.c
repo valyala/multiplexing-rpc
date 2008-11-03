@@ -85,7 +85,7 @@ static struct mrpc_method *create_foo_method()
 {
 	struct mrpc_method *method;
 
-	method = mrpc_method_create_server(foo_request_param_constructors, foo_response_param_constructors, foo_callback);
+	method = mrpc_method_create_server_method(foo_request_param_constructors, foo_response_param_constructors, foo_callback);
 	return method;
 }
 

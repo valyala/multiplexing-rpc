@@ -1,10 +1,15 @@
 #include "private/mrpc_common.h"
 
 #include "private/mrpc_method.h"
+#include "private/mrpc_method_factory.h"
 #include "private/mrpc_param.h"
 #include "private/mrpc_data.h"
 #include "ff/ff_stream.h"
 
+/**
+ * Maximum number of parameters in the request or response of the rpc.
+ * This value has no practical limitations except 0 < MAX_PARAMS_CNT < INT_MAX.
+ */
 #define MAX_PARAMS_CNT 100
 
 struct mrpc_method
@@ -79,14 +84,14 @@ static enum ff_result read_params(struct mrpc_param **params, int param_cnt, str
 	enum ff_result result = FF_SUCCESS;
 
 	ff_assert(param_cnt >= 0);
-	ff_assert(param_cnt < MAX_PARAMS_CNT);
+	ff_assert(param_cnt <= MAX_PARAMS_CNT);
 	for (i = 0; i < param_cnt; i++)
 	{
 		struct mrpc_param *param;
 
 		param = params[i];
 		ff_assert(param != NULL);
-		result = mrpc_param_read(param, stream);
+		result = mrpc_param_read_from_stream(param, stream);
 		if (result != FF_SUCCESS)
 		{
 			break;
@@ -102,13 +107,13 @@ static enum ff_result write_params(struct mrpc_param **params, int param_cnt, st
 	enum ff_result result = FF_SUCCESS;
 
 	ff_assert(param_cnt >= 0);
-	ff_assert(param_cnt < MAX_PARAMS_CNT);
+	ff_assert(param_cnt <= MAX_PARAMS_CNT);
 	for (i = 0; i < param_cnt; i++)
 	{
 		struct mrpc_param *param;
 
 		param = params[i];
-		result = mrpc_param_write(param, stream);
+		result = mrpc_param_write_to_stream(param, stream);
 		if (result != FF_SUCCESS)
 		{
 			break;
@@ -123,7 +128,7 @@ static void get_param_value(struct mrpc_param **params, void **value, int param_
 	struct mrpc_param *param;
 
 	ff_assert(params_cnt >= 0);
-	ff_assert(params_cnt < MAX_PARAMS_CNT);
+	ff_assert(params_cnt <= MAX_PARAMS_CNT);
 	ff_assert(param_idx >= 0);
 	ff_assert(param_idx < params_cnt);
 
@@ -136,7 +141,7 @@ static void set_param_value(struct mrpc_param **params, const void *value, int p
 	struct mrpc_param *param;
 
 	ff_assert(params_cnt >= 0);
-	ff_assert(params_cnt < MAX_PARAMS_CNT);
+	ff_assert(params_cnt <= MAX_PARAMS_CNT);
 	ff_assert(param_idx >= 0);
 	ff_assert(param_idx < params_cnt);
 
@@ -144,7 +149,7 @@ static void set_param_value(struct mrpc_param **params, const void *value, int p
 	mrpc_param_set_value(param, value);
 }
 
-struct mrpc_method *mrpc_method_create_server(const mrpc_param_constructor *request_param_constructors,
+struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructor *request_param_constructors,
 	const mrpc_param_constructor *response_param_constructors, mrpc_method_callback callback)
 {
 	struct mrpc_method *method;
@@ -164,7 +169,7 @@ struct mrpc_method *mrpc_method_create_server(const mrpc_param_constructor *requ
 	return method;
 }
 
-struct mrpc_method *mrpc_method_create_client(const mrpc_param_constructor *request_param_constructors,
+struct mrpc_method *mrpc_method_create_client_method(const mrpc_param_constructor *request_param_constructors,
 	const mrpc_param_constructor *response_param_constructors, int *is_key)
 {
 	struct mrpc_method *method;
@@ -175,7 +180,7 @@ struct mrpc_method *mrpc_method_create_client(const mrpc_param_constructor *requ
 
 	method = (struct mrpc_method *) ff_malloc(sizeof(*method));
 	method->request_param_constructors = request_param_constructors;
-	method->resposne_param_constructors = response_param_constructors;
+	method->response_param_constructors = response_param_constructors;
 	method->callback = NULL;
 	method->is_key = is_key;
 	method->request_params_cnt = get_constructors_cnt(request_param_constructors);
@@ -219,6 +224,9 @@ enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struc
 {
 	enum ff_result result;
 
+	ff_assert(method->callback != NULL);
+	ff_assert(method->is_key == NULL);
+
 	result = read_params(request_params, method->request_params_cnt, stream);
 	return result;
 }
@@ -226,6 +234,9 @@ enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struc
 enum ff_result mrpc_method_read_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream)
 {
 	enum ff_result result;
+
+	ff_assert(method->callback == NULL);
+	ff_assert(method->is_key != NULL);
 
 	result = read_params(response_params, method->response_params_cnt, stream);
 	return result;
@@ -235,6 +246,9 @@ enum ff_result mrpc_method_write_request_params(struct mrpc_method *method, stru
 {
 	enum ff_result result;
 
+	ff_assert(method->callback == NULL);
+	ff_assert(method->is_key != NULL);
+
 	result = write_params(request_params, method->request_params_cnt, stream);
 	return result;
 }
@@ -243,39 +257,55 @@ enum ff_result mrpc_method_write_response_params(struct mrpc_method *method, str
 {
 	enum ff_result result;
 
+	ff_assert(method->callback != NULL);
+	ff_assert(method->is_key == NULL);
+
 	result = write_params(response_params, method->response_params_cnt, stream);
 	return result;
 }
 
 void mrpc_method_set_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **request_params, const void *value)
 {
+	ff_assert(method->callback == NULL);
+	ff_assert(method->is_key != NULL);
+
 	set_param_value(request_params, value, param_idx, method->request_params_cnt);
 }
 
 void mrpc_method_set_response_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **response_params, const void *value)
 {
+	ff_assert(method->callback != NULL);
+	ff_assert(method->is_key == NULL);
+
 	set_param_value(response_params, value, param_idx, method->response_params_cnt);
 }
 
 void mrpc_method_get_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **request_params, void **value)
 {
+	ff_assert(method->callback != NULL);
+	ff_assert(method->is_key == NULL);
+
 	get_param_value(request_params, value, param_idx, method->request_params_cnt);
 }
 
 void mrpc_method_get_response_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **response_params, void **value)
 {
+	ff_assert(method->callback == NULL);
+	ff_assert(method->is_key != NULL);
+
 	get_param_value(response_params, value, param_idx, method->response_params_cnt);
 }
 
 uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start_value, struct mrpc_param **request_params)
 {
 	int params_cnt;
+	int i;
 	uint32_t hash_value;
 
 	ff_assert(method->callback == NULL);
 	ff_assert(method->is_key != NULL);
 
-	hash_value = start_value
+	hash_value = start_value;
 	params_cnt = method->request_params_cnt;
 	for (i = 0; i < params_cnt; i++)
 	{
