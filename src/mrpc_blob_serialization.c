@@ -11,20 +11,21 @@ enum ff_result mrpc_blob_serialize(struct mrpc_blob *blob, struct ff_stream *str
 	struct ff_stream *blob_stream;
 	enum ff_result result = FF_FAILURE;
 
+	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	if (blob_stream == NULL)
+	{
+		goto end;
+	}
+
 	blob_len = mrpc_blob_get_size(blob);
 	ff_assert(blob_len >= 0);
 	result = mrpc_uint32_serialize((uint32_t) blob_len, stream);
 	if (result != FF_SUCCESS)
 	{
+		ff_stream_delete(blob_stream);
 		goto end;
 	}
 
-	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
-	if (blob_stream == NULL)
-	{
-		result = FF_FAILURE;
-		goto end;
-	}
 	result = ff_stream_copy(blob_stream, stream, blob_len);
 	ff_stream_delete(blob_stream);
 
