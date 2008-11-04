@@ -6,7 +6,7 @@
 #elif defined(MRPC_USE_DLL)
 	#define MRPC_API __declspec(dllimport)
 #else
-	#define MRPC_API extern
+	#define MRPC_API __attribute__((visibility("default")))
 #endif
 
 #endif
