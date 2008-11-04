@@ -18,7 +18,7 @@
  * The unique file name will start with the BLOB_FILENAME_PREFIX.
  */
 #define BLOB_FILENAME_PREFIX L"blob."
-#define BLOB_FILENAME_PREFIX_LEN (sizeof(BLOB_FILENAME_PREFIX) / sizeof(BLOB_FILENAME_PREFIX[0]))
+#define BLOB_FILENAME_PREFIX_LEN ((sizeof(BLOB_FILENAME_PREFIX) / sizeof(BLOB_FILENAME_PREFIX[0])) - 1)
 
 enum blob_state
 {
