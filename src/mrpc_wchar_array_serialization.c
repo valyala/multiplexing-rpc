@@ -20,6 +20,7 @@ enum ff_result mrpc_wchar_array_serialize(struct mrpc_wchar_array *wchar_array, 
 	const wchar_t *value;
 	enum ff_result result = FF_FAILURE;
 
+	mrpc_wchar_array_inc_ref(wchar_array);
 	len = mrpc_wchar_array_get_len(wchar_array);
 	ff_assert(len >= 0);
 	if (len > MAX_WCHAR_ARRAY_SIZE)
@@ -48,6 +49,7 @@ enum ff_result mrpc_wchar_array_serialize(struct mrpc_wchar_array *wchar_array, 
 	}
 
 end:
+	mrpc_wchar_array_dec_ref(wchar_array);
 	return result;
 }
 

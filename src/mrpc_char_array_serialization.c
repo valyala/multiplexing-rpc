@@ -19,6 +19,7 @@ enum ff_result mrpc_char_array_serialize(struct mrpc_char_array *char_array, str
 	const char *value;
 	enum ff_result result = FF_FAILURE;
 
+	mrpc_char_array_inc_ref(char_array);
 	len = mrpc_char_array_get_len(char_array);
 	ff_assert(len >= 0);
 	if (len > MAX_CHAR_ARRAY_SIZE)
@@ -36,6 +37,7 @@ enum ff_result mrpc_char_array_serialize(struct mrpc_char_array *char_array, str
 	result = ff_stream_write(stream, value, len);
 
 end:
+	mrpc_char_array_dec_ref(char_array);
 	return result;
 }
 
