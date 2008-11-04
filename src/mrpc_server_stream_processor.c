@@ -36,6 +36,13 @@
  */
 #define MAX_PACKETS_CNT 1000
 
+enum server_stream_processor_state
+{
+	STATE_WORKING,
+	STATE_STOP_INITIATED,
+	STATE_STOPPED,
+};
+
 struct mrpc_server_stream_processor
 {
 	mrpc_server_stream_processor_release_func release_func;
@@ -50,10 +57,12 @@ struct mrpc_server_stream_processor
 	void *service_ctx;
 	struct ff_stream *stream;
 	int request_processors_cnt;
+	enum server_stream_processor_state state;
 };
 
 static void skip_writer_queue_packets(struct mrpc_server_stream_processor *stream_processor)
 {
+	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 	for (;;)
 	{
 		struct mrpc_packet *packet;
@@ -76,7 +85,8 @@ static void stream_writer_func(void *ctx)
 	struct mrpc_server_stream_processor *stream_processor;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
-
+	ff_assert(stream_processor->stream != NULL);
+	ff_assert(stream_processor->state != STATE_STOPPED);
 	for (;;)
 	{
 		struct mrpc_packet *packet;
@@ -86,6 +96,7 @@ static void stream_writer_func(void *ctx)
 		ff_blocking_queue_get(stream_processor->writer_queue, (const void **) &packet);
 		if (packet == NULL)
 		{
+			ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 			is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
 			ff_assert(is_empty);
 			break;
@@ -114,11 +125,11 @@ static void stream_writer_func(void *ctx)
 		if (result == FF_FAILURE)
 		{
 			mrpc_server_stream_processor_stop_async(stream_processor);
+			ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 			skip_writer_queue_packets(stream_processor);
 			break;
 		}
 	}
-
 	ff_event_set(stream_processor->writer_stop_event);
 }
 
@@ -128,6 +139,7 @@ static struct mrpc_packet *acquire_packet(void *ctx)
 	struct mrpc_packet *packet;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	ff_assert(stream_processor->state != STATE_STOPPED);
 	packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
 	return packet;
 }
@@ -137,6 +149,7 @@ static void release_packet(void *ctx, struct mrpc_packet *packet)
 	struct mrpc_server_stream_processor *stream_processor;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	ff_assert(stream_processor->state != STATE_STOPPED);
 	mrpc_packet_reset(packet);
 	ff_pool_release_entry(stream_processor->packets_pool, packet);
 }
@@ -147,6 +160,7 @@ static struct mrpc_server_request_processor *acquire_request_processor(struct mr
 
 	ff_assert(stream_processor->request_processors_cnt >= 0);
 	ff_assert(stream_processor->request_processors_cnt <= MAX_REQUEST_PROCESSORS_CNT);
+	ff_assert(stream_processor->state != STATE_STOPPED);
 
 	request_processor = (struct mrpc_server_request_processor *) ff_pool_acquire_entry(stream_processor->request_processors_pool);
 	ff_assert(stream_processor->request_processors[request_id] == NULL);
@@ -165,6 +179,7 @@ static void release_request_processor(void *ctx, struct mrpc_server_request_proc
 	struct mrpc_server_stream_processor *stream_processor;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	ff_assert(stream_processor->state != STATE_STOPPED);
 
 	ff_assert(stream_processor->request_processors_cnt > 0);
 	ff_assert(stream_processor->request_processors_cnt <= MAX_REQUEST_PROCESSORS_CNT);
@@ -184,6 +199,7 @@ static void notify_request_processor_error(void *ctx)
 	struct mrpc_server_stream_processor *stream_processor;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	ff_assert(stream_processor->state != STATE_STOPPED);
 	mrpc_server_stream_processor_stop_async(stream_processor);
 }
 
@@ -193,6 +209,7 @@ static void *create_request_processor(void *ctx)
 	struct mrpc_server_request_processor *request_processor;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	ff_assert(stream_processor->state != STATE_STOPPED);
 	request_processor = mrpc_server_request_processor_create(release_request_processor, stream_processor, notify_request_processor_error, stream_processor,
 		acquire_packet, release_packet, stream_processor, stream_processor->writer_queue);
 	return request_processor;
@@ -208,7 +225,11 @@ static void delete_request_processor(void *ctx)
 
 static void *create_packet(void *ctx)
 {
+	struct mrpc_server_stream_processor *stream_processor;
 	struct mrpc_packet *packet;
+
+	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	ff_assert(stream_processor->state != STATE_STOPPED);
 
 	packet = mrpc_packet_create();
 	return packet;
@@ -224,8 +245,11 @@ static void delete_packet(void *ctx)
 
 static void stop_request_processor(void *entry, void *ctx, int is_acquired)
 {
+	struct mrpc_server_stream_processor *stream_processor;
 	struct mrpc_server_request_processor *request_processor;
 
+	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 	request_processor = (struct mrpc_server_request_processor *) entry;
 	if (is_acquired)
 	{
@@ -235,6 +259,7 @@ static void stop_request_processor(void *entry, void *ctx, int is_acquired)
 
 static void stop_all_request_processors(struct mrpc_server_stream_processor *stream_processor)
 {
+	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 	ff_pool_for_each_entry(stream_processor->request_processors_pool, stop_request_processor, stream_processor);
 	ff_event_wait(stream_processor->request_processors_stop_event);
 	ff_assert(stream_processor->request_processors_cnt == 0);
@@ -242,11 +267,13 @@ static void stop_all_request_processors(struct mrpc_server_stream_processor *str
 
 static void start_stream_writer(struct mrpc_server_stream_processor *stream_processor)
 {
+	ff_assert(stream_processor->state != STATE_STOPPED);
 	ff_core_fiberpool_execute_async(stream_writer_func, stream_processor);
 }
 
 static void stop_stream_writer(struct mrpc_server_stream_processor *stream_processor)
 {
+	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 	ff_blocking_queue_put(stream_processor->writer_queue, NULL);
 	ff_event_wait(stream_processor->writer_stop_event);
 }
@@ -260,6 +287,7 @@ static void stream_reader_func(void *ctx)
 	ff_assert(stream_processor->request_processors_cnt == 0);
 	ff_assert(stream_processor->service_interface != NULL);
 	ff_assert(stream_processor->stream != NULL);
+	ff_assert(stream_processor->state != STATE_STOPPED);
 
 	start_stream_writer(stream_processor);
 	ff_event_set(stream_processor->request_processors_stop_event);
@@ -305,12 +333,14 @@ static void stream_reader_func(void *ctx)
 		mrpc_server_request_processor_push_packet(request_processor, packet);
 	}
 	mrpc_server_stream_processor_stop_async(stream_processor);
+	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 	stop_all_request_processors(stream_processor);
 	stop_stream_writer(stream_processor);
 	ff_stream_delete(stream_processor->stream);
 	stream_processor->service_interface = NULL;
 	stream_processor->service_ctx = NULL;
 	stream_processor->stream = NULL;
+	stream_processor->state = STATE_STOPPED;
 	stream_processor->release_func(stream_processor->release_func_ctx, stream_processor);
 }
 
@@ -337,6 +367,7 @@ struct mrpc_server_stream_processor *mrpc_server_stream_processor_create(mrpc_se
 	stream_processor->service_ctx = NULL;
 	stream_processor->stream = NULL;
 	stream_processor->request_processors_cnt = 0;
+	stream_processor->state = STATE_STOPPED;
 
 	return stream_processor;
 }
@@ -347,6 +378,7 @@ void mrpc_server_stream_processor_delete(struct mrpc_server_stream_processor *st
 	ff_assert(stream_processor->service_ctx == NULL);
 	ff_assert(stream_processor->stream == NULL);
 	ff_assert(stream_processor->request_processors_cnt == 0);
+	ff_assert(stream_processor->state == STATE_STOPPED);
 
 	ff_blocking_queue_delete(stream_processor->writer_queue);
 	ff_pool_delete(stream_processor->packets_pool);
@@ -362,10 +394,15 @@ void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *str
 	ff_assert(stream_processor->service_interface == NULL);
 	ff_assert(stream_processor->service_ctx == NULL);
 	ff_assert(stream_processor->stream == NULL);
+	ff_assert(stream_processor->state != STATE_WORKING);
 
 	ff_assert(service_interface != NULL);
 	ff_assert(stream != NULL);
 
+	if (stream_processor->state == STATE_STOPPED)
+	{
+		stream_processor->state = STATE_WORKING;
+	}
 	stream_processor->service_interface = service_interface;
 	stream_processor->service_ctx = service_ctx;
 	stream_processor->stream = stream;
@@ -374,8 +411,10 @@ void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *str
 
 void mrpc_server_stream_processor_stop_async(struct mrpc_server_stream_processor *stream_processor)
 {
-	ff_assert(stream_processor->service_interface != NULL);
-	ff_assert(stream_processor->stream != NULL);
-
-	ff_stream_disconnect(stream_processor->stream);
+	if (stream_processor->state == STATE_WORKING)
+	{
+		ff_assert(stream_processor->stream != NULL);
+		stream_processor->state = STATE_STOP_INITIATED;
+		ff_stream_disconnect(stream_processor->stream);
+	}
 }

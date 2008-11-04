@@ -40,7 +40,9 @@ void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *str
 /**
  * Notifies the stream_processor to stop ASAP.
  * When the stream_processor will stop, it will call the release_func() callback
- * passed to the mrpc_server_stream_processor_create()
+ * passed to the mrpc_server_stream_processor_create().
+ * This function can be called multiple times and at any time while the stream_processor isn't deleted.
+ * This function returns immediately.
  */
 void mrpc_server_stream_processor_stop_async(struct mrpc_server_stream_processor *stream_processor);
 
