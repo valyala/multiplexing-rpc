@@ -180,15 +180,17 @@ static struct mrpc_blob *create_blob(int size)
 
 static void delete_blob(struct mrpc_blob *blob)
 {
-	enum ff_result result;
-
 	ff_assert(blob->ref_cnt == 0);
-	ff_assert(blob->state != BLOB_EMPTY);
 
-	result = ff_file_erase(blob->file_path);
-	if (result != FF_SUCCESS)
+	if (blob->state != BLOB_EMPTY)
 	{
-		ff_log_warning(L"cannot delete the blob backing file [%ls]", blob->file_path);
+		enum ff_result result;
+
+		result = ff_file_erase(blob->file_path);
+		if (result != FF_SUCCESS)
+		{
+			ff_log_warning(L"cannot delete the blob backing file [%ls]", blob->file_path);
+		}
 	}
 
 	ff_free((void *) blob->file_path);
