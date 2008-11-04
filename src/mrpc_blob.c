@@ -210,7 +210,7 @@ struct mrpc_blob *mrpc_blob_create(int size)
 void mrpc_blob_inc_ref(struct mrpc_blob *blob)
 {
 	blob->ref_cnt++;
-	ff_assert(blob->ref_cnt > 0);
+	ff_assert(blob->ref_cnt > 1);
 }
 
 void mrpc_blob_dec_ref(struct mrpc_blob *blob)

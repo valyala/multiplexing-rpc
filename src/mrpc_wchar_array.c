@@ -47,7 +47,7 @@ struct mrpc_wchar_array *mrpc_wchar_array_create(const wchar_t *value, int len)
 void mrpc_wchar_array_inc_ref(struct mrpc_wchar_array *wchar_array)
 {
 	wchar_array->ref_cnt++;
-	ff_assert(wchar_array->ref_cnt > 0);
+	ff_assert(wchar_array->ref_cnt > 1);
 }
 
 void mrpc_wchar_array_dec_ref(struct mrpc_wchar_array *wchar_array)

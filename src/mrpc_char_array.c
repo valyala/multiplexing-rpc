@@ -47,7 +47,7 @@ struct mrpc_char_array *mrpc_char_array_create(const char *value, int len)
 void mrpc_char_array_inc_ref(struct mrpc_char_array *char_array)
 {
 	char_array->ref_cnt++;
-	ff_assert(char_array->ref_cnt > 0);
+	ff_assert(char_array->ref_cnt > 1);
 }
 
 void mrpc_char_array_dec_ref(struct mrpc_char_array *char_array)
