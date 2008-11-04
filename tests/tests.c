@@ -1,10 +1,16 @@
 #include "mrpc/mrpc_char_array.h"
 #include "mrpc/mrpc_wchar_array.h"
 #include "mrpc/mrpc_blob.h"
+#include "mrpc/mrpc_char_array_param.h"
+#include "mrpc/mrpc_wchar_array_param.h"
+#include "mrpc/mrpc_param.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
 #include "ff/ff_event.h"
+#include "ff/ff_stream_connector_tcp.h"
+#include "ff/ff_endpoint_tcp.h"
+#include "ff/arch/ff_arch_net_addr.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -322,11 +328,248 @@ static void test_blob_all()
 /* end of mrpc_blob tests */
 #pragma endregion
 
+
+#pragma region mrpc_char_array_param tests
+
+static void test_char_array_param_create_delete()
+{
+	struct mrpc_param *param;
+
+	param = mrpc_char_array_param_create();
+	ASSERT(param != NULL, "param cannot be NULL");
+	mrpc_param_delete(param);
+}
+
+static void char_array_param_basic_fiberpool_func(void *ctx)
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_endpoint *endpoint;
+	struct ff_stream *stream;
+	struct mrpc_param *param;
+	enum ff_result result;
+
+	event = (struct ff_event *) ctx;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	endpoint = ff_endpoint_tcp_create(addr);
+	ff_endpoint_initialize(endpoint);
+	stream = ff_endpoint_accept(endpoint);
+	ASSERT(stream != NULL, "cannot accept local connection");
+
+	param = mrpc_char_array_param_create();
+	result = mrpc_param_read_from_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read char array from the stream");
+	result = mrpc_param_write_to_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write char array to the stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	mrpc_param_delete(param);
+	ff_stream_delete(stream);
+	ff_endpoint_shutdown(endpoint);
+	ff_endpoint_delete(endpoint);
+
+	ff_event_set(event);
+}
+
+static void test_char_array_param_basic()
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *connector;
+	struct ff_stream *stream;
+	struct mrpc_char_array *char_array1;
+	struct mrpc_char_array *char_array2;
+	struct mrpc_char_array *char_array3;
+	struct mrpc_param *param;
+	char *s1;
+	const char *s2;
+	int len;
+	int is_equal;
+	enum ff_result result;
+
+	event = ff_event_create(FF_EVENT_MANUAL);
+	ff_core_fiberpool_execute_async(char_array_param_basic_fiberpool_func, event);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	connector = ff_stream_connector_tcp_create(addr);
+	stream = ff_stream_connector_connect(connector);
+	ASSERT(stream != NULL, "cannot establish connection to localhost");
+
+	s1 = (char *) ff_calloc(8, sizeof(s1[0]));
+	memcpy(s1, "foo bar", 7 * sizeof(s1[0]));
+	char_array1 = mrpc_char_array_create(s1, 7);
+
+	param = mrpc_char_array_param_create();
+	mrpc_param_set_value(param, char_array1);
+	mrpc_param_get_value(param, (void **) &char_array2);
+	ASSERT(char_array1 == char_array2, "wrong value obtained from the parameter");
+	result = mrpc_param_write_to_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write char array to the stream");
+	result = ff_stream_flush(stream);
+	mrpc_param_delete(param);
+
+	param = mrpc_char_array_param_create();
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+	result = mrpc_param_read_from_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read char array from the stream");
+
+	mrpc_param_get_value(param, (void **) &char_array3);
+	len = mrpc_char_array_get_len(char_array3);
+	ASSERT(len == 7, "unexpected length of the char array");
+	s2 = mrpc_char_array_get_value(char_array3);
+	is_equal = (memcmp(s2, "foo bar", 7 * sizeof(s2[0])) == 0);
+	ASSERT(is_equal, "unexpected value of the char array");
+	mrpc_param_delete(param);
+
+	ff_stream_delete(stream);
+	ff_stream_connector_delete(connector);
+
+	ff_event_wait(event);
+	ff_event_delete(event);
+}
+
+static void test_char_array_param_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_char_array_param_create_delete();
+	test_char_array_param_basic();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_char_array_param tests */
+#pragma endregion
+
+
+#pragma region mrpc_wchar_array_param tests
+
+static void test_wchar_array_param_create_delete()
+{
+	struct mrpc_param *param;
+
+	param = mrpc_wchar_array_param_create();
+	ASSERT(param != NULL, "param cannot be NULL");
+	mrpc_param_delete(param);
+}
+
+static void wchar_array_param_basic_fiberpool_func(void *ctx)
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_endpoint *endpoint;
+	struct ff_stream *stream;
+	struct mrpc_param *param;
+	enum ff_result result;
+
+	event = (struct ff_event *) ctx;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	endpoint = ff_endpoint_tcp_create(addr);
+	ff_endpoint_initialize(endpoint);
+	stream = ff_endpoint_accept(endpoint);
+	ASSERT(stream != NULL, "cannot accept local connection");
+
+	param = mrpc_wchar_array_param_create();
+	result = mrpc_param_read_from_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read wchar array from the stream");
+	result = mrpc_param_write_to_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write wchar array to the stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	mrpc_param_delete(param);
+	ff_stream_delete(stream);
+	ff_endpoint_shutdown(endpoint);
+	ff_endpoint_delete(endpoint);
+
+	ff_event_set(event);
+}
+
+static void test_wchar_array_param_basic()
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *connector;
+	struct ff_stream *stream;
+	struct mrpc_wchar_array *wchar_array1;
+	struct mrpc_wchar_array *wchar_array2;
+	struct mrpc_wchar_array *wchar_array3;
+	struct mrpc_param *param;
+	wchar_t *s1;
+	const wchar_t *s2;
+	int len;
+	int is_equal;
+	enum ff_result result;
+
+	event = ff_event_create(FF_EVENT_MANUAL);
+	ff_core_fiberpool_execute_async(char_array_param_basic_fiberpool_func, event);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	connector = ff_stream_connector_tcp_create(addr);
+	stream = ff_stream_connector_connect(connector);
+	ASSERT(stream != NULL, "cannot establish connection to localhost");
+
+	s1 = (wchar_t *) ff_calloc(8, sizeof(s1[0]));
+	memcpy(s1, L"foo bar", 7 * sizeof(s1[0]));
+	wchar_array1 = mrpc_wchar_array_create(s1, 7);
+
+	param = mrpc_wchar_array_param_create();
+	mrpc_param_set_value(param, wchar_array1);
+	mrpc_param_get_value(param, (void **) &wchar_array2);
+	ASSERT(wchar_array1 == wchar_array2, "wrong value obtained from the parameter");
+	result = mrpc_param_write_to_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write wchar array to the stream");
+	result = ff_stream_flush(stream);
+	mrpc_param_delete(param);
+
+	param = mrpc_wchar_array_param_create();
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+	result = mrpc_param_read_from_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read wchar array from the stream");
+
+	mrpc_param_get_value(param, (void **) &wchar_array3);
+	len = mrpc_wchar_array_get_len(wchar_array3);
+	ASSERT(len == 7, "unexpected length of the wchar array");
+	s2 = mrpc_wchar_array_get_value(wchar_array3);
+	is_equal = (memcmp(s2, L"foo bar", 7 * sizeof(s2[0])) == 0);
+	ASSERT(is_equal, "unexpected value of the wchar array");
+	mrpc_param_delete(param);
+
+	ff_stream_delete(stream);
+	ff_stream_connector_delete(connector);
+
+	ff_event_wait(event);
+	ff_event_delete(event);
+}
+
+static void test_wchar_array_param_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_wchar_array_param_create_delete();
+	test_wchar_array_param_basic();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_char_array_param tests */
+#pragma endregion
+
+
 static void test_all()
 {
 	test_char_array_all();
 	test_wchar_array_all();
 	test_blob_all();
+	test_char_array_param_all();
+	test_wchar_array_param_all();
 }
 
 int main(int argc, char* argv[])
