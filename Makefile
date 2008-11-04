@@ -37,15 +37,18 @@ ALL_OBJS= \
 
 default: all
 
-all: libfiber-framework libmultiplexing-rpc.so
+all: libmultiplexing-rpc.so tests
 
 libfiber-framework:
 	cd ./external/fiber-framework && make libfiber-framework.so
 
-libmultiplexing-rpc.so: $(MRPC_LIB_OBJS)
+libmultiplexing-rpc.so: libfiber-framework $(MRPC_LIB_OBJS)
 	$(CC) $(MRPC_LIB_OBJS) $(LDFLAGS) -lfiber-framework -L./external/fiber-framework -Wl,--rpath -Wl,./external/fiber-framework -o $@
+
+tests: libfiber-framework libmultiplexing-rpc.so
+	$(CC) -g -I./include -I./external/fiber-framework/include -DHAS_STDINT_H -lfiber-framework -lmultiplexing-rpc -L./external/fiber-framework -Wl,--rpath -Wl,./external/fiber-framework -L. -Wl,--rpath -Wl,. -o run-tests $(TESTS_DIR)/tests.c
 
 clean:
 	cd ./external/fiber-framework && make clean
-	rm -f $(ALL_OBJS) libmultiplexing-rpc.so
+	rm -f $(ALL_OBJS) libmultiplexing-rpc.so run-tests
 
