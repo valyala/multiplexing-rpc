@@ -91,7 +91,7 @@ static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void 
 	data = (struct blob_stream_data *) ff_stream_get_ctx(stream);
 
 	ff_assert(data->mode = MRPC_BLOB_WRITE);
-	ff_assert(data->blob->state == BLOB_INCOMPLETE);
+	ff_assert(data->blob->state != BLOB_EMPTY);
 	ff_assert(data->curr_pos >= 0);
 	ff_assert(data->curr_pos <= data->blob->size);
 	bytes_left = data->blob->size - data->curr_pos;
