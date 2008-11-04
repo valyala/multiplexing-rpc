@@ -3,6 +3,7 @@
 #include "mrpc/mrpc_blob.h"
 #include "mrpc/mrpc_char_array_param.h"
 #include "mrpc/mrpc_wchar_array_param.h"
+#include "mrpc/mrpc_blob_param.h"
 #include "mrpc/mrpc_param.h"
 
 #include "ff/ff_core.h"
@@ -356,6 +357,7 @@ static void char_array_param_basic_fiberpool_func(void *ctx)
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
 	endpoint = ff_endpoint_tcp_create(addr);
 	ff_endpoint_initialize(endpoint);
+	ff_event_set(event);
 	stream = ff_endpoint_accept(endpoint);
 	ASSERT(stream != NULL, "cannot accept local connection");
 
@@ -391,8 +393,9 @@ static void test_char_array_param_basic()
 	int is_equal;
 	enum ff_result result;
 
-	event = ff_event_create(FF_EVENT_MANUAL);
+	event = ff_event_create(FF_EVENT_AUTO);
 	ff_core_fiberpool_execute_async(char_array_param_basic_fiberpool_func, event);
+	ff_event_wait(event);
 
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
@@ -412,10 +415,10 @@ static void test_char_array_param_basic()
 	result = mrpc_param_write_to_stream(param, stream);
 	ASSERT(result == FF_SUCCESS, "cannot write char array to the stream");
 	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 	mrpc_param_delete(param);
 
 	param = mrpc_char_array_param_create();
-	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 	result = mrpc_param_read_from_stream(param, stream);
 	ASSERT(result == FF_SUCCESS, "cannot read char array from the stream");
 
@@ -469,10 +472,11 @@ static void wchar_array_param_basic_fiberpool_func(void *ctx)
 	event = (struct ff_event *) ctx;
 
 	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8491);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
 	endpoint = ff_endpoint_tcp_create(addr);
 	ff_endpoint_initialize(endpoint);
+	ff_event_set(event);
 	stream = ff_endpoint_accept(endpoint);
 	ASSERT(stream != NULL, "cannot accept local connection");
 
@@ -508,11 +512,12 @@ static void test_wchar_array_param_basic()
 	int is_equal;
 	enum ff_result result;
 
-	event = ff_event_create(FF_EVENT_MANUAL);
-	ff_core_fiberpool_execute_async(char_array_param_basic_fiberpool_func, event);
+	event = ff_event_create(FF_EVENT_AUTO);
+	ff_core_fiberpool_execute_async(wchar_array_param_basic_fiberpool_func, event);
+	ff_event_wait(event);
 
 	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8491);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
 	connector = ff_stream_connector_tcp_create(addr);
 	stream = ff_stream_connector_connect(connector);
@@ -529,10 +534,10 @@ static void test_wchar_array_param_basic()
 	result = mrpc_param_write_to_stream(param, stream);
 	ASSERT(result == FF_SUCCESS, "cannot write wchar array to the stream");
 	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 	mrpc_param_delete(param);
 
 	param = mrpc_wchar_array_param_create();
-	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 	result = mrpc_param_read_from_stream(param, stream);
 	ASSERT(result == FF_SUCCESS, "cannot read wchar array from the stream");
 
@@ -559,7 +564,135 @@ static void test_wchar_array_param_all()
 	ff_core_shutdown();
 }
 
-/* end of mrpc_char_array_param tests */
+/* end of mrpc_wchar_array_param tests */
+#pragma endregion
+
+
+#pragma region mrpc_blob_param tests
+
+static void test_blob_param_create_delete()
+{
+	struct mrpc_param *param;
+
+	param = mrpc_blob_param_create();
+	ASSERT(param != NULL, "param cannot be NULL");
+	mrpc_param_delete(param);
+}
+
+static void blob_param_basic_fiberpool_func(void *ctx)
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_endpoint *endpoint;
+	struct ff_stream *stream;
+	struct mrpc_param *param;
+	enum ff_result result;
+
+	event = (struct ff_event *) ctx;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8492);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	endpoint = ff_endpoint_tcp_create(addr);
+	ff_endpoint_initialize(endpoint);
+	ff_event_set(event);
+	stream = ff_endpoint_accept(endpoint);
+	ASSERT(stream != NULL, "cannot accept local connection");
+
+	param = mrpc_blob_param_create();
+	result = mrpc_param_read_from_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read blob from the stream");
+	result = mrpc_param_write_to_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write blob to the stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	mrpc_param_delete(param);
+	ff_stream_delete(stream);
+	ff_endpoint_shutdown(endpoint);
+	ff_endpoint_delete(endpoint);
+
+	ff_event_set(event);
+}
+
+static void test_blob_param_basic()
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *connector;
+	struct ff_stream *stream;
+	struct ff_stream *blob_stream;
+	struct mrpc_blob *blob1;
+	struct mrpc_blob *blob2;
+	struct mrpc_blob *blob3;
+	struct mrpc_param *param;
+	char buf[10];
+	int size;
+	int is_equal;
+	enum ff_result result;
+
+	event = ff_event_create(FF_EVENT_AUTO);
+	ff_core_fiberpool_execute_async(blob_param_basic_fiberpool_func, event);
+	ff_event_wait(event);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8492);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	connector = ff_stream_connector_tcp_create(addr);
+	stream = ff_stream_connector_connect(connector);
+	ASSERT(stream != NULL, "cannot establish connection to localhost");
+
+	blob1 = mrpc_blob_create(10);
+	blob_stream = mrpc_blob_open_stream(blob1, MRPC_BLOB_WRITE);
+	ASSERT(blob_stream != NULL, "cannot open blob stream for writing");
+	result = ff_stream_write(blob_stream, "0123456789", 10);
+	ASSERT(result == FF_SUCCESS, "cannot write data to blob stream");
+	result = ff_stream_flush(blob_stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the blob stream");
+	ff_stream_delete(blob_stream);
+
+	param = mrpc_blob_param_create();
+	mrpc_param_set_value(param, blob1);
+	mrpc_param_get_value(param, (void **) &blob2);
+	ASSERT(blob1 == blob2, "wrong value obtained from the parameter");
+	result = mrpc_param_write_to_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write blob to the stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+	mrpc_param_delete(param);
+
+	param = mrpc_blob_param_create();
+	result = mrpc_param_read_from_stream(param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read blob from the stream");
+
+	mrpc_param_get_value(param, (void **) &blob3);
+	size = mrpc_blob_get_size(blob3);
+	ASSERT(size == 10, "unexpected size of the blob");
+	blob_stream = mrpc_blob_open_stream(blob3, MRPC_BLOB_READ);
+	ASSERT(blob_stream != NULL, "cannot open blob for reading");
+	result = ff_stream_read(blob_stream, buf, 10);
+	ASSERT(result == FF_SUCCESS, "cannot read data from the blob");
+	is_equal = (memcmp(buf, "0123456789", 10) == 0);
+	ASSERT(is_equal, "unexpected value of blob");
+	ff_stream_delete(blob_stream);
+	mrpc_param_delete(param);
+
+	ff_stream_delete(stream);
+	ff_stream_connector_delete(connector);
+
+	ff_event_wait(event);
+	ff_event_delete(event);
+}
+
+static void test_blob_param_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_blob_param_create_delete();
+	test_blob_param_basic();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_wchar_array_param tests */
 #pragma endregion
 
 
@@ -570,6 +703,7 @@ static void test_all()
 	test_blob_all();
 	test_char_array_param_all();
 	test_wchar_array_param_all();
+	test_blob_param_all();
 }
 
 int main(int argc, char* argv[])
