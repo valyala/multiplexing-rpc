@@ -101,10 +101,6 @@ static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void 
 		if (result == FF_SUCCESS)
 		{
 			data->curr_pos += len;
-			if (data->curr_pos == data->blob->size)
-			{
-				data->blob->state = BLOB_COMPLETE;
-			}
 		}
 	}
 	return result;
@@ -120,6 +116,13 @@ static enum ff_result flush_blob_stream(struct ff_stream *stream)
 	ff_assert(data->mode == MRPC_BLOB_WRITE);
 	ff_assert(data->blob->state != BLOB_EMPTY);
 	result = ff_file_flush(data->file);
+	if (result == FF_SUCCESS)
+	{
+		if (data->curr_pos == data->blob->size)
+		{
+			data->blob->state = BLOB_COMPLETE;
+		}
+	}
 	return result;
 }
 
