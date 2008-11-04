@@ -17,7 +17,7 @@
  * then the blob content is written into separate unique file in the temporary directory.
  * The unique file name will start with the BLOB_FILENAME_PREFIX.
  */
-#define BLOB_FILENAME_PREFIX L"blob."
+#define BLOB_FILENAME_PREFIX L"mrpc_blob."
 #define BLOB_FILENAME_PREFIX_LEN ((sizeof(BLOB_FILENAME_PREFIX) / sizeof(BLOB_FILENAME_PREFIX[0])) - 1)
 
 enum blob_state
