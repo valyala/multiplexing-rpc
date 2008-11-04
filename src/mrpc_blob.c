@@ -242,10 +242,12 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
 	if (mode == MRPC_BLOB_READ)
 	{
 		ff_assert(blob->state == BLOB_COMPLETE);
+		mrpc_blob_inc_ref(blob);
 		file = ff_file_open(blob->file_path, FF_FILE_READ);
 		if (file == NULL)
 		{
 			ff_log_warning(L"cannot open the blob backing file [%ls] for reading", blob->file_path);
+			mrpc_blob_dec_ref(blob);
 			goto end;
 		}
 	}
@@ -254,10 +256,12 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
 		ff_assert(mode == MRPC_BLOB_WRITE);
 		ff_assert(blob->ref_cnt == 1);
 		ff_assert(blob->state == BLOB_EMPTY);
+		mrpc_blob_inc_ref(blob);
 		file = ff_file_open(blob->file_path, FF_FILE_WRITE);
 		if (file == NULL)
 		{
 			ff_log_warning(L"cannot open the blob backing file [%ls] for writing", blob->file_path);
+			mrpc_blob_dec_ref(blob);
 			goto end;
 		}
 		blob->state = BLOB_INCOMPLETE;
@@ -265,7 +269,6 @@ struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_o
 
 	data = (struct blob_stream_data *) ff_malloc(sizeof(*data));
 	data->blob = blob;
-	mrpc_blob_inc_ref(data->blob);
 	data->file = file;
 	data->mode = mode;
 	data->curr_pos = 0;
@@ -283,6 +286,7 @@ enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *new_file_pa
 	ff_assert(blob->state == BLOB_COMPLETE);
 	ff_assert(blob->ref_cnt == 1);
 
+	mrpc_blob_inc_ref(blob);
 	result = ff_file_move(blob->file_path, new_file_path);
 	if (result == FF_SUCCESS)
 	{
@@ -299,6 +303,7 @@ enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *new_file_pa
 	{
 		ff_log_warning(L"cannot move the blob backing file from the [%ls] to the [%ls]", blob->file_path, new_file_path);
 	}
+	mrpc_blob_dec_ref(blob);
 
 	return result;
 }
@@ -310,6 +315,7 @@ uint32_t mrpc_blob_get_hash(struct mrpc_blob *blob, uint32_t start_value)
 	enum ff_result result = FF_FAILURE;
 
 	ff_assert(blob->state == BLOB_COMPLETE);
+	ff_assert(blob->ref_cnt > 0);
 
 	hash_value = start_value;
 	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
