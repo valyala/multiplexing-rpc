@@ -502,7 +502,7 @@ static void test_int_param_basic()
 	ASSERT(s32_value == *s32_ptr, "unexpected value of the s32");
 	mrpc_param_get_value(u64_param, (void **) &u64_ptr);
 	ASSERT(u64_value == *u64_ptr, "unexpected value of the u64");
-	mrpc_param_get_value(u32_param, (void **) &u32_ptr);
+	mrpc_param_get_value(s64_param, (void **) &s64_ptr);
 	ASSERT(s64_value == *s64_ptr, "unexpected value of the s64");
 
 	mrpc_param_delete(u32_param);
