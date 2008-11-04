@@ -1,6 +1,10 @@
-#include "ff/ff_core.h"
 #include "mrpc/mrpc_char_array.h"
 #include "mrpc/mrpc_wchar_array.h"
+#include "mrpc/mrpc_blob.h"
+
+#include "ff/ff_core.h"
+#include "ff/ff_stream.h"
+#include "ff/ff_event.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -61,11 +65,12 @@ static void test_char_array_basic()
 	}
 
 	hash_value = mrpc_char_array_get_hash(char_array, 123);
+	ASSERT(hash_value == 3133663974ul, "unexpected hash value");
 
 	mrpc_char_array_dec_ref(char_array);
 }
 
-static void test_char_array()
+static void test_char_array_all()
 {
 	ff_core_initialize(LOG_FILENAME);
 
@@ -123,27 +128,205 @@ static void test_wchar_array_basic()
 	}
 
 	hash_value = mrpc_wchar_array_get_hash(wchar_array, 123);
+	ASSERT(hash_value == 2051898534ul, "unexpected hash value");
 
 	mrpc_wchar_array_dec_ref(wchar_array);
 }
 
-static void test_wchar_array()
+static void test_wchar_array_all()
 {
 	ff_core_initialize(LOG_FILENAME);
-
 	test_wchar_array_create_delete();
 	test_wchar_array_basic();
-
 	ff_core_shutdown();
 }
 
 /* end of mrpc_char_array tests */
 #pragma endregion
 
+
+#pragma region mrpc_blob tests
+
+static void test_blob_create_delete()
+{
+	struct mrpc_blob *blob;
+	int size;
+
+	blob = mrpc_blob_create(10);
+	ASSERT(blob != NULL, "blob cannot be null");
+	size = mrpc_blob_get_size(blob);
+	ASSERT(size == 10, "unexpected size for the blob");
+	mrpc_blob_dec_ref(blob);
+}
+
+static void test_blob_basic()
+{
+	struct mrpc_blob *blob;
+	struct ff_stream *stream;
+	char buf[5];
+	uint32_t hash_value;
+	int i;
+	int is_equal;
+	enum ff_result result;
+
+	blob = mrpc_blob_create(10);
+	for (i = 0; i < 10; i++)
+	{
+		mrpc_blob_inc_ref(blob);
+	}
+	mrpc_blob_dec_ref(blob);
+	mrpc_blob_inc_ref(blob);
+	for (i = 0; i < 10; i++)
+	{
+		mrpc_blob_dec_ref(blob);
+	}
+
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
+	ASSERT(stream != NULL, "cannot open blob stream for writing");
+	result = ff_stream_write(stream, "1234", 4);
+	ASSERT(result == FF_SUCCESS, "cannot write data to blob stream");
+	result = ff_stream_write(stream, "5678", 4);
+	ASSERT(result == FF_SUCCESS, "cannot write data to blob stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the blob stream");
+	result = ff_stream_write(stream, "90", 2);
+	ASSERT(result == FF_SUCCESS, "cannot write data to blob stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the blob stream");
+	result = ff_stream_write(stream, "junk", 4);
+	ASSERT(result != FF_SUCCESS, "unexpected result on attempt of writing more data than the blob capacity");
+	ff_stream_delete(stream);
+
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	ASSERT(stream != NULL, "cannot open blob stream for reading");
+	result = ff_stream_read(stream, buf, 5);
+	ASSERT(result == FF_SUCCESS, "cannot read data from the stream");
+	is_equal = (memcmp(buf, "12345", 5) == 0);
+	ASSERT(is_equal, "unexpected data read from the stream");
+	result = ff_stream_read(stream, buf, 5);
+	ASSERT(result == FF_SUCCESS, "cannot read data from the stream");
+	is_equal = (memcmp(buf, "67890", 5) == 0);
+	ASSERT(is_equal, "unexpected data read from the stream");
+	result = ff_stream_read(stream, buf, 3);
+	ASSERT(result != FF_SUCCESS, "unexpected result on attempt of reading more data than the blob capacity");
+	ff_stream_delete(stream);
+
+	result = mrpc_blob_move(blob, L"test_blob_file.txt");
+	ASSERT(result == FF_SUCCESS, "cannot move the blob file");
+
+	hash_value = mrpc_blob_get_hash(blob, 432);
+	ASSERT(hash_value == 3858857425, "wrong hash value calculated for the blob");
+
+	mrpc_blob_dec_ref(blob);
+}
+
+struct blob_multiple_read_data
+{
+	struct ff_event *event;
+	struct mrpc_blob *blob;
+	int workers_cnt;
+};
+
+static void blob_multiple_read_fiberpool_func(void *ctx)
+{
+	struct blob_multiple_read_data *data;
+	struct ff_stream *stream;
+	char buf[10];
+	int is_equal;
+	enum ff_result result;
+
+	data = (struct blob_multiple_read_data *) ctx;
+
+	stream = mrpc_blob_open_stream(data->blob, MRPC_BLOB_READ);
+	ASSERT(stream != NULL, "cannot open blob stream for reading");
+	result = ff_stream_read(stream, buf, 10);
+	ASSERT(result == FF_SUCCESS, "cannot read data from the blob stream");
+	is_equal = (memcmp(buf, "1234567890", 10) == 0);
+	ASSERT(is_equal, "unexpected data read from the blob stream");
+	ff_stream_delete(stream);
+
+	data->workers_cnt--;
+	if (data->workers_cnt == 0)
+	{
+		ff_event_set(data->event);
+	}
+}
+
+static void test_blob_multiple_read()
+{
+	struct mrpc_blob *blob;
+	struct ff_stream *stream;
+	struct blob_multiple_read_data data;
+	int i;
+	enum ff_result result;
+
+	blob = mrpc_blob_create(10);
+
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
+	ASSERT(stream != NULL, "cannot open blob stream for writing");
+	result = ff_stream_write(stream, "1234567890", 10);
+	ASSERT(result == FF_SUCCESS, "cannot write data to the blob stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the blob stream");
+	ff_stream_delete(stream);
+
+	data.event = ff_event_create(FF_EVENT_MANUAL);
+	data.blob = blob;
+	data.workers_cnt = 10;
+	for (i = 0; i < 10; i++)
+	{
+		ff_core_fiberpool_execute_async(blob_multiple_read_fiberpool_func, &data);
+	}
+	ff_event_wait(data.event);
+	ff_event_delete(data.event);
+
+	mrpc_blob_dec_ref(blob);
+}
+
+static void test_blob_ref_cnt()
+{
+	struct mrpc_blob *blob;
+	struct ff_stream *stream;
+	enum ff_result result;
+
+	blob = mrpc_blob_create(10);
+
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
+	ASSERT(stream != NULL, "cannot open blob stream for writing");
+	result = ff_stream_write(stream, "1234567890", 10);
+	ASSERT(result == FF_SUCCESS, "cannot write data to the blob stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the blob stream");
+	ff_stream_delete(stream);
+
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	mrpc_blob_dec_ref(blob);
+	mrpc_blob_inc_ref(blob);
+	ff_stream_delete(stream);
+
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	mrpc_blob_dec_ref(blob);
+	ff_stream_delete(stream);
+}
+
+static void test_blob_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_blob_create_delete();
+	test_blob_basic();
+	test_blob_multiple_read();
+	test_blob_ref_cnt();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_blob tests */
+#pragma endregion
+
 static void test_all()
 {
-	test_char_array();
-	test_wchar_array();
+	test_char_array_all();
+	test_wchar_array_all();
+	test_blob_all();
 }
 
 int main(int argc, char* argv[])
