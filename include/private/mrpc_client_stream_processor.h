@@ -33,6 +33,7 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 /**
  * Notifies the stream_processor, that it should be stopped.
  * This function is used for unblocking the mrpc_client_stream_processor_process_stream() function.
+ * This function can be called multiple times and at any time while the stream_processor isn't deleted.
  * This function returns immediately.
  */
 void mrpc_client_stream_processor_stop_async(struct mrpc_client_stream_processor *stream_processor);
