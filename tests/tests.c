@@ -1,6 +1,7 @@
 #include "mrpc/mrpc_char_array.h"
 #include "mrpc/mrpc_wchar_array.h"
 #include "mrpc/mrpc_blob.h"
+#include "mrpc/mrpc_int_param.h"
 #include "mrpc/mrpc_char_array_param.h"
 #include "mrpc/mrpc_wchar_array_param.h"
 #include "mrpc/mrpc_blob_param.h"
@@ -327,6 +328,204 @@ static void test_blob_all()
 }
 
 /* end of mrpc_blob tests */
+#pragma endregion
+
+
+#pragma region mrpc_int_param tests
+
+static void test_int_param_create_delete()
+{
+	struct mrpc_param *param;
+
+	param = mrpc_uint32_param_create();
+	ASSERT(param != NULL, "param cannot be NULL");
+	mrpc_param_delete(param);
+
+	param = mrpc_int32_param_create();
+	ASSERT(param != NULL, "param cannot be NULL");
+	mrpc_param_delete(param);
+
+	param = mrpc_uint64_param_create();
+	ASSERT(param != NULL, "param cannot be NULL");
+	mrpc_param_delete(param);
+
+	param = mrpc_int64_param_create();
+	ASSERT(param != NULL, "param cannot be NULL");
+	mrpc_param_delete(param);
+}
+
+static void int_param_basic_fiberpool_func(void *ctx)
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_endpoint *endpoint;
+	struct ff_stream *stream;
+	struct mrpc_param *u32_param;
+	struct mrpc_param *s32_param;
+	struct mrpc_param *u64_param;
+	struct mrpc_param *s64_param;
+	enum ff_result result;
+
+	event = (struct ff_event *) ctx;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8489);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	endpoint = ff_endpoint_tcp_create(addr);
+	ff_endpoint_initialize(endpoint);
+	ff_event_set(event);
+	stream = ff_endpoint_accept(endpoint);
+	ASSERT(stream != NULL, "cannot accept local connection");
+
+	u32_param = mrpc_uint32_param_create();
+	s32_param = mrpc_int32_param_create();
+	u64_param = mrpc_uint64_param_create();
+	s64_param = mrpc_int64_param_create();
+
+	result = mrpc_param_read_from_stream(u32_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read u32 from the stream");
+	result = mrpc_param_read_from_stream(s32_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read s32 from the stream");
+	result = mrpc_param_read_from_stream(u64_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read u64 from the stream");
+	result = mrpc_param_read_from_stream(s64_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read s64 from the stream");
+
+	result = mrpc_param_write_to_stream(u32_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write u32 to the stream");
+	result = mrpc_param_write_to_stream(s32_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write s32 to the stream");
+	result = mrpc_param_write_to_stream(u64_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write u64 to the stream");
+	result = mrpc_param_write_to_stream(s64_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write s64 to the stream");
+
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	mrpc_param_delete(u32_param);
+	mrpc_param_delete(s32_param);
+	mrpc_param_delete(u64_param);
+	mrpc_param_delete(s64_param);
+
+	ff_stream_delete(stream);
+	ff_endpoint_shutdown(endpoint);
+	ff_endpoint_delete(endpoint);
+
+	ff_event_set(event);
+}
+
+static void test_int_param_basic()
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *connector;
+	struct ff_stream *stream;
+	struct mrpc_param *u32_param;
+	struct mrpc_param *s32_param;
+	struct mrpc_param *u64_param;
+	struct mrpc_param *s64_param;
+	uint32_t u32_value, *u32_ptr;
+	int32_t s32_value, *s32_ptr;
+	uint64_t u64_value, *u64_ptr;
+	int64_t s64_value, *s64_ptr;
+	enum ff_result result;
+
+	event = ff_event_create(FF_EVENT_AUTO);
+	ff_core_fiberpool_execute_async(int_param_basic_fiberpool_func, event);
+	ff_event_wait(event);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8489);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	connector = ff_stream_connector_tcp_create(addr);
+	stream = ff_stream_connector_connect(connector);
+	ASSERT(stream != NULL, "cannot establish connection to localhost");
+
+	u32_param = mrpc_uint32_param_create();
+	s32_param = mrpc_int32_param_create();
+	u64_param = mrpc_uint64_param_create();
+	s64_param = mrpc_int64_param_create();
+
+	u32_value = 12345678ul;
+	s32_value = -2345870l;
+	u64_value = 12345678902343ull;
+	s64_value = -34823472894342ll;
+
+	mrpc_param_set_value(u32_param, &u32_value);
+	mrpc_param_get_value(u32_param, (void **) &u32_ptr);
+	ASSERT(u32_value == *u32_ptr, "wrong value obtained from the parameter");
+	mrpc_param_set_value(s32_param, &s32_value);
+	mrpc_param_get_value(s32_param, (void **) &s32_ptr);
+	ASSERT(s32_value == *s32_ptr, "wrong value obtained from the parameter");
+	mrpc_param_set_value(u64_param, &u64_value);
+	mrpc_param_get_value(u64_param, (void **) &u64_ptr);
+	ASSERT(u64_value == *u64_ptr, "wrong value obtained from the parameter");
+	mrpc_param_set_value(s64_param, &s64_value);
+	mrpc_param_get_value(s64_param, (void **) &s64_ptr);
+	ASSERT(s64_value == *s64_ptr, "wrong value obtained from the parameter");
+
+	result = mrpc_param_write_to_stream(u32_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write u32 to the stream");
+	result = mrpc_param_write_to_stream(s32_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write s32 to the stream");
+	result = mrpc_param_write_to_stream(u64_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write u64 to the stream");
+	result = mrpc_param_write_to_stream(s64_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot write s64 to the stream");
+
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	mrpc_param_delete(u32_param);
+	mrpc_param_delete(s32_param);
+	mrpc_param_delete(u64_param);
+	mrpc_param_delete(s64_param);
+
+	u32_param = mrpc_uint32_param_create();
+	s32_param = mrpc_int32_param_create();
+	u64_param = mrpc_uint64_param_create();
+	s64_param = mrpc_int64_param_create();
+
+	result = mrpc_param_read_from_stream(u32_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read u32 from the stream");
+	result = mrpc_param_read_from_stream(s32_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read s32 from the stream");
+	result = mrpc_param_read_from_stream(u64_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read u64 from the stream");
+	result = mrpc_param_read_from_stream(s64_param, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read s64 from the stream");
+
+	mrpc_param_get_value(u32_param, (void **) &u32_ptr);
+	ASSERT(u32_value == *u32_ptr, "unexpected value of the u32");
+	mrpc_param_get_value(s32_param, (void **) &s32_ptr);
+	ASSERT(s32_value == *s32_ptr, "unexpected value of the s32");
+	mrpc_param_get_value(u64_param, (void **) &u64_ptr);
+	ASSERT(u64_value == *u64_ptr, "unexpected value of the u64");
+	mrpc_param_get_value(u32_param, (void **) &u32_ptr);
+	ASSERT(s64_value == *s64_ptr, "unexpected value of the s64");
+
+	mrpc_param_delete(u32_param);
+	mrpc_param_delete(s32_param);
+	mrpc_param_delete(u64_param);
+	mrpc_param_delete(s64_param);
+
+	ff_stream_delete(stream);
+	ff_stream_connector_delete(connector);
+
+	ff_event_wait(event);
+	ff_event_delete(event);
+}
+
+static void test_int_param_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_int_param_create_delete();
+	test_int_param_basic();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_int_param tests */
 #pragma endregion
 
 
@@ -692,7 +891,7 @@ static void test_blob_param_all()
 	ff_core_shutdown();
 }
 
-/* end of mrpc_wchar_array_param tests */
+/* end of mrpc_blob_param tests */
 #pragma endregion
 
 
@@ -701,6 +900,7 @@ static void test_all()
 	test_char_array_all();
 	test_wchar_array_all();
 	test_blob_all();
+	test_int_param_all();
 	test_char_array_param_all();
 	test_wchar_array_param_all();
 	test_blob_param_all();
