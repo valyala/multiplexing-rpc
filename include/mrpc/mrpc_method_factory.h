@@ -68,7 +68,7 @@ MRPC_API struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_c
  * Always returns correct result.
  */
 MRPC_API struct mrpc_method *mrpc_method_create_client_method(const mrpc_param_constructor *request_param_constructors,
-	const mrpc_param_constructor *response_param_constructors, int *is_key);
+	const mrpc_param_constructor *response_param_constructors, const int *is_key);
 
 /**
  * Deletes the method, which could be created by the mrpc_method_create_server_method()

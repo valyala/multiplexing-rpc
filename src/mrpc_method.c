@@ -17,7 +17,7 @@ struct mrpc_method
 	const mrpc_param_constructor *request_param_constructors;
 	const mrpc_param_constructor *response_param_constructors;
 	mrpc_method_callback callback;
-	int *is_key;
+	const int *is_key;
 	int request_params_cnt;
 	int response_params_cnt;
 };
@@ -170,7 +170,7 @@ struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructo
 }
 
 struct mrpc_method *mrpc_method_create_client_method(const mrpc_param_constructor *request_param_constructors,
-	const mrpc_param_constructor *response_param_constructors, int *is_key)
+	const mrpc_param_constructor *response_param_constructors, const int *is_key)
 {
 	struct mrpc_method *method;
 
