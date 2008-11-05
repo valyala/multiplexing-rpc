@@ -6,6 +6,7 @@
 #include "mrpc/mrpc_wchar_array_param.h"
 #include "mrpc/mrpc_blob_param.h"
 #include "mrpc/mrpc_param.h"
+#include "mrpc/mrpc_method_factory.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"

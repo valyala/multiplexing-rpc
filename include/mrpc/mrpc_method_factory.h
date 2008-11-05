@@ -23,9 +23,21 @@ typedef void (*mrpc_method_callback)(struct mrpc_data *data, void *service_ctx);
 /**
  * Creates the server method.
  * request_param_constructors and response_param_constructors must contain NULL-terminated arrays
- * of corresponding constructors.
- * These parameters cannot be NULL.
+ * of corresponding constructors. These parameters cannot be NULL.
  * The callback will be invoked for the given method by the rpc server. It cannot be NULL.
+ * All parameters, which are passed to this function, must be persistent during the returned method lifetime.
+ * The best way is to put these parameters in static memory using the following template code:
+ *   static const mrpc_param_constructor request_param_constructors[] =
+ *   {
+ *     param_constructor1,
+ *     param_constructor2,
+ *     NULL,
+ *   };
+ *   static const int is_key[] =
+ *   {
+ *     0,
+ *     1,
+ *   };
  * The returned method must be deleted using the mrpc_method_delete().
  * Always returns correct result.
  */
@@ -35,12 +47,23 @@ MRPC_API struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_c
 /**
  * Creates the client method.
  * request_param_constructors and response_param_constructors must contain NULL-terminated arrays
- * of corresponding constructors.
- * These parameters cannot be NULL.
+ * of corresponding constructors. These parameters cannot be NULL.
  * The is_key must contain an array of integers with the length equal to the number of constructors
  * in the request_param_constructors. It is used for determining whether the given parameter must be
- * used for calculating the hash of the given request.
- * It cannot be NULL.
+ * used for calculating the hash of the given request. It cannot be NULL.
+ * All parameters, which are passed to this function, must be persistent during the returned method lifetime.
+ * The best way is to put these parameters in static memory using the following template code:
+ *   static const mrpc_param_constructor request_param_constructors[] =
+ *   {
+ *     param_constructor1,
+ *     param_constructor2,
+ *     NULL,
+ *   };
+ *   static const int is_key[] =
+ *   {
+ *     0,
+ *     1,
+ *   };
  * The returned method must be deleted using the mrpc_method_delete().
  * Always returns correct result.
  */
