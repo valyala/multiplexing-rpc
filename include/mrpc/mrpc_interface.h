@@ -13,6 +13,7 @@ struct mrpc_interface;
 /**
  * Creates a mrpc_interface.
  * method_constructors must be a NULL-terminated array of method constructors, which implement interface's methods.
+ * method_constructors must contain at least one non-NULL element.
  * Always returns correct result.
  */
 MRPC_API struct mrpc_interface *mrpc_interface_create(const mrpc_method_constructor *method_constructors);

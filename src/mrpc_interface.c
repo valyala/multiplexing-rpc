@@ -39,13 +39,17 @@ struct mrpc_interface *mrpc_interface_create(const mrpc_method_constructor *meth
 
 	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
 	interface->methods_cnt = get_constructors_cnt(method_constructors);
+	ff_assert(interface->methods_cnt > 0);
 	interface->methods = (struct mrpc_method **) ff_calloc(interface->methods_cnt, sizeof(interface->methods[0]));
 	for (i = 0; i < interface->methods_cnt; i++)
 	{
 		mrpc_method_constructor method_constructor;
+		struct mrpc_method *method;
 
 		method_constructor = method_constructors[i];
-		interface->methods[i] = method_constructor();
+		method = method_constructor();
+		ff_assert(method != NULL);
+		interface->methods[i] = method;
 	}
 
 	return interface;
@@ -60,6 +64,7 @@ void mrpc_interface_delete(struct mrpc_interface *interface)
 		struct mrpc_method *method;
 
 		method = interface->methods[i];
+		ff_assert(method != NULL);
 		mrpc_method_delete(method);
 	}
 

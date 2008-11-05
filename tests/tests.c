@@ -8,6 +8,7 @@
 #include "mrpc/mrpc_param.h"
 #include "mrpc/mrpc_method_factory.h"
 #include "mrpc/mrpc_method.h"
+#include "mrpc/mrpc_interface.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
@@ -982,6 +983,79 @@ static void test_method_all()
 /* end of mrpc_method tests */
 #pragma endregion
 
+#pragma region mrpc_interface tests
+
+static struct mrpc_method *interface_create_delete_method_constructor1()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		mrpc_uint32_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		NULL,
+	};
+	static const int is_key[] =
+	{
+		0,
+	};
+
+	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static struct mrpc_method *interface_create_delete_method_constructor2()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_wchar_array_param_create,
+		mrpc_uint32_param_create,
+		mrpc_uint64_param_create,
+		NULL,
+	};
+	static const int is_key[] =
+	{
+		0, /* fake value */
+	};
+
+	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static void test_interface_create_delete()
+{
+	struct mrpc_interface *interface;
+	static const mrpc_method_constructor method_constructors[] =
+	{
+		interface_create_delete_method_constructor1,
+		interface_create_delete_method_constructor2,
+		NULL,
+	};
+
+	interface = mrpc_interface_create(method_constructors);
+	ASSERT(interface != NULL, "mrpc_interface_create() must return valid result");
+	mrpc_interface_delete(interface);
+}
+
+static void test_interface_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_interface_create_delete();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_interface tests */
+#pragma endregion
+
 
 static void test_all()
 {
@@ -993,6 +1067,7 @@ static void test_all()
 	test_wchar_array_param_all();
 	test_blob_param_all();
 	test_method_all();
+	test_interface_all();
 }
 
 int main(int argc, char* argv[])
