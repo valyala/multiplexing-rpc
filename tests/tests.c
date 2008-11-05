@@ -7,6 +7,7 @@
 #include "mrpc/mrpc_blob_param.h"
 #include "mrpc/mrpc_param.h"
 #include "mrpc/mrpc_method_factory.h"
+#include "mrpc/mrpc_method.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
@@ -895,6 +896,73 @@ static void test_blob_param_all()
 /* end of mrpc_blob_param tests */
 #pragma endregion
 
+#pragma region mrpc_method tests
+
+static void test_method_client_create_delete()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		mrpc_uint32_param_create,
+		mrpc_int32_param_create,
+		mrpc_uint64_param_create,
+		mrpc_int64_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_blob_param_create,
+		mrpc_wchar_array_param_create,
+		mrpc_char_array_param_create,
+		NULL,
+	};
+	static const int is_key[] =
+	{
+		1,
+		0,
+		0,
+		1,
+	};
+
+	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
+	ASSERT(method != NULL, "cannot create client method");
+	mrpc_method_delete(method);
+}
+
+static void method_server_create_delete_callback(struct mrpc_data *data, void *service_ctx)
+{
+	ASSERT(0, "this callback shouldn't be called");
+}
+
+static void test_method_server_create_delete()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_blob_param_create,
+		NULL,
+	};
+
+	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, method_server_create_delete_callback);
+	ASSERT(method != NULL, "cannot create server method");
+	mrpc_method_delete(method);
+}
+
+static void test_method_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_method_client_create_delete();
+	test_method_server_create_delete();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_method tests */
+#pragma endregion
+
 
 static void test_all()
 {
@@ -905,6 +973,7 @@ static void test_all()
 	test_char_array_param_all();
 	test_wchar_array_param_all();
 	test_blob_param_all();
+	test_method_all();
 }
 
 int main(int argc, char* argv[])
