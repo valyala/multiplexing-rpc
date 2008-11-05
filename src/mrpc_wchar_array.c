@@ -80,6 +80,7 @@ uint32_t mrpc_wchar_array_get_hash(struct mrpc_wchar_array *wchar_array, uint32_
 
 	ff_assert(wchar_array->ref_cnt > 0);
 
+	/* the following test must be eliminated by optimizing compiler */
 	if (sizeof(wchar_t) == 4)
 	{
 		uint16_t *buf;
