@@ -1,0 +1,47 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multiplexing-rpc", "multiplexing-rpc.vcproj", "{7AFE3833-FD73-4040-8350-DFEB5C8B8A5E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{45AB88BE-CB27-49B0-849A-156FAD7D6D6E} = {45AB88BE-CB27-49B0-849A-156FAD7D6D6E}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fiber-framework", "external\fiber-framework\fiber-framework.vcproj", "{45AB88BE-CB27-49B0-849A-156FAD7D6D6E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fiber-framework-tests", "external\fiber-framework\tests\fiber-framework-tests.vcproj", "{269647F2-06C6-46C9-9C51-90789B87E2CA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{45AB88BE-CB27-49B0-849A-156FAD7D6D6E} = {45AB88BE-CB27-49B0-849A-156FAD7D6D6E}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multiplexing-rpc-tests", "tests\multiplexing-rpc-tests.vcproj", "{4A0E61E9-51A7-4F3D-B62D-855F5BE6E7B2}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7AFE3833-FD73-4040-8350-DFEB5C8B8A5E} = {7AFE3833-FD73-4040-8350-DFEB5C8B8A5E}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7AFE3833-FD73-4040-8350-DFEB5C8B8A5E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7AFE3833-FD73-4040-8350-DFEB5C8B8A5E}.Debug|Win32.Build.0 = Debug|Win32
+		{7AFE3833-FD73-4040-8350-DFEB5C8B8A5E}.Release|Win32.ActiveCfg = Release|Win32
+		{7AFE3833-FD73-4040-8350-DFEB5C8B8A5E}.Release|Win32.Build.0 = Release|Win32
+		{45AB88BE-CB27-49B0-849A-156FAD7D6D6E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{45AB88BE-CB27-49B0-849A-156FAD7D6D6E}.Debug|Win32.Build.0 = Debug|Win32
+		{45AB88BE-CB27-49B0-849A-156FAD7D6D6E}.Release|Win32.ActiveCfg = Release|Win32
+		{45AB88BE-CB27-49B0-849A-156FAD7D6D6E}.Release|Win32.Build.0 = Release|Win32
+		{269647F2-06C6-46C9-9C51-90789B87E2CA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{269647F2-06C6-46C9-9C51-90789B87E2CA}.Debug|Win32.Build.0 = Debug|Win32
+		{269647F2-06C6-46C9-9C51-90789B87E2CA}.Release|Win32.ActiveCfg = Release|Win32
+		{269647F2-06C6-46C9-9C51-90789B87E2CA}.Release|Win32.Build.0 = Release|Win32
+		{4A0E61E9-51A7-4F3D-B62D-855F5BE6E7B2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4A0E61E9-51A7-4F3D-B62D-855F5BE6E7B2}.Debug|Win32.Build.0 = Debug|Win32
+		{4A0E61E9-51A7-4F3D-B62D-855F5BE6E7B2}.Release|Win32.ActiveCfg = Release|Win32
+		{4A0E61E9-51A7-4F3D-B62D-855F5BE6E7B2}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
