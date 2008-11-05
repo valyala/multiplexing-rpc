@@ -431,6 +431,7 @@ static void test_int_param_basic()
 	int32_t s32_value, *s32_ptr;
 	uint64_t u64_value, *u64_ptr;
 	int64_t s64_value, *s64_ptr;
+	uint32_t hash_value;
 	enum ff_result result;
 
 	event = ff_event_create(FF_EVENT_AUTO);
@@ -506,6 +507,15 @@ static void test_int_param_basic()
 	ASSERT(u64_value == *u64_ptr, "unexpected value of the u64");
 	mrpc_param_get_value(s64_param, (void **) &s64_ptr);
 	ASSERT(s64_value == *s64_ptr, "unexpected value of the s64");
+
+	hash_value = mrpc_param_get_hash(u32_param, 12345);
+	ASSERT(hash_value == 3806499569ul, "unexpected hash value");
+	hash_value = mrpc_param_get_hash(s32_param, 12345);
+	ASSERT(hash_value == 138116614ul, "unexpected hash value");
+	hash_value = mrpc_param_get_hash(u64_param, 12345);
+	ASSERT(hash_value == 3433180561ul, "unexpected hash value");
+	hash_value = mrpc_param_get_hash(s64_param, 12345);
+	ASSERT(hash_value == 647666836ul, "unexpected hash value");
 
 	mrpc_param_delete(u32_param);
 	mrpc_param_delete(s32_param);
@@ -590,6 +600,7 @@ static void test_char_array_param_basic()
 	struct mrpc_param *param;
 	char *s1;
 	const char *s2;
+	uint32_t hash_value;
 	int len;
 	int is_equal;
 	enum ff_result result;
@@ -629,6 +640,8 @@ static void test_char_array_param_basic()
 	s2 = mrpc_char_array_get_value(char_array3);
 	is_equal = (memcmp(s2, "foo bar", 7 * sizeof(s2[0])) == 0);
 	ASSERT(is_equal, "unexpected value of the char array");
+	hash_value = mrpc_param_get_hash(param, 12345);
+	ASSERT(hash_value == 1444866618ul, "unexpected hash value");
 	mrpc_param_delete(param);
 
 	ff_stream_delete(stream);
@@ -709,6 +722,7 @@ static void test_wchar_array_param_basic()
 	struct mrpc_param *param;
 	wchar_t *s1;
 	const wchar_t *s2;
+	uint32_t hash_value;
 	int len;
 	int is_equal;
 	enum ff_result result;
@@ -748,6 +762,8 @@ static void test_wchar_array_param_basic()
 	s2 = mrpc_wchar_array_get_value(wchar_array3);
 	is_equal = (memcmp(s2, L"foo bar", 7 * sizeof(s2[0])) == 0);
 	ASSERT(is_equal, "unexpected value of the wchar array");
+	hash_value = mrpc_param_get_hash(param, 12345);
+	ASSERT(hash_value == 3358053767ul, "unexpected hash value");
 	mrpc_param_delete(param);
 
 	ff_stream_delete(stream);
@@ -827,6 +843,7 @@ static void test_blob_param_basic()
 	struct mrpc_blob *blob2;
 	struct mrpc_blob *blob3;
 	struct mrpc_param *param;
+	uint32_t hash_value;
 	char buf[10];
 	int size;
 	int is_equal;
@@ -876,6 +893,8 @@ static void test_blob_param_basic()
 	is_equal = (memcmp(buf, "0123456789", 10) == 0);
 	ASSERT(is_equal, "unexpected value of blob");
 	ff_stream_delete(blob_stream);
+	hash_value = mrpc_param_get_hash(param, 12345);
+	ASSERT(hash_value == 318893864ul, "unexpected hash value");
 	mrpc_param_delete(param);
 
 	ff_stream_delete(stream);
