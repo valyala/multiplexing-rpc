@@ -3,7 +3,7 @@
 #include "private/mrpc_server.h"
 #include "private/mrpc_server_stream_processor.h"
 #include "private/mrpc_interface.h"
-#include "ff/ff_endpoint.h"
+#include "ff/ff_stream_acceptor.h"
 #include "ff/ff_event.h"
 #include "ff/ff_pool.h"
 #include "ff/ff_core.h"
@@ -20,7 +20,7 @@ struct mrpc_server
 {
 	struct mrpc_interface *service_interface;
 	void *service_ctx;
-	struct ff_endpoint *endpoint;
+	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_event *stop_event;
 	struct ff_event *stream_processors_stop_event;
 	struct ff_pool *stream_processors;
@@ -105,13 +105,12 @@ static void main_server_func(void *ctx)
 
 	ff_assert(server->stream_processors_cnt == 0);
 	ff_event_set(server->stream_processors_stop_event);
-	ff_endpoint_initialize(server->endpoint);
 	for (;;)
 	{
 		struct mrpc_server_stream_processor *stream_processor;
 		struct ff_stream *client_stream;
 
-		client_stream = ff_endpoint_accept(server->endpoint);
+		client_stream = ff_stream_acceptor_accept(server->stream_acceptor);
 		if (client_stream == NULL)
 		{
 			break;
@@ -131,7 +130,7 @@ struct mrpc_server *mrpc_server_create()
 	server = (struct mrpc_server *) ff_malloc(sizeof(*server));
 	server->service_interface = NULL;
 	server->service_ctx = NULL;
-	server->endpoint = NULL;
+	server->stream_acceptor = NULL;
 	server->stop_event = ff_event_create(FF_EVENT_AUTO);
 	server->stream_processors_stop_event = ff_event_create(FF_EVENT_AUTO);
 	server->stream_processors = ff_pool_create(MAX_STREAM_PROCESSORS_CNT, create_stream_processor, server, delete_stream_processor);
@@ -144,7 +143,7 @@ void mrpc_server_delete(struct mrpc_server *server)
 {
 	ff_assert(server->service_interface == NULL);
 	ff_assert(server->service_ctx == NULL);
-	ff_assert(server->endpoint == NULL);
+	ff_assert(server->stream_acceptor == NULL);
 	ff_assert(server->stream_processors_cnt == 0);
 
 	ff_pool_delete(server->stream_processors);
@@ -153,32 +152,33 @@ void mrpc_server_delete(struct mrpc_server *server)
 	ff_free(server);
 }
 
-void mrpc_server_start(struct mrpc_server *server, struct mrpc_interface *service_interface, void *service_ctx, struct ff_endpoint *endpoint)
+void mrpc_server_start(struct mrpc_server *server, struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream_acceptor *stream_acceptor)
 {
 	ff_assert(server->service_interface == NULL);
 	ff_assert(server->service_ctx == NULL);
-	ff_assert(server->endpoint == NULL);
+	ff_assert(server->stream_acceptor == NULL);
 	ff_assert(server->stream_processors_cnt == 0);
 
 	ff_assert(service_interface != NULL);
-	ff_assert(endpoint != NULL);
+	ff_assert(stream_acceptor != NULL);
 
 	server->service_interface = service_interface;
 	server->service_ctx = service_ctx;
-	server->endpoint = endpoint;
+	server->stream_acceptor = stream_acceptor;
+	ff_stream_acceptor_initialize(server->stream_acceptor);
 	ff_core_fiberpool_execute_async(main_server_func, server);
 }
 
 void mrpc_server_stop(struct mrpc_server *server)
 {
 	ff_assert(server->service_interface != NULL);
-	ff_assert(server->endpoint != NULL);
+	ff_assert(server->stream_acceptor != NULL);
 
-	ff_endpoint_shutdown(server->endpoint);
+	ff_stream_acceptor_shutdown(server->stream_acceptor);
 	ff_event_wait(server->stop_event);
 	ff_assert(server->stream_processors_cnt == 0);
 
 	server->service_interface = NULL;
 	server->service_ctx = NULL;
-	server->endpoint = NULL;
+	server->stream_acceptor = NULL;
 }

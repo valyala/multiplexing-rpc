@@ -3,7 +3,7 @@
 
 #include "mrpc/mrpc_common.h"
 #include "mrpc/mrpc_interface.h"
-#include "ff/ff_endpoint.h"
+#include "ff/ff_stream_acceptor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,9 +25,9 @@ MRPC_API struct mrpc_server *mrpc_server_create();
 MRPC_API void mrpc_server_delete(struct mrpc_server *server);
 
 /**
- * Starts the given server for serving the given service_interface and using the given service_ctx.
+ * Starts the given server for serving the given service_interface, service_ctx and the given stream_acceptor
  */
-MRPC_API void mrpc_server_start(struct mrpc_server *server, struct mrpc_interface *service_interface, void *service_ctx, struct ff_endpoint *endpoint);
+MRPC_API void mrpc_server_start(struct mrpc_server *server, struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream_acceptor *stream_acceptor);
 
 /**
  * Stops the given server.
