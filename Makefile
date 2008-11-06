@@ -1,54 +1,51 @@
-CFLAGS=-Wall -fpic -fvisibility=hidden -g -I./include -I./external/fiber-framework/include -DHAS_STDINT_H -D_GNU_SOURCE
-LDFLAGS=-shared
+CFLAGS=-Wall -fpic -combine -fwhole-program -g -I./include -I./external/fiber-framework/include -DHAS_STDINT_H -D_GNU_SOURCE -U_FORTIFY_SOURCE
+LDFLAGS=-lfiber-framework -shared -s
 CC=gcc
 
 SRC_DIR=src
 TESTS_DIR=tests
 
-MRPC_LIB_OBJS= \
-	$(SRC_DIR)/mrpc_bitmap.o \
-	$(SRC_DIR)/mrpc_blob.o \
-	$(SRC_DIR)/mrpc_blob_param.o \
-	$(SRC_DIR)/mrpc_blob_serialization.o \
-	$(SRC_DIR)/mrpc_char_array.o \
-	$(SRC_DIR)/mrpc_char_array_param.o \
-	$(SRC_DIR)/mrpc_char_array_serialization.o \
-	$(SRC_DIR)/mrpc_client.o \
-	$(SRC_DIR)/mrpc_client_request_processor.o \
-	$(SRC_DIR)/mrpc_client_stream_processor.o \
-	$(SRC_DIR)/mrpc_data.o \
-	$(SRC_DIR)/mrpc_interface.o \
-	$(SRC_DIR)/mrpc_int_param.o \
-	$(SRC_DIR)/mrpc_int_serialization.o \
-	$(SRC_DIR)/mrpc_method.o \
-	$(SRC_DIR)/mrpc_packet.o \
-	$(SRC_DIR)/mrpc_packet_stream.o \
-	$(SRC_DIR)/mrpc_packet_stream_factory.o \
-	$(SRC_DIR)/mrpc_param.o \
-	$(SRC_DIR)/mrpc_server.o \
-	$(SRC_DIR)/mrpc_server_request_processor.o \
-	$(SRC_DIR)/mrpc_server_stream_processor.o \
-	$(SRC_DIR)/mrpc_wchar_array.o \
-	$(SRC_DIR)/mrpc_wchar_array_param.o \
-	$(SRC_DIR)/mrpc_wchar_array_serialization.o
-
-ALL_OBJS= \
-	$(MRPC_LIB_OBJS)
+MRPC_LIB_SRCS= \
+	$(SRC_DIR)/mrpc_bitmap.c \
+	$(SRC_DIR)/mrpc_blob.c \
+	$(SRC_DIR)/mrpc_blob_param.c \
+	$(SRC_DIR)/mrpc_blob_serialization.c \
+	$(SRC_DIR)/mrpc_char_array.c \
+	$(SRC_DIR)/mrpc_char_array_param.c \
+	$(SRC_DIR)/mrpc_char_array_serialization.c \
+	$(SRC_DIR)/mrpc_client.c \
+	$(SRC_DIR)/mrpc_client_request_processor.c \
+	$(SRC_DIR)/mrpc_client_stream_processor.c \
+	$(SRC_DIR)/mrpc_data.c \
+	$(SRC_DIR)/mrpc_interface.c \
+	$(SRC_DIR)/mrpc_int_param.c \
+	$(SRC_DIR)/mrpc_int_serialization.c \
+	$(SRC_DIR)/mrpc_method.c \
+	$(SRC_DIR)/mrpc_packet.c \
+	$(SRC_DIR)/mrpc_packet_stream.c \
+	$(SRC_DIR)/mrpc_packet_stream_factory.c \
+	$(SRC_DIR)/mrpc_param.c \
+	$(SRC_DIR)/mrpc_server.c \
+	$(SRC_DIR)/mrpc_server_request_processor.c \
+	$(SRC_DIR)/mrpc_server_stream_processor.c \
+	$(SRC_DIR)/mrpc_wchar_array.c \
+	$(SRC_DIR)/mrpc_wchar_array_param.c \
+	$(SRC_DIR)/mrpc_wchar_array_serialization.c
 
 default: all
 
 all: libmultiplexing-rpc.so tests
 
-libfiber-framework:
+libfiber-framework.so:
 	cd ./external/fiber-framework && make libfiber-framework.so && cp libfiber-framework.so ../../
 
-libmultiplexing-rpc.so: libfiber-framework $(MRPC_LIB_OBJS)
-	$(CC) $(MRPC_LIB_OBJS) $(LDFLAGS) -lfiber-framework -L. -Wl,--rpath -Wl,. -o $@
+libmultiplexing-rpc.so: libfiber-framework.so $(MRPC_LIB_SRCS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -L. -Wl,--rpath -Wl,. -o libmultiplexing-rpc.so $(MRPC_LIB_SRCS)
 
-tests: libfiber-framework libmultiplexing-rpc.so
+tests: libfiber-framework.so libmultiplexing-rpc.so
 	$(CC) -g -I./include -I./external/fiber-framework/include -DHAS_STDINT_H -lfiber-framework -lmultiplexing-rpc -L. -Wl,--rpath -Wl,. -o run-tests $(TESTS_DIR)/tests.c
 
 clean:
 	cd ./external/fiber-framework && make clean
-	rm -f $(ALL_OBJS) libfiber-framework.so libmultiplexing-rpc.so run-tests
+	rm -f libfiber-framework.so libmultiplexing-rpc.so run-tests
 
