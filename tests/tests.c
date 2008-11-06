@@ -14,7 +14,7 @@
 #include "ff/ff_stream.h"
 #include "ff/ff_event.h"
 #include "ff/ff_stream_connector_tcp.h"
-#include "ff/ff_endpoint_tcp.h"
+#include "ff/ff_stream_acceptor_tcp.h"
 #include "ff/arch/ff_arch_net_addr.h"
 
 #include <stdio.h>
@@ -361,7 +361,7 @@ static void int_param_basic_fiberpool_func(void *ctx)
 {
 	struct ff_event *event;
 	struct ff_arch_net_addr *addr;
-	struct ff_endpoint *endpoint;
+	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_stream *stream;
 	struct mrpc_param *u32_param;
 	struct mrpc_param *s32_param;
@@ -374,10 +374,10 @@ static void int_param_basic_fiberpool_func(void *ctx)
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8489);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	endpoint = ff_endpoint_tcp_create(addr);
-	ff_endpoint_initialize(endpoint);
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	ff_stream_acceptor_initialize(stream_acceptor);
 	ff_event_set(event);
-	stream = ff_endpoint_accept(endpoint);
+	stream = ff_stream_acceptor_accept(stream_acceptor);
 	ASSERT(stream != NULL, "cannot accept local connection");
 
 	u32_param = mrpc_uint32_param_create();
@@ -412,8 +412,8 @@ static void int_param_basic_fiberpool_func(void *ctx)
 	mrpc_param_delete(s64_param);
 
 	ff_stream_delete(stream);
-	ff_endpoint_shutdown(endpoint);
-	ff_endpoint_delete(endpoint);
+	ff_stream_acceptor_shutdown(stream_acceptor);
+	ff_stream_acceptor_delete(stream_acceptor);
 
 	ff_event_set(event);
 }
@@ -443,6 +443,7 @@ static void test_int_param_basic()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8489);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
 	connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(connector);
 	stream = ff_stream_connector_connect(connector);
 	ASSERT(stream != NULL, "cannot establish connection to localhost");
 
@@ -524,6 +525,7 @@ static void test_int_param_basic()
 	mrpc_param_delete(s64_param);
 
 	ff_stream_delete(stream);
+	ff_stream_connector_shutdown(connector);
 	ff_stream_connector_delete(connector);
 
 	ff_event_wait(event);
@@ -557,7 +559,7 @@ static void char_array_param_basic_fiberpool_func(void *ctx)
 {
 	struct ff_event *event;
 	struct ff_arch_net_addr *addr;
-	struct ff_endpoint *endpoint;
+	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_stream *stream;
 	struct mrpc_param *param;
 	enum ff_result result;
@@ -567,10 +569,10 @@ static void char_array_param_basic_fiberpool_func(void *ctx)
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	endpoint = ff_endpoint_tcp_create(addr);
-	ff_endpoint_initialize(endpoint);
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	ff_stream_acceptor_initialize(stream_acceptor);
 	ff_event_set(event);
-	stream = ff_endpoint_accept(endpoint);
+	stream = ff_stream_acceptor_accept(stream_acceptor);
 	ASSERT(stream != NULL, "cannot accept local connection");
 
 	param = mrpc_char_array_param_create();
@@ -583,8 +585,8 @@ static void char_array_param_basic_fiberpool_func(void *ctx)
 
 	mrpc_param_delete(param);
 	ff_stream_delete(stream);
-	ff_endpoint_shutdown(endpoint);
-	ff_endpoint_delete(endpoint);
+	ff_stream_acceptor_shutdown(stream_acceptor);
+	ff_stream_acceptor_delete(stream_acceptor);
 
 	ff_event_set(event);
 }
@@ -614,6 +616,7 @@ static void test_char_array_param_basic()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8490);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
 	connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(connector);
 	stream = ff_stream_connector_connect(connector);
 	ASSERT(stream != NULL, "cannot establish connection to localhost");
 
@@ -646,6 +649,7 @@ static void test_char_array_param_basic()
 	mrpc_param_delete(param);
 
 	ff_stream_delete(stream);
+	ff_stream_connector_shutdown(connector);
 	ff_stream_connector_delete(connector);
 
 	ff_event_wait(event);
@@ -679,7 +683,7 @@ static void wchar_array_param_basic_fiberpool_func(void *ctx)
 {
 	struct ff_event *event;
 	struct ff_arch_net_addr *addr;
-	struct ff_endpoint *endpoint;
+	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_stream *stream;
 	struct mrpc_param *param;
 	enum ff_result result;
@@ -689,10 +693,10 @@ static void wchar_array_param_basic_fiberpool_func(void *ctx)
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8491);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	endpoint = ff_endpoint_tcp_create(addr);
-	ff_endpoint_initialize(endpoint);
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	ff_stream_acceptor_initialize(stream_acceptor);
 	ff_event_set(event);
-	stream = ff_endpoint_accept(endpoint);
+	stream = ff_stream_acceptor_accept(stream_acceptor);
 	ASSERT(stream != NULL, "cannot accept local connection");
 
 	param = mrpc_wchar_array_param_create();
@@ -705,8 +709,8 @@ static void wchar_array_param_basic_fiberpool_func(void *ctx)
 
 	mrpc_param_delete(param);
 	ff_stream_delete(stream);
-	ff_endpoint_shutdown(endpoint);
-	ff_endpoint_delete(endpoint);
+	ff_stream_acceptor_shutdown(stream_acceptor);
+	ff_stream_acceptor_delete(stream_acceptor);
 
 	ff_event_set(event);
 }
@@ -736,6 +740,7 @@ static void test_wchar_array_param_basic()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8491);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
 	connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(connector);
 	stream = ff_stream_connector_connect(connector);
 	ASSERT(stream != NULL, "cannot establish connection to localhost");
 
@@ -768,6 +773,7 @@ static void test_wchar_array_param_basic()
 	mrpc_param_delete(param);
 
 	ff_stream_delete(stream);
+	ff_stream_connector_shutdown(connector);
 	ff_stream_connector_delete(connector);
 
 	ff_event_wait(event);
@@ -801,7 +807,7 @@ static void blob_param_basic_fiberpool_func(void *ctx)
 {
 	struct ff_event *event;
 	struct ff_arch_net_addr *addr;
-	struct ff_endpoint *endpoint;
+	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_stream *stream;
 	struct mrpc_param *param;
 	enum ff_result result;
@@ -811,10 +817,10 @@ static void blob_param_basic_fiberpool_func(void *ctx)
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8492);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	endpoint = ff_endpoint_tcp_create(addr);
-	ff_endpoint_initialize(endpoint);
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	ff_stream_acceptor_initialize(stream_acceptor);
 	ff_event_set(event);
-	stream = ff_endpoint_accept(endpoint);
+	stream = ff_stream_acceptor_accept(stream_acceptor);
 	ASSERT(stream != NULL, "cannot accept local connection");
 
 	param = mrpc_blob_param_create();
@@ -827,8 +833,8 @@ static void blob_param_basic_fiberpool_func(void *ctx)
 
 	mrpc_param_delete(param);
 	ff_stream_delete(stream);
-	ff_endpoint_shutdown(endpoint);
-	ff_endpoint_delete(endpoint);
+	ff_stream_acceptor_shutdown(stream_acceptor);
+	ff_stream_acceptor_delete(stream_acceptor);
 
 	ff_event_set(event);
 }
@@ -858,6 +864,7 @@ static void test_blob_param_basic()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8492);
 	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
 	connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(connector);
 	stream = ff_stream_connector_connect(connector);
 	ASSERT(stream != NULL, "cannot establish connection to localhost");
 
@@ -899,6 +906,7 @@ static void test_blob_param_basic()
 	mrpc_param_delete(param);
 
 	ff_stream_delete(stream);
+	ff_stream_connector_shutdown(connector);
 	ff_stream_connector_delete(connector);
 
 	ff_event_wait(event);
