@@ -9,6 +9,7 @@
 #include "mrpc/mrpc_method_factory.h"
 #include "mrpc/mrpc_method.h"
 #include "mrpc/mrpc_interface.h"
+#include "mrpc/mrpc_data.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
@@ -1064,6 +1065,213 @@ static void test_interface_all()
 /* end of mrpc_interface tests */
 #pragma endregion
 
+#pragma region mrpc_data tests
+
+static struct mrpc_method *data_method_constructor1_client()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		mrpc_uint32_param_create,
+		mrpc_uint64_param_create,
+		mrpc_wchar_array_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_char_array_param_create,
+		mrpc_blob_param_create,
+		mrpc_uint64_param_create,
+		NULL,
+	};
+	static const int is_key[] =
+	{
+		0,
+		1,
+		1
+	};
+
+	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static struct mrpc_method *data_method_constructor2_client()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		mrpc_int32_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		NULL,
+	};
+	static const int is_key[] =
+	{
+		0,
+	};
+
+	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static const mrpc_method_constructor data_method_constructors_client[] =
+{
+	data_method_constructor1_client,
+	data_method_constructor2_client,
+	NULL,
+};
+
+static void data_method_callback1(struct mrpc_data *data, void *service_ctx)
+{
+	ASSERT(0, "this callback shouldn't be called");
+}
+
+static void data_method_callback2(struct mrpc_data *data, void *service_ctx)
+{
+	ASSERT(0, "this callback shouldn't be called");
+}
+
+static struct mrpc_method *data_method_constructor1_server()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		mrpc_int64_param_create,
+		mrpc_char_array_param_create,
+		mrpc_int32_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_uint32_param_create,
+		mrpc_uint64_param_create,
+		mrpc_wchar_array_param_create,
+		NULL,
+	};
+
+	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, data_method_callback1);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static struct mrpc_method *data_method_constructor2_server()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		mrpc_int32_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		NULL,
+	};
+
+	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, data_method_callback2);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static const mrpc_method_constructor data_method_constructors_server[] =
+{
+	data_method_constructor1_server,
+	data_method_constructor2_server,
+	NULL,
+};
+
+static void test_data_create_delete()
+{
+	struct mrpc_interface *interface;
+	struct mrpc_data *data;
+
+	interface = mrpc_interface_create(data_method_constructors_client);
+	ASSERT(interface != NULL, "interface cannot be NULL");
+
+	data = mrpc_data_create(interface, 0);
+	ASSERT(data != NULL, "data cannot be NULL");
+	mrpc_data_delete(data);
+
+	data = mrpc_data_create(interface, 1);
+	ASSERT(data != NULL, "data cannot be NULL");
+	mrpc_data_delete(data);
+
+	mrpc_interface_delete(interface);
+}
+
+static void test_data_basic_client()
+{
+	struct mrpc_interface *interface;
+	struct mrpc_data *data;
+	wchar_t *s;
+	struct mrpc_wchar_array *wchar_array;
+	uint64_t u64_value;
+	uint32_t u32_value;
+	uint32_t hash_value;
+
+	interface = mrpc_interface_create(data_method_constructors_client);
+	ASSERT(interface != NULL, "interface cannot be NULL");
+
+	data = mrpc_data_create(interface, 0);
+	ASSERT(data != NULL, "data cannot be NULL");
+	u32_value = 123458ul;
+	mrpc_data_set_request_param_value(data, 0, &u32_value);
+	u64_value = 18889899089089ull;
+	mrpc_data_set_request_param_value(data, 1, &u64_value);
+	s = (wchar_t *) ff_calloc(11, sizeof(s[0]));
+	memcpy(s, L"1234567890", 10 * sizeof(s[0]));
+	wchar_array = mrpc_wchar_array_create(s, 10);
+	mrpc_data_set_request_param_value(data, 2, wchar_array);
+	hash_value = mrpc_data_get_request_hash(data, 12345);
+	ASSERT(hash_value == 1821522797ul, "wrong hash value");
+	/* mrpc_data_delete() will delete wchar_array, which, in turn, will delete s */
+	mrpc_data_delete(data);
+
+	mrpc_interface_delete(interface);
+}
+
+static void test_data_basic_server()
+{
+	struct mrpc_interface *interface;
+	struct mrpc_data *data;
+	wchar_t *s;
+	struct mrpc_wchar_array *wchar_array;
+	uint64_t u64_value;
+	uint32_t u32_value;
+
+	interface = mrpc_interface_create(data_method_constructors_server);
+	ASSERT(interface != NULL, "interface cannot be NULL");
+
+	data = mrpc_data_create(interface, 0);
+	ASSERT(data != NULL, "data cannot be NULL");
+	u32_value = 123458ul;
+	mrpc_data_set_response_param_value(data, 0, &u32_value);
+	u64_value = 18889899089089ull;
+	mrpc_data_set_response_param_value(data, 1, &u64_value);
+	s = (wchar_t *) ff_calloc(11, sizeof(s[0]));
+	memcpy(s, L"1234567890", 10 * sizeof(s[0]));
+	wchar_array = mrpc_wchar_array_create(s, 10);
+	mrpc_data_set_response_param_value(data, 2, wchar_array);
+	/* mrpc_data_delete() will delete wchar_array, which, in turn, will delete s */
+	mrpc_data_delete(data);
+
+	mrpc_interface_delete(interface);
+}
+
+static void test_data_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_data_create_delete();
+	test_data_basic_client();
+	test_data_basic_server();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_data tests */
+#pragma endregion
 
 static void test_all()
 {
@@ -1076,6 +1284,7 @@ static void test_all()
 	test_blob_param_all();
 	test_method_all();
 	test_interface_all();
+	test_data_all();
 }
 
 int main(int argc, char* argv[])
