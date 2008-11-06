@@ -1311,10 +1311,10 @@ static void server_method_callback1(struct mrpc_data *data, void *service_ctx)
 
 	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
 
-	mrpc_data_get_request_param_value(data, 0, &s32_ptr);
+	mrpc_data_get_request_param_value(data, 0, (void **) &s32_ptr);
 	ASSERT(*s32_ptr == -5433734, "unexpected value");
 
-	mrpc_data_get_request_param_value(data, 1, &blob);
+	mrpc_data_get_request_param_value(data, 1, (void **) &blob);
 	len = mrpc_blob_get_size(blob);
 	ASSERT(len == 5, "wrong blob size");
 	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
@@ -1325,7 +1325,7 @@ static void server_method_callback1(struct mrpc_data *data, void *service_ctx)
 	ASSERT(is_equal, "unexpected value received from the stream");
 	ff_stream_delete(stream);
 
-	mrpc_data_get_request_param_value(data, 2, &wchar_array);
+	mrpc_data_get_request_param_value(data, 2, (void **) &wchar_array);
 	len = mrpc_wchar_array_get_len(wchar_array);
 	ASSERT(len == 6, "unexpected value received from the stream");
 	s = mrpc_wchar_array_get_value(wchar_array);
