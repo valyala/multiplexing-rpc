@@ -1,12 +1,10 @@
 #ifndef MRPC_API_PUBLIC
 #define MRPC_API_PUBLIC
 
-#if defined(MRPC_BUILD_DLL)
-	#define MRPC_API __declspec(dllexport)
-#elif defined(MRPC_USE_DLL)
+#if defined(WIN32)
 	#define MRPC_API __declspec(dllimport)
 #else
-	#define MRPC_API __attribute__((visibility("default")))
+	#define MRPC_API
 #endif
 
 #endif
