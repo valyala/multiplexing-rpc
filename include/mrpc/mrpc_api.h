@@ -4,7 +4,7 @@
 #if defined(WIN32)
 	#define MRPC_API __declspec(dllimport)
 #else
-	#define MRPC_API
+	#define MRPC_API __attribute__((visibility("default")))
 #endif
 
 #endif

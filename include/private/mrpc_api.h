@@ -7,13 +7,9 @@
 	#error mrpc/mrpc_api.h file must define MRPC_API
 #endif
 
-/* undefine public definition of the MRPC_API */
-#undef MRPC_API
-
 #if defined(WIN32)
+	#undef MRPC_API
 	#define MRPC_API __declspec(dllexport)
-#else
-	#define MRPC_API __attribute__((visibility("default")))
 #endif
 
 #endif
