@@ -1452,6 +1452,49 @@ static const mrpc_method_constructor client_method_constructors[] =
 	NULL,
 };
 
+static void test_client_start_stop()
+{
+	struct mrpc_client *client;
+	struct ff_stream_connector *stream_connector;
+	struct ff_arch_net_addr *addr;
+	enum ff_result result;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8593);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	client = mrpc_client_create();
+	mrpc_client_start(client, stream_connector);
+	mrpc_client_stop(client);
+	mrpc_client_delete(client);
+	ff_stream_connector_delete(stream_connector);
+}
+
+static void test_client_start_stop_multiple()
+{
+	struct mrpc_client *client;
+	struct ff_stream_connector *stream_connector;
+	struct ff_arch_net_addr *addr;
+	int i;
+	enum ff_result result;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8594);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	client = mrpc_client_create();
+	mrpc_client_start(client, stream_connector);
+	ff_core_sleep(100);
+	mrpc_client_stop(client);
+	for (i = 0; i < 10; i++)
+	{
+		mrpc_client_start(client, stream_connector);
+		mrpc_client_stop(client);
+	}
+	mrpc_client_delete(client);
+	ff_stream_connector_delete(stream_connector);
+}
+
 static void test_server_start_stop()
 {
 	struct mrpc_server *server;
@@ -1492,6 +1535,9 @@ static void test_server_start_stop_multiple()
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create();
 	service_ctx = (void *) 1234ul;
+	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+	ff_core_sleep(100);
+	mrpc_server_stop(server);
 	for (i = 0; i < 10; i++)
 	{
 		mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
@@ -1573,6 +1619,8 @@ static void test_client_server_all()
 	ff_core_initialize(LOG_FILENAME);
 	test_client_create_delete();
 	test_server_create_delete();
+	test_client_start_stop();
+	test_client_start_stop_multiple();
 	test_server_start_stop();
 	test_server_start_stop_multiple();
 	test_server_accept();
