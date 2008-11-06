@@ -1487,7 +1487,7 @@ static void test_server_start_stop_multiple()
 
 	service_interface = mrpc_interface_create(server_method_constructors);
 	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 8595);
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8596);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create();
@@ -1502,6 +1502,72 @@ static void test_server_start_stop_multiple()
 	mrpc_interface_delete(service_interface);
 }
 
+static void server_accept_fiberpool_func(void *ctx)
+{
+	struct ff_event *event;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *stream_connector;
+	struct ff_stream *streams[10];
+	int i;
+	enum ff_result result;
+
+	event = (struct ff_event *) ctx;
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8597);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(stream_connector);
+	for (i = 0; i < 10; i++)
+	{
+		struct ff_stream *stream;
+
+		stream = ff_stream_connector_connect(stream_connector);
+		ASSERT(stream != NULL, "stream cannot be NULL");
+		streams[i] = stream;
+	}
+	ff_core_sleep(100);
+	for (i = 0; i < 10; i++)
+	{
+		struct ff_stream *stream;
+
+		stream = streams[i];
+		ff_stream_delete(stream);
+	}
+	ff_stream_connector_shutdown(stream_connector);
+	ff_stream_connector_delete(stream_connector);
+	ff_event_set(event);
+}
+
+static void test_server_accept()
+{
+	struct mrpc_server *server;
+	struct mrpc_interface *service_interface;
+	void *service_ctx;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_arch_net_addr *addr;
+	struct ff_event *event;
+	enum ff_result result;
+
+	service_interface = mrpc_interface_create(server_method_constructors);
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8597);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	server = mrpc_server_create();
+	service_ctx = (void *) 1234ul;
+	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+
+	event = ff_event_create(FF_EVENT_AUTO);
+	ff_core_fiberpool_execute_async(server_accept_fiberpool_func, event);
+	ff_event_wait(event);
+	ff_event_delete(event);
+
+	mrpc_server_stop(server);
+	mrpc_server_delete(server);
+	ff_stream_acceptor_delete(stream_acceptor);
+	mrpc_interface_delete(service_interface);
+}
+
 static void test_client_server_all()
 {
 	ff_core_initialize(LOG_FILENAME);
@@ -1509,6 +1575,7 @@ static void test_client_server_all()
 	test_server_create_delete();
 	test_server_start_stop();
 	test_server_start_stop_multiple();
+	test_server_accept();
 	ff_core_shutdown();
 }
 
