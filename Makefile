@@ -1,5 +1,5 @@
 CFLAGS=-Wall -fpic -combine -fwhole-program -g -I./include -I./external/fiber-framework/include -DHAS_STDINT_H -D_GNU_SOURCE -U_FORTIFY_SOURCE
-LDFLAGS=-lfiber-framework -shared -s
+LDFLAGS=-lfiber-framework -shared
 CC=gcc
 
 SRC_DIR=src
