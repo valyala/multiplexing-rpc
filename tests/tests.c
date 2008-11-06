@@ -10,6 +10,8 @@
 #include "mrpc/mrpc_method.h"
 #include "mrpc/mrpc_interface.h"
 #include "mrpc/mrpc_data.h"
+#include "mrpc/mrpc_client.h"
+#include "mrpc/mrpc_server.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
@@ -1273,6 +1275,246 @@ static void test_data_all()
 /* end of mrpc_data tests */
 #pragma endregion
 
+#pragma region mrpc_client and mrpc_server tests
+
+static void test_client_create_delete()
+{
+	struct mrpc_client *client;
+
+	client = mrpc_client_create();
+	ASSERT(client != NULL, "client cannot be NULL");
+	mrpc_client_delete(client);
+}
+
+static void test_server_create_delete()
+{
+	struct mrpc_server *server;
+
+	server = mrpc_server_create();
+	ASSERT(server != NULL, "server cannot be NULL");
+	mrpc_server_delete(server);
+}
+
+static void server_method_callback1(struct mrpc_data *data, void *service_ctx)
+{
+	int32_t *s32_ptr;
+	struct mrpc_blob *blob;
+	struct mrpc_wchar_array *wchar_array;
+	struct mrpc_char_array *char_array;
+	struct ff_stream *stream;
+	const wchar_t *s;
+	char buf[5];
+	uint64_t u64_value;
+	int len;
+	int is_equal;
+	enum ff_result result;
+
+	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
+
+	mrpc_data_get_request_param_value(data, 0, &s32_ptr);
+	ASSERT(*s32_ptr == -5433734, "unexpected value");
+
+	mrpc_data_get_request_param_value(data, 1, &blob);
+	len = mrpc_blob_get_size(blob);
+	ASSERT(len == 5, "wrong blob size");
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	ASSERT(stream != NULL, "cannot open blob for reading");
+	result = ff_stream_read(stream, buf, 5);
+	ASSERT(result == FF_SUCCESS, "cannot read from stream");
+	is_equal = (memcmp(buf, "12345", 5) == 0);
+	ASSERT(is_equal, "unexpected value received from the stream");
+	ff_stream_delete(stream);
+
+	mrpc_data_get_request_param_value(data, 2, &wchar_array);
+	len = mrpc_wchar_array_get_len(wchar_array);
+	ASSERT(len == 6, "unexpected value received from the stream");
+	s = mrpc_wchar_array_get_value(wchar_array);
+	is_equal = (memcmp(s, L"987654", 6 * sizeof(s[0])) == 0);
+	ASSERT(is_equal, "unexpected value received from the stream");
+
+	memcpy(buf, "foo", 3 * sizeof(buf[0]));
+	char_array = mrpc_char_array_create(buf, 3);
+	mrpc_data_set_response_param_value(data, 0, char_array);
+
+	u64_value = 7367289343278ull;
+	mrpc_data_set_response_param_value(data, 1, &u64_value);
+}
+
+static void server_method_callback2(struct mrpc_data *data, void *service_ctx)
+{
+	uint32_t u32_value;
+
+	u32_value = 5728933ul;
+	mrpc_data_set_response_param_value(data, 0, &u32_value);
+}
+
+static struct mrpc_method *server_method_constructor1()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		mrpc_int32_param_create,
+		mrpc_blob_param_create,
+		mrpc_wchar_array_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_char_array_param_create,
+		mrpc_uint64_param_create,
+		NULL,
+	};
+
+	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, server_method_callback1);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static struct mrpc_method *server_method_constructor2()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_uint32_param_create,
+		NULL,
+	};
+
+	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, server_method_callback2);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static const mrpc_method_constructor server_method_constructors[] =
+{
+	server_method_constructor1,
+	server_method_constructor2,
+	NULL,
+};
+
+static struct mrpc_method *client_method_constructor1()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		mrpc_int32_param_create,
+		mrpc_blob_param_create,
+		mrpc_wchar_array_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_char_array_param_create,
+		mrpc_uint64_param_create,
+		NULL,
+	};
+	static const int is_key[] =
+	{
+		1,
+		1,
+		0,
+	};
+
+	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static struct mrpc_method *client_method_constructor2()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		mrpc_uint32_param_create,
+		NULL,
+	};
+	static const int is_key[] =
+	{
+		0, /* fake parameter */
+	};
+
+	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
+static const mrpc_method_constructor client_method_constructors[] =
+{
+	client_method_constructor1,
+	client_method_constructor2,
+	NULL,
+};
+
+static void test_server_start_stop()
+{
+	struct mrpc_server *server;
+	struct mrpc_interface *service_interface;
+	void *service_ctx;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_arch_net_addr *addr;
+	enum ff_result result;
+
+	service_interface = mrpc_interface_create(server_method_constructors);
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8595);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	server = mrpc_server_create();
+	service_ctx = (void *) 1234ul;
+	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+	mrpc_server_stop(server);
+	mrpc_server_delete(server);
+	ff_stream_acceptor_delete(stream_acceptor);
+	mrpc_interface_delete(service_interface);
+}
+
+static void test_server_start_stop_multiple()
+{
+	struct mrpc_server *server;
+	struct mrpc_interface *service_interface;
+	void *service_ctx;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_arch_net_addr *addr;
+	int i;
+	enum ff_result result;
+
+	service_interface = mrpc_interface_create(server_method_constructors);
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8595);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	server = mrpc_server_create();
+	service_ctx = (void *) 1234ul;
+	for (i = 0; i < 10; i++)
+	{
+		mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+		mrpc_server_stop(server);
+	}
+	mrpc_server_delete(server);
+	ff_stream_acceptor_delete(stream_acceptor);
+	mrpc_interface_delete(service_interface);
+}
+
+static void test_client_server_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_client_create_delete();
+	test_server_create_delete();
+	test_server_start_stop();
+	test_server_start_stop_multiple();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_client and mrpc_server tests */
+#pragma endregion
+
 static void test_all()
 {
 	test_char_array_all();
@@ -1285,6 +1527,7 @@ static void test_all()
 	test_method_all();
 	test_interface_all();
 	test_data_all();
+	test_client_server_all();
 }
 
 int main(int argc, char* argv[])
