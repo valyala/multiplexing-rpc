@@ -60,6 +60,40 @@ struct mrpc_server_stream_processor
 	enum server_stream_processor_state state;
 };
 
+static struct mrpc_packet *acquire_server_packet(struct mrpc_server_stream_processor *stream_processor)
+{
+	struct mrpc_packet *packet;
+
+	ff_assert(stream_processor->state != STATE_STOPPED);
+	packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
+	return packet;
+}
+
+static void release_server_packet(struct mrpc_server_stream_processor *stream_processor, struct mrpc_packet *packet)
+{
+	ff_assert(stream_processor->state != STATE_STOPPED);
+	mrpc_packet_reset(packet);
+	ff_pool_release_entry(stream_processor->packets_pool, packet);
+}
+
+static struct mrpc_packet *acquire_packet(void *ctx)
+{
+	struct mrpc_server_stream_processor *stream_processor;
+	struct mrpc_packet *packet;
+
+	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	packet = acquire_server_packet(stream_processor);
+	return packet;
+}
+
+static void release_packet(void *ctx, struct mrpc_packet *packet)
+{
+	struct mrpc_server_stream_processor *stream_processor;
+
+	stream_processor = (struct mrpc_server_stream_processor *) ctx;
+	release_server_packet(stream_processor, packet);
+}
+
 static void skip_writer_queue_packets(struct mrpc_server_stream_processor *stream_processor)
 {
 	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
@@ -76,7 +110,7 @@ static void skip_writer_queue_packets(struct mrpc_server_stream_processor *strea
 			ff_assert(is_empty);
 			break;
 		}
-		ff_pool_release_entry(stream_processor->packets_pool, packet);
+		release_server_packet(stream_processor, packet);
 	}
 }
 
@@ -102,7 +136,7 @@ static void stream_writer_func(void *ctx)
 			break;
 		}
 		result = mrpc_packet_write_to_stream(packet, stream_processor->stream);
-		ff_pool_release_entry(stream_processor->packets_pool, packet);
+		release_server_packet(stream_processor, packet);
 
 		/* below is an optimization, which is used for minimizing the number of
 		 * usually expensive ff_stream_flush() calls. These calls are invoked only
@@ -131,27 +165,6 @@ static void stream_writer_func(void *ctx)
 		}
 	}
 	ff_event_set(stream_processor->writer_stop_event);
-}
-
-static struct mrpc_packet *acquire_packet(void *ctx)
-{
-	struct mrpc_server_stream_processor *stream_processor;
-	struct mrpc_packet *packet;
-
-	stream_processor = (struct mrpc_server_stream_processor *) ctx;
-	ff_assert(stream_processor->state != STATE_STOPPED);
-	packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
-	return packet;
-}
-
-static void release_packet(void *ctx, struct mrpc_packet *packet)
-{
-	struct mrpc_server_stream_processor *stream_processor;
-
-	stream_processor = (struct mrpc_server_stream_processor *) ctx;
-	ff_assert(stream_processor->state != STATE_STOPPED);
-	mrpc_packet_reset(packet);
-	ff_pool_release_entry(stream_processor->packets_pool, packet);
 }
 
 static struct mrpc_server_request_processor *acquire_request_processor(struct mrpc_server_stream_processor *stream_processor, uint8_t request_id)
@@ -299,11 +312,11 @@ static void stream_reader_func(void *ctx)
 		struct mrpc_server_request_processor *request_processor;
 		enum ff_result result;
 
-		packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
+		packet = acquire_server_packet(stream_processor);
 		result = mrpc_packet_read_from_stream(packet, stream_processor->stream);
 		if (result != FF_SUCCESS)
 		{
-			ff_pool_release_entry(stream_processor->packets_pool, packet);
+			release_server_packet(stream_processor, packet);
 			break;
 		}
 
@@ -314,7 +327,7 @@ static void stream_reader_func(void *ctx)
 		{
 			if (request_processor != NULL)
 			{
-				ff_pool_release_entry(stream_processor->packets_pool, packet);
+				release_server_packet(stream_processor, packet);
 				break;
 			}
 
@@ -326,7 +339,7 @@ static void stream_reader_func(void *ctx)
 			/* packet_type is MRPC_PACKET_MIDDLE or MRPC_PACKET_LAST */
 			if (request_processor == NULL)
 			{
-				ff_pool_release_entry(stream_processor->packets_pool, packet);
+				release_server_packet(stream_processor, packet);
 				break;
 			}
 		}

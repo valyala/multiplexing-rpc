@@ -48,15 +48,49 @@ struct mrpc_client_stream_processor
 {
 	struct ff_blocking_queue *writer_queue;
 	struct ff_event *writer_stop_event;
+	struct mrpc_bitmap *request_processors_bitmap;
 	struct ff_pool *request_processors_pool;
 	struct ff_event *request_processors_stop_event;
-	struct mrpc_bitmap *request_processors_bitmap;
 	struct ff_pool *packets_pool;
 	struct mrpc_client_request_processor *active_request_processors[MAX_REQUEST_PROCESSORS_CNT];
 	struct ff_stream *stream;
 	int active_request_processors_cnt;
 	enum client_stream_processor_state state;
 };
+
+static struct mrpc_packet *acquire_client_packet(struct mrpc_client_stream_processor *stream_processor)
+{
+	struct mrpc_packet *packet;
+
+	ff_assert(stream_processor->state != STATE_STOPPED);
+	packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
+	return packet;
+}
+
+static void release_client_packet(struct mrpc_client_stream_processor *stream_processor, struct mrpc_packet *packet)
+{
+	ff_assert(stream_processor->state != STATE_STOPPED);
+	mrpc_packet_reset(packet);
+	ff_pool_release_entry(stream_processor->packets_pool, packet);
+}
+
+static struct mrpc_packet *acquire_packet(void *ctx)
+{
+	struct mrpc_client_stream_processor *stream_processor;
+	struct mrpc_packet *packet;
+
+	stream_processor = (struct mrpc_client_stream_processor *) ctx;
+	packet = acquire_client_packet(stream_processor);
+	return packet;
+}
+
+static void release_packet(void *ctx, struct mrpc_packet *packet)
+{
+	struct mrpc_client_stream_processor *stream_processor;
+
+	stream_processor = (struct mrpc_client_stream_processor *) ctx;
+	release_client_packet(stream_processor, packet);
+}
 
 static void skip_writer_queue_packets(struct mrpc_client_stream_processor *stream_processor)
 {
@@ -74,7 +108,7 @@ static void skip_writer_queue_packets(struct mrpc_client_stream_processor *strea
 			ff_assert(is_empty);
 			break;
 		}
-		ff_pool_release_entry(stream_processor->packets_pool, packet);
+		release_client_packet(stream_processor, packet);
 	}
 }
 
@@ -100,7 +134,7 @@ static void stream_writer_func(void *ctx)
 			break;
 		}
 		result = mrpc_packet_write_to_stream(packet, stream_processor->stream);
-		ff_pool_release_entry(stream_processor->packets_pool, packet);
+		release_client_packet(stream_processor, packet);
 
 		/* below is an optimization, which is used for minimizing the number of
 		 * usually expensive ff_stream_flush() calls. These calls are invoked only
@@ -131,27 +165,6 @@ static void stream_writer_func(void *ctx)
 	ff_event_set(stream_processor->writer_stop_event);
 }
 
-static struct mrpc_packet *acquire_packet(void *ctx)
-{
-	struct mrpc_client_stream_processor *stream_processor;
-	struct mrpc_packet *packet;
-
-	stream_processor = (struct mrpc_client_stream_processor *) ctx;
-	ff_assert(stream_processor->state != STATE_STOPPED);
-	packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
-	return packet;
-}
-
-static void release_packet(void *ctx, struct mrpc_packet *packet)
-{
-	struct mrpc_client_stream_processor *stream_processor;
-
-	stream_processor = (struct mrpc_client_stream_processor *) ctx;
-	ff_assert(stream_processor->state != STATE_STOPPED);
-	mrpc_packet_reset(packet);
-	ff_pool_release_entry(stream_processor->packets_pool, packet);
-}
-
 static uint8_t acquire_request_id(struct mrpc_client_stream_processor *stream_processor)
 {
 	int request_id;
@@ -169,7 +182,6 @@ static void release_request_id(void *ctx, uint8_t request_id)
 	struct mrpc_client_stream_processor *stream_processor;
 
 	stream_processor = (struct mrpc_client_stream_processor *) ctx;
-	ff_assert(stream_processor->state != STATE_STOPPED);
 	mrpc_bitmap_release_bit(stream_processor->request_processors_bitmap, request_id);
 }
 
@@ -303,9 +315,9 @@ struct mrpc_client_stream_processor *mrpc_client_stream_processor_create()
 	stream_processor = (struct mrpc_client_stream_processor *) ff_malloc(sizeof(*stream_processor));
 	stream_processor->writer_queue = ff_blocking_queue_create(MAX_WRITER_QUEUE_SIZE);
 	stream_processor->writer_stop_event = ff_event_create(FF_EVENT_AUTO);
+	stream_processor->request_processors_bitmap = mrpc_bitmap_create(MAX_REQUEST_PROCESSORS_CNT);
 	stream_processor->request_processors_pool = ff_pool_create(MAX_REQUEST_PROCESSORS_CNT, create_request_processor, stream_processor, delete_request_processor);
 	stream_processor->request_processors_stop_event = ff_event_create(FF_EVENT_AUTO);
-	stream_processor->request_processors_bitmap = mrpc_bitmap_create(MAX_REQUEST_PROCESSORS_CNT);
 	stream_processor->packets_pool = ff_pool_create(MAX_PACKETS_CNT, create_packet, stream_processor, delete_packet);
 
 	for (i = 0; i < MAX_REQUEST_PROCESSORS_CNT; i++)
@@ -332,9 +344,9 @@ void mrpc_client_stream_processor_delete(struct mrpc_client_stream_processor *st
 	ff_assert(stream_processor->state != STATE_WORKING);
 
 	ff_pool_delete(stream_processor->packets_pool);
-	mrpc_bitmap_delete(stream_processor->request_processors_bitmap);
 	ff_event_delete(stream_processor->request_processors_stop_event);
 	ff_pool_delete(stream_processor->request_processors_pool);
+	mrpc_bitmap_delete(stream_processor->request_processors_bitmap);
 	ff_event_delete(stream_processor->writer_stop_event);
 	ff_blocking_queue_delete(stream_processor->writer_queue);
 	ff_free(stream_processor);
@@ -363,11 +375,11 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 		uint8_t request_id;
 		enum ff_result result;
 
-		packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
+		packet = acquire_client_packet(stream_processor);
 		result = mrpc_packet_read_from_stream(packet, stream);
 		if (result != FF_SUCCESS)
 		{
-			ff_pool_release_entry(stream_processor->packets_pool, packet);
+			release_client_packet(stream_processor, packet);
 			break;
 		}
 
@@ -375,7 +387,7 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 		request_processor = stream_processor->active_request_processors[request_id];
 		if (request_processor == NULL)
 		{
-			ff_pool_release_entry(stream_processor->packets_pool, packet);
+			release_client_packet(stream_processor, packet);
 			break;
 		}
 		mrpc_client_request_processor_push_packet(request_processor, packet);
