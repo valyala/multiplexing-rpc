@@ -401,13 +401,13 @@ static void int_param_basic_fiberpool_func(void *ctx)
 	result = mrpc_param_read_from_stream(s64_param, stream);
 	ASSERT(result == FF_SUCCESS, "cannot read s64 from the stream");
 
-	mrpc_param_get_value(u32_param, &u32_ptr);
+	mrpc_param_get_value(u32_param, (void **) &u32_ptr);
 	ASSERT(*u32_ptr == 12345678ul, "unexpected value");
-	mrpc_param_get_value(s32_param, &s32_ptr);
+	mrpc_param_get_value(s32_param, (void **) &s32_ptr);
 	ASSERT(*s32_ptr == -2345870l, "unexpected value");
-	mrpc_param_get_value(u64_param, &u64_ptr);
+	mrpc_param_get_value(u64_param, (void **) &u64_ptr);
 	ASSERT(*u64_ptr == 12345678902343ull, "unexpected value");
-	mrpc_param_get_value(s64_param, &s64_ptr);
+	mrpc_param_get_value(s64_param, (void **) &s64_ptr);
 	ASSERT(*s64_ptr == -34823472894342ll, "unexpected value");
 
 	result = mrpc_param_write_to_stream(u32_param, stream);
@@ -599,7 +599,7 @@ static void char_array_param_basic_fiberpool_func(void *ctx)
 	result = mrpc_param_read_from_stream(param, stream);
 	ASSERT(result == FF_SUCCESS, "cannot read char array from the stream");
 
-	mrpc_param_get_value(param, &char_array);
+	mrpc_param_get_value(param, (void **) &char_array);
 	len = mrpc_char_array_get_len(char_array);
 	ASSERT(len == 7, "unexpected length of char array");
 	s = mrpc_char_array_get_value(char_array);
@@ -735,7 +735,7 @@ static void wchar_array_param_basic_fiberpool_func(void *ctx)
 	result = mrpc_param_read_from_stream(param, stream);
 	ASSERT(result == FF_SUCCESS, "cannot read wchar array from the stream");
 
-	mrpc_param_get_value(param, &wchar_array);
+	mrpc_param_get_value(param, (void **) &wchar_array);
 	len = mrpc_wchar_array_get_len(wchar_array);
 	ASSERT(len == 7, "unexpected length of wchar array");
 	s = mrpc_wchar_array_get_value(wchar_array);
@@ -872,7 +872,7 @@ static void blob_param_basic_fiberpool_func(void *ctx)
 	result = mrpc_param_read_from_stream(param, stream);
 	ASSERT(result == FF_SUCCESS, "cannot read blob from the stream");
 
-	mrpc_param_get_value(param, &blob);
+	mrpc_param_get_value(param, (void **) &blob);
 	size = mrpc_blob_get_size(blob);
 	ASSERT(size == 10, "unexpected blob size");
 	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
@@ -1910,14 +1910,14 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		result = mrpc_client_invoke_rpc(client, data);
 		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
 
-		mrpc_data_get_response_param_value(data, 0, &char_array);
+		mrpc_data_get_response_param_value(data, 0, (void **) &char_array);
 		len = mrpc_char_array_get_len(char_array);
 		ASSERT(len == 3, "unexpected length returned");
 		s = mrpc_char_array_get_value(char_array);
 		is_equal = (memcmp(s, "foo", 3) == 0);
 		ASSERT(is_equal, "unexpected value received");
 
-		mrpc_data_get_response_param_value(data, 1, &u64_ptr);
+		mrpc_data_get_response_param_value(data, 1, (void **) &u64_ptr);
 		ASSERT(*u64_ptr == 7367289343278ull, "unexpected value received");
 
 		mrpc_data_delete(data);
@@ -1926,7 +1926,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		ASSERT(data != NULL, "data cannot be NULL");
 		result = mrpc_client_invoke_rpc(client, data);
 		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
-		mrpc_data_get_response_param_value(data, 0, &u32_ptr);
+		mrpc_data_get_response_param_value(data, 0, (void **) &u32_ptr);
 		ASSERT(*u32_ptr == 5728933ul, "unexpected value received");
 		mrpc_data_delete(data);
 	}
