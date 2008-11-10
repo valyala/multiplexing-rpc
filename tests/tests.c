@@ -1614,6 +1614,87 @@ static void test_server_accept()
 	mrpc_interface_delete(service_interface);
 }
 
+struct client_server_connect_data
+{
+	struct ff_event *event;
+	int workers_cnt;
+};
+
+static void client_server_connect_fiberpool_func(void *ctx)
+{
+	struct client_server_connect_data *data;
+	struct mrpc_client *client;
+	struct ff_stream_connector *stream_connector;
+	struct ff_arch_net_addr *addr;
+	int i;
+	enum ff_result result;
+
+	data = (struct client_server_connect_data *) ctx;
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8598);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	client = mrpc_client_create();
+
+	mrpc_client_start(client, stream_connector);
+	mrpc_client_stop(client);
+
+	mrpc_client_start(client, stream_connector);
+	ff_core_sleep(100);
+	mrpc_client_stop(client);
+
+	for (i = 0; i < 5; i++)
+	{
+		mrpc_client_start(client, stream_connector);
+		ff_core_sleep(10);
+		mrpc_client_stop(client);
+	}
+
+	mrpc_client_delete(client);
+	ff_stream_connector_delete(stream_connector);
+
+	data->workers_cnt--;
+	if (data->workers_cnt == 0)
+	{
+		ff_event_set(data->event);
+	}
+}
+
+static void test_client_server_connect()
+{
+	struct client_server_connect_data data;
+	struct mrpc_server *server;
+	struct mrpc_interface *service_interface;
+	void *service_ctx;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_arch_net_addr *addr;
+	int i;
+	enum ff_result result;
+
+	service_interface = mrpc_interface_create(server_method_constructors);
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8598);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	server = mrpc_server_create();
+	service_ctx = (void *) 1234ul;
+	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+
+	data.event = ff_event_create(FF_EVENT_MANUAL);
+	data.workers_cnt = 5;
+	for (i = 0; i < 5; i++)
+	{
+		ff_core_fiberpool_execute_async(client_server_connect_fiberpool_func, &data);
+	}
+	ff_event_wait(data.event);
+	ff_event_delete(data.event);
+
+	mrpc_server_stop(server);
+	mrpc_server_delete(server);
+	ff_stream_acceptor_delete(stream_acceptor);
+	mrpc_interface_delete(service_interface);
+}
+
 static void test_client_server_all()
 {
 	ff_core_initialize(LOG_FILENAME);
@@ -1624,6 +1705,7 @@ static void test_client_server_all()
 	test_server_start_stop();
 	test_server_start_stop_multiple();
 	test_server_accept();
+	test_client_server_connect();
 	ff_core_shutdown();
 }
 
