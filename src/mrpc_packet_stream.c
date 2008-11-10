@@ -40,7 +40,7 @@ static struct mrpc_packet *acquire_packet(struct mrpc_packet_stream *stream, enu
 {
 	struct mrpc_packet *packet;
 
-	ff_assert(packet_type == MRPC_PACKET_START || packet_type == MRPC_PACKET_MIDDLE);
+	ff_assert(packet_type != MRPC_PACKET_SINGLE);
 	packet = stream->acquire_packet_func(stream->packet_func_ctx);
 	mrpc_packet_set_request_id(packet, stream->request_id);
 	mrpc_packet_set_type(packet, packet_type);
