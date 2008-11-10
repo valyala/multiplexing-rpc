@@ -324,7 +324,12 @@ void mrpc_client_stream_processor_delete(struct mrpc_client_stream_processor *st
 {
 	ff_assert(stream_processor->stream == NULL);
 	ff_assert(stream_processor->active_request_processors_cnt == 0);
-	ff_assert(stream_processor->state == STATE_STOPPED);
+	/* state can be either STATE_STOPPED either STATE_STOP_INITIATED.
+	 * The second case is possible if the mrpc_client_stream_processor_stop_async()
+	 * was called when the state was STATE_STOPPED and the mrpc_client_stream_processor_process_stream() wasn't called
+	 * after the mrpc_client_stream_processor_stop_async() call.
+	 */
+	ff_assert(stream_processor->state != STATE_WORKING);
 
 	ff_pool_delete(stream_processor->packets_pool);
 	mrpc_bitmap_delete(stream_processor->request_processors_bitmap);
@@ -341,10 +346,12 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 	ff_assert(stream_processor->active_request_processors_cnt == 0);
 	ff_assert(stream_processor->state != STATE_WORKING);
 
-	if (stream_processor->state == STATE_STOPPED)
+	if (stream_processor->state == STATE_STOP_INITIATED)
 	{
-		stream_processor->state = STATE_WORKING;
+		goto end;
 	}
+	ff_assert(stream_processor->state == STATE_STOPPED);
+	stream_processor->state = STATE_WORKING;
 	stream_processor->stream = stream;
 	start_stream_writer(stream_processor);
 	ff_event_set(stream_processor->request_processors_stop_event);
@@ -380,6 +387,8 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 	ff_assert(stream_processor->active_request_processors_cnt == 0);
 	stop_stream_writer(stream_processor);
 	stream_processor->stream = NULL;
+
+end:
 	stream_processor->state = STATE_STOPPED;
 }
 
@@ -390,6 +399,21 @@ void mrpc_client_stream_processor_stop_async(struct mrpc_client_stream_processor
 		ff_assert(stream_processor->stream != NULL);
 		stream_processor->state = STATE_STOP_INITIATED;
 		ff_stream_disconnect(stream_processor->stream);
+	}
+	else if (stream_processor->state == STATE_STOPPED)
+	{
+		/* the mrpc_client_stream_processor_stop_async() was called
+		 * before the mrpc_client_stream_processor_process_stream() call.
+		 * This means that the mrpc_client_stream_processor_process_stream() call must
+		 * return immediately.
+		 */
+		ff_assert(stream_processor->stream == NULL);
+		ff_assert(stream_processor->active_request_processors_cnt == 0);
+		stream_processor->state = STATE_STOP_INITIATED;
+	}
+	else
+	{
+		ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 	}
 }
 
