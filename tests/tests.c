@@ -1854,6 +1854,83 @@ static void test_client_server_connect()
 	mrpc_interface_delete(service_interface);
 }
 
+static void client_server_rpc_client(int port)
+{
+	struct ff_arch_net_addr *addr;
+	struct mrpc_client *client;
+	struct mrpc_interface *client_interface;
+	struct ff_stream_connector *stream_connector;
+	struct mrpc_data *data;
+	struct mrpc_blob *blob;
+	struct ff_stream *stream;
+	struct mrpc_wchar_array *wchar_array;
+	struct mrpc_char_array *char_array;
+	wchar_t *ws;
+	const char *s;
+	int len;
+	int is_equal;
+	int32_t s32_value;
+	uint64_t *u64_ptr;
+	uint32_t *u32_ptr;
+	enum ff_result result;
+
+	client_interface = mrpc_interface_create(client_method_constructors);
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	client = mrpc_client_create();
+	mrpc_client_start(client, stream_connector);
+	data = mrpc_data_create(client_interface, 0);
+	ASSERT(data != NULL, "data cannot be NULL");
+
+	s32_value = -5433734l;
+	mrpc_data_set_request_param_value(data, 0, &s32_value);
+
+	blob = mrpc_blob_create(5);
+	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
+	ASSERT(stream != NULL, "cannot open blob for writing");
+	result = ff_stream_write(stream, "12345", 5);
+	ASSERT(result == FF_SUCCESS, "cannot write to blob stream");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the blob stream");
+	ff_stream_delete(stream);
+	mrpc_data_set_request_param_value(data, 1, blob);
+
+	ws = (wchar_t *) ff_calloc(6, sizeof(ws[0]));
+	memcpy(ws, L"987654", 6 * sizeof(ws[0]));
+	wchar_array = mrpc_wchar_array_create(ws, 6);
+	mrpc_data_set_request_param_value(data, 2, wchar_array);
+
+	result = mrpc_client_invoke_rpc(client, data);
+	ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
+
+	mrpc_data_get_response_param_value(data, 0, &char_array);
+	len = mrpc_char_array_get_len(char_array);
+	ASSERT(len == 3, "unexpected length returned");
+	s = mrpc_char_array_get_value(char_array);
+	is_equal = (memcmp(s, "foo", 3) == 0);
+	ASSERT(is_equal, "unexpected value received");
+
+	mrpc_data_get_response_param_value(data, 1, &u64_ptr);
+	ASSERT(*u64_ptr == 7367289343278ull, "unexpected value received");
+
+	mrpc_data_delete(data);
+
+	data = mrpc_data_create(client_interface, 1);
+	ASSERT(data != NULL, "data cannot be NULL");
+	result = mrpc_client_invoke_rpc(client, data);
+	ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
+	mrpc_data_get_response_param_value(data, 0, &u32_ptr);
+	ASSERT(*u32_ptr == 5728933ul, "unexpected value received");
+	mrpc_data_delete(data);
+
+	mrpc_client_stop(client);
+	mrpc_client_delete(client);
+	ff_stream_connector_delete(stream_connector);
+	mrpc_interface_delete(client_interface);
+}
+
 static void test_client_server_rpc()
 {
 	struct mrpc_server *server;
@@ -1872,79 +1949,62 @@ static void test_client_server_rpc()
 	service_ctx = (void *) 1234ul;
 	mrpc_server_start(server, server_interface, service_ctx, stream_acceptor);
 
+	client_server_rpc_client(8599);
+
+	mrpc_server_stop(server);
+	mrpc_server_delete(server);
+	ff_stream_acceptor_delete(stream_acceptor);
+	mrpc_interface_delete(server_interface);
+}
+
+struct client_server_concurrent_rpc_data
+{
+	struct ff_event *event;
+	int port;
+	int workers_cnt;
+};
+
+static void client_server_concurrent_rpc_fiberpool_func(void *ctx)
+{
+	struct client_server_concurrent_rpc_data *data;
+
+	data = (struct client_server_concurrent_rpc_data *) ctx;
+	client_server_rpc_client(data->port);
+	data->workers_cnt--;
+	if (data->workers_cnt == 0)
 	{
-		struct mrpc_client *client;
-		struct mrpc_interface *client_interface;
-		struct ff_stream_connector *stream_connector;
-		struct mrpc_data *data;
-		struct mrpc_blob *blob;
-		struct ff_stream *stream;
-		struct mrpc_wchar_array *wchar_array;
-		struct mrpc_char_array *char_array;
-		wchar_t *ws;
-		const char *s;
-		int len;
-		int is_equal;
-		int32_t s32_value;
-		uint64_t *u64_ptr;
-		uint32_t *u32_ptr;
-
-		client_interface = mrpc_interface_create(client_method_constructors);
-		addr = ff_arch_net_addr_create();
-		result = ff_arch_net_addr_resolve(addr, L"localhost", 8599);
-		ASSERT(result == FF_SUCCESS, "cannot resolve local address");
-		stream_connector = ff_stream_connector_tcp_create(addr);
-		client = mrpc_client_create();
-		mrpc_client_start(client, stream_connector);
-		data = mrpc_data_create(client_interface, 0);
-		ASSERT(data != NULL, "data cannot be NULL");
-
-		s32_value = -5433734l;
-		mrpc_data_set_request_param_value(data, 0, &s32_value);
-
-		blob = mrpc_blob_create(5);
-		stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
-		ASSERT(stream != NULL, "cannot open blob for writing");
-		result = ff_stream_write(stream, "12345", 5);
-		ASSERT(result == FF_SUCCESS, "cannot write to blob stream");
-		result = ff_stream_flush(stream);
-		ASSERT(result == FF_SUCCESS, "cannot flush the blob stream");
-		ff_stream_delete(stream);
-		mrpc_data_set_request_param_value(data, 1, blob);
-
-		ws = (wchar_t *) ff_calloc(6, sizeof(ws[0]));
-		memcpy(ws, L"987654", 6 * sizeof(ws[0]));
-		wchar_array = mrpc_wchar_array_create(ws, 6);
-		mrpc_data_set_request_param_value(data, 2, wchar_array);
-
-		result = mrpc_client_invoke_rpc(client, data);
-		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
-
-		mrpc_data_get_response_param_value(data, 0, &char_array);
-		len = mrpc_char_array_get_len(char_array);
-		ASSERT(len == 3, "unexpected length returned");
-		s = mrpc_char_array_get_value(char_array);
-		is_equal = (memcmp(s, "foo", 3) == 0);
-		ASSERT(is_equal, "unexpected value received");
-
-		mrpc_data_get_response_param_value(data, 1, &u64_ptr);
-		ASSERT(*u64_ptr == 7367289343278ull, "unexpected value received");
-
-		mrpc_data_delete(data);
-
-		data = mrpc_data_create(client_interface, 1);
-		ASSERT(data != NULL, "data cannot be NULL");
-		result = mrpc_client_invoke_rpc(client, data);
-		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
-		mrpc_data_get_response_param_value(data, 0, &u32_ptr);
-		ASSERT(*u32_ptr == 5728933ul, "unexpected value received");
-		mrpc_data_delete(data);
-
-		mrpc_client_stop(client);
-		mrpc_client_delete(client);
-		ff_stream_connector_delete(stream_connector);
-		mrpc_interface_delete(client_interface);
+		ff_event_set(data->event);
 	}
+}
+
+static void test_client_server_concurrent_rpc()
+{
+	struct client_server_concurrent_rpc_data data;
+	struct mrpc_server *server;
+	struct mrpc_interface *server_interface;
+	void *service_ctx;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_arch_net_addr *addr;
+	int i;
+	enum ff_result result;
+
+	server_interface = mrpc_interface_create(server_method_constructors);
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 8600);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	server = mrpc_server_create();
+	service_ctx = (void *) 1234ul;
+	mrpc_server_start(server, server_interface, service_ctx, stream_acceptor);
+	data.event = ff_event_create(FF_EVENT_MANUAL);
+	data.port = 8600;
+	data.workers_cnt = 10;
+	for (i = 0; i < 10; i++)
+	{
+		ff_core_fiberpool_execute_async(client_server_concurrent_rpc_fiberpool_func, &data);
+	}
+	ff_event_wait(data.event);
+	ff_event_delete(data.event);
 
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
@@ -1966,6 +2026,7 @@ static void test_client_server_all()
 	test_server_accept();
 	test_client_server_connect();
 	test_client_server_rpc();
+	test_client_server_concurrent_rpc();
 	ff_core_shutdown();
 }
 
