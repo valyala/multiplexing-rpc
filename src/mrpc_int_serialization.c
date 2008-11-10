@@ -9,7 +9,7 @@
 #define OCTET_MASK ((1 << BITS_PER_OCTET) - 1)
 #define CONTINUE_NUMBER_FLAG (1 << BITS_PER_OCTET)
 
-#define MAX_UINT32_VALUE (~0ull)
+#define MAX_UINT32_VALUE ((1ull << 32) - 1)
 
 enum ff_result mrpc_uint64_serialize(uint64_t data, struct ff_stream *stream)
 {
@@ -37,14 +37,14 @@ enum ff_result mrpc_uint64_serialize(uint64_t data, struct ff_stream *stream)
 
 enum ff_result mrpc_uint64_unserialize(uint64_t *data, struct ff_stream *stream)
 {
-	int len = 0;
 	uint64_t u_data = 0;
+	int bits_len = 0;
 	uint8_t octet;
 	enum ff_result result = FF_FAILURE;
 
 	do
 	{
-		if (len >= MAX_UINT64_OCTETS)
+		if (bits_len >= 64)
 		{
 			result = FF_FAILURE;
 			goto end;
@@ -54,9 +54,8 @@ enum ff_result mrpc_uint64_unserialize(uint64_t *data, struct ff_stream *stream)
 		{
 			goto end;
 		}
-		len++;
-		u_data <<= BITS_PER_OCTET;
-		u_data |= (octet & OCTET_MASK);
+		u_data |= ((uint64_t) (octet & OCTET_MASK)) << bits_len;
+		bits_len += BITS_PER_OCTET;
 	}
 	while ((octet & CONTINUE_NUMBER_FLAG) != 0);
 
@@ -115,7 +114,7 @@ enum ff_result mrpc_uint32_unserialize(uint32_t *data, struct ff_stream *stream)
 	result = mrpc_uint64_unserialize(&u_data, stream);
 	if (result == FF_SUCCESS)
 	{
-		if (u_data < MAX_UINT32_VALUE)
+		if (u_data <= MAX_UINT32_VALUE)
 		{
 			*data = (uint32_t) u_data;
 		}
