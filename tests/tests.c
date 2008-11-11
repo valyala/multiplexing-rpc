@@ -2457,6 +2457,63 @@ static void test_client_server_echo_rpc()
 	mrpc_interface_delete(server_interface);
 }
 
+struct client_server_echo_rpc_multiple_clients_data
+{
+	struct ff_event *event;
+	int port;
+	int workers_cnt;
+};
+
+static void client_server_echo_rpc_multiple_clients_fiberpool_func(void *ctx)
+{
+	struct client_server_echo_rpc_multiple_clients_data *data;
+
+	data = (struct client_server_echo_rpc_multiple_clients_data *) ctx;
+
+	client_server_echo_client(data->port, 2);
+
+	data->workers_cnt--;
+	if (data->workers_cnt == 0)
+	{
+		ff_event_set(data->event);
+	}
+}
+
+static void test_client_server_echo_rpc_multiple_clients()
+{
+	struct client_server_echo_rpc_multiple_clients_data data;
+	struct mrpc_interface *server_interface;
+	void *server_ctx = NULL;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct mrpc_server *server;
+	int i;
+	enum ff_result result;
+
+	server_interface = mrpc_interface_create(server_echo_interface_constructors);
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 10997);
+	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	server = mrpc_server_create();
+	mrpc_server_start(server, server_interface, server_ctx, stream_acceptor);
+
+	data.event = ff_event_create(FF_EVENT_MANUAL);
+	data.port = 10997;
+	data.workers_cnt = 5;
+	for (i = 0; i < 5; i++)
+	{
+		ff_core_fiberpool_execute_async(client_server_echo_rpc_multiple_clients_fiberpool_func, &data);
+	}
+	ff_event_wait(data.event);
+	ff_event_delete(data.event);
+
+	mrpc_server_stop(server);
+	mrpc_server_delete(server);
+	ff_stream_acceptor_delete(stream_acceptor);
+	mrpc_interface_delete(server_interface);
+}
+
 struct client_server_echo_rpc_concurrent_data
 {
 	struct ff_event *event;
@@ -2556,6 +2613,7 @@ static void test_client_server_all()
 	test_client_server_rpc();
 	test_client_server_rpc_multiple_clients();
 	test_client_server_echo_rpc();
+	test_client_server_echo_rpc_multiple_clients();
 	test_client_server_echo_rpc_concurrent();
 	ff_core_shutdown();
 }
