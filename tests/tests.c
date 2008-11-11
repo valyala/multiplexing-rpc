@@ -1885,6 +1885,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		int32_t s32_value;
 		uint64_t *u64_ptr;
 		uint32_t *u32_ptr;
+		uint32_t hash_value;
 
 		data = mrpc_data_create(client_interface, 0);
 		ASSERT(data != NULL, "data cannot be NULL");
@@ -1907,6 +1908,9 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		wchar_array = mrpc_wchar_array_create(ws, 6);
 		mrpc_data_set_request_param_value(data, 2, wchar_array);
 
+		hash_value = mrpc_data_get_request_hash(data, 12345);
+		ASSERT(hash_value == 295991475ul, "unexpected hash value");
+
 		result = mrpc_client_invoke_rpc(client, data);
 		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
 
@@ -1924,6 +1928,8 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 
 		data = mrpc_data_create(client_interface, 1);
 		ASSERT(data != NULL, "data cannot be NULL");
+		hash_value = mrpc_data_get_request_hash(data, 12345);
+		ASSERT(hash_value == 12345, "unexpected hash value");
 		result = mrpc_client_invoke_rpc(client, data);
 		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
 		mrpc_data_get_response_param_value(data, 0, (void **) &u32_ptr);
