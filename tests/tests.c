@@ -2228,6 +2228,16 @@ static struct mrpc_wchar_array *client_server_echo_create_wchar_array()
 	len = client_server_echo_get_random_uint(1 << 14);
 	s = (wchar_t *) ff_calloc(len, sizeof(s[0]));
 	ff_arch_misc_fill_buffer_with_random_data(s, len * sizeof(s[0]));
+	if (sizeof(wchar_t) == 4)
+	{
+		/* make all chars less than 0x10000 */
+		int i;
+
+		for (i = 0; i < len; i++)
+		{
+			s[i] = s[i] & 0xffff;
+		}
+	}
 	wchar_array = mrpc_wchar_array_create(s, len);
 	return wchar_array;
 }
