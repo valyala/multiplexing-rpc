@@ -58,9 +58,22 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 
 static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *stream)
 {
+	uint8_t method_id;
 	enum ff_result result;
 
-	result = mrpc_method_read_response_params(data->method, data->response_params, stream);
+	result = ff_stream_read(stream, &method_id, 1);
+	if (result == FF_SUCCESS)
+	{
+		if (method_id == data->method_id)
+		{
+			result = mrpc_method_read_response_params(data->method, data->response_params, stream);
+		}
+		else
+		{
+			/* wrong method_id received */
+			result = FF_FAILURE;
+		}
+	}
 	return result;
 }
 
@@ -68,10 +81,14 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 {
 	enum ff_result result;
 
-	result = mrpc_method_write_response_params(data->method, data->response_params, stream);
+	result = ff_stream_write(stream, &data->method_id, 1);
 	if (result == FF_SUCCESS)
 	{
-		result = ff_stream_flush(stream);
+		result = mrpc_method_write_response_params(data->method, data->response_params, stream);
+		if (result == FF_SUCCESS)
+		{
+			result = ff_stream_flush(stream);
+		}
 	}
 	return result;
 }
