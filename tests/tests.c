@@ -1400,8 +1400,17 @@ static void server_method_callback2(struct mrpc_data *data, void *service_ctx)
 {
 	uint32_t u32_value;
 
+	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
+
 	u32_value = 5728933ul;
 	mrpc_data_set_response_param_value(data, 0, &u32_value);
+}
+
+static void server_method_callback3(struct mrpc_data *data, void *service_ctx)
+{
+	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
+
+	/* nothing to do */
 }
 
 static struct mrpc_method *server_method_constructor1()
@@ -1444,10 +1453,28 @@ static struct mrpc_method *server_method_constructor2()
 	return method;
 }
 
+static struct mrpc_method *server_method_constructor3()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		NULL,
+	};
+
+	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, server_method_callback3);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
 static const mrpc_method_constructor server_method_constructors[] =
 {
 	server_method_constructor1,
 	server_method_constructor2,
+	server_method_constructor3,
 	NULL,
 };
 
@@ -1501,10 +1528,32 @@ static struct mrpc_method *client_method_constructor2()
 	return method;
 }
 
+static struct mrpc_method *client_method_constructor3()
+{
+	struct mrpc_method *method;
+	static const mrpc_param_constructor request_param_constructors[] =
+	{
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors[] =
+	{
+		NULL,
+	};
+	static const int is_key[] =
+	{
+		0, /* fake parameter */
+	};
+
+	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
+	ASSERT(method != NULL, "unexpected value returned");
+	return method;
+}
+
 static const mrpc_method_constructor client_method_constructors[] =
 {
 	client_method_constructor1,
 	client_method_constructor2,
+	client_method_constructor3,
 	NULL,
 };
 
@@ -1934,6 +1983,14 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
 		mrpc_data_get_response_param_value(data, 0, (void **) &u32_ptr);
 		ASSERT(*u32_ptr == 5728933ul, "unexpected value received");
+		mrpc_data_delete(data);
+
+		data = mrpc_data_create(client_interface, 2);
+		ASSERT(data != NULL, "data cannot be NULL");
+		hash_value = mrpc_data_get_request_hash(data, 3242);
+		ASSERT(hash_value == 3242, "unexpected hash value");
+		result = mrpc_client_invoke_rpc(client, data);
+		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
 		mrpc_data_delete(data);
 	}
 
