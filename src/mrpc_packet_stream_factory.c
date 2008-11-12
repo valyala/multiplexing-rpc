@@ -21,6 +21,10 @@ static enum ff_result read_from_packet_stream(struct ff_stream *stream, void *bu
 
 	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
 	result = mrpc_packet_stream_read(packet_stream, buf, len);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot read data from the packet_stream=%p to the buf=%p, len=%d. See previous messages for more info", packet_stream, buf, len);
+	}
 	return result;
 }
 
@@ -33,6 +37,10 @@ static enum ff_result write_to_packet_stream(struct ff_stream *stream, const voi
 
 	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
 	result = mrpc_packet_stream_write(packet_stream, buf, len);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot write data to the packet_stream=%p from the buf=%p, len=%d. See previous messages for more info", packet_stream, buf, len);
+	}
 	return result;
 }
 
@@ -43,6 +51,10 @@ static enum ff_result flush_packet_stream(struct ff_stream *stream)
 
 	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
 	result = mrpc_packet_stream_flush(packet_stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot flush the packet_stream=%p. See previous messages for more info", packet_stream);
+	}
 	return result;
 }
 
