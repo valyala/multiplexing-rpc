@@ -76,10 +76,11 @@ MRPC_API struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mr
 MRPC_API enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *new_file_path);
 
 /**
- * Returns the hash value for the given blob and the given start_value.
+ * Calculates the hash value for the given blob and the given start_value.
  * This function can be called only for the blob already filled by data.
+ * Returns FF_SUCCESS on successful hash calculation, otherwise returns FF_FAILURE
  */
-MRPC_API uint32_t mrpc_blob_get_hash(struct mrpc_blob *blob, uint32_t start_value);
+MRPC_API enum ff_result mrpc_blob_get_hash(struct mrpc_blob *blob, uint32_t start_value, uint32_t *hash_value);
 
 #ifdef __cplusplus
 }
