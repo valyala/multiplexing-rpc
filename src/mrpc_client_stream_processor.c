@@ -134,6 +134,11 @@ static void stream_writer_func(void *ctx)
 			break;
 		}
 		result = mrpc_packet_write_to_stream(packet, stream_processor->stream);
+		if (result != FF_SUCCESS)
+		{
+			ff_log_debug(L"cannot write packet=%p to the stream=%p of the stream_processor=%p. See previous messages for more info",
+				packet, stream_processor->stream, stream_processor);
+		}
 		release_client_packet(stream_processor, packet);
 
 		/* below is an optimization, which is used for minimizing the number of
@@ -153,6 +158,10 @@ static void stream_writer_func(void *ctx)
 		if (result == FF_SUCCESS && is_empty)
 		{
 			result = ff_stream_flush(stream_processor->stream);
+			if (result != FF_SUCCESS)
+			{
+				ff_log_debug(L"cannot flush the stream=%p of the stream_processor=%p. See previous messages for more info", stream_processor->stream, stream_processor);
+			}
 		}
 		if (result != FF_SUCCESS)
 		{
@@ -360,6 +369,7 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 
 	if (stream_processor->state == STATE_STOP_INITIATED)
 	{
+		ff_log_debug(L"the stream_processor=%p cannot process the stream=%p, because it is instructed to stop", stream_processor, stream);
 		goto end;
 	}
 	ff_assert(stream_processor->state == STATE_STOPPED);
@@ -379,6 +389,7 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 		result = mrpc_packet_read_from_stream(packet, stream);
 		if (result != FF_SUCCESS)
 		{
+			ff_log_debug(L"cannot read packet=%p from the stream=%p. See previous messages for more info", packet, stream);
 			release_client_packet(stream_processor, packet);
 			break;
 		}
@@ -387,6 +398,7 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 		request_processor = stream_processor->active_request_processors[request_id];
 		if (request_processor == NULL)
 		{
+			ff_log_debug(L"there is no active request_processor for the request_id=%lu read from the stream=%p", (uint32_t) request_id, stream);
 			release_client_packet(stream_processor, packet);
 			break;
 		}
@@ -419,6 +431,7 @@ void mrpc_client_stream_processor_stop_async(struct mrpc_client_stream_processor
 		 * This means that the mrpc_client_stream_processor_process_stream() call must
 		 * return immediately.
 		 */
+		ff_log_debug(L"the stream_processor=%p is already stopped. Instruct it to stop next time the mrpc_client_stream_processor_process_stream() will be called", stream_processor);
 		ff_assert(stream_processor->stream == NULL);
 		ff_assert(stream_processor->active_request_processors_cnt == 0);
 		stream_processor->state = STATE_STOP_INITIATED;
@@ -426,6 +439,7 @@ void mrpc_client_stream_processor_stop_async(struct mrpc_client_stream_processor
 	else
 	{
 		ff_assert(stream_processor->state == STATE_STOP_INITIATED);
+		ff_log_debug(L"the stream_processor=%p didn't yet stopped, so do nothing", stream_processor);
 	}
 }
 
@@ -439,7 +453,15 @@ enum ff_result mrpc_client_stream_processor_invoke_rpc(struct mrpc_client_stream
 
 		request_processor = acquire_request_processor(stream_processor);
 		result = mrpc_client_request_processor_invoke_rpc(request_processor, data);
+		if (result != FF_SUCCESS)
+		{
+			ff_log_debug(L"cannot invoke rpc for data=%p on the request_processor=%p. See previous messages for more info", data, request_processor);
+		}
 		release_request_processor(stream_processor, request_processor);
+	}
+	else
+	{
+		ff_log_debug(L"the stream_processor=%p cannot invoke rpc (data=%p), because it is stopped or its stop proces is initiated", stream_processor, data);
 	}
 
 	return result;
