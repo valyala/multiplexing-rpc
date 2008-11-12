@@ -229,7 +229,8 @@ static void test_blob_basic()
 	result = mrpc_blob_move(blob, L"test_blob_file.txt");
 	ASSERT(result == FF_SUCCESS, "cannot move the blob file");
 
-	hash_value = mrpc_blob_get_hash(blob, 432);
+	result = mrpc_blob_get_hash(blob, 432, &hash_value);
+	ASSERT(result == FF_SUCCESS, "cannot calculate hash for the blob");
 	ASSERT(hash_value == 3858857425ul, "wrong hash value calculated for the blob");
 
 	mrpc_blob_dec_ref(blob);
