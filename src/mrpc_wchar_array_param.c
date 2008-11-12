@@ -35,6 +35,10 @@ static enum ff_result read_wchar_array_param_from_stream(struct mrpc_param *para
 	{
 		ff_assert(wchar_array_param->value != NULL);
 	}
+	else
+	{
+		ff_log_debug(L"error while unserializing wchar_array param=%p from the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -46,6 +50,10 @@ static enum ff_result write_wchar_array_param_to_stream(struct mrpc_param *param
 	wchar_array_param = (struct wchar_array_param *) mrpc_param_get_ctx(param);
 	ff_assert(wchar_array_param->value != NULL);
 	result = mrpc_wchar_array_serialize(wchar_array_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"error while serializing wchar_array param=%p to the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
