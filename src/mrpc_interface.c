@@ -83,6 +83,10 @@ struct mrpc_method *mrpc_interface_get_method(struct mrpc_interface *interface, 
 	{
 		method = interface->methods[method_id];
 	}
+	else
+	{
+		ff_log_debug(L"the interface=%p doesn't contain method with method_id=%lu. It contains only %d methods", interface, (uint32_t) method_id, interface->methods_cnt);
+	}
 
 	return method;
 }
