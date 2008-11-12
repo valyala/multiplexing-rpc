@@ -28,6 +28,10 @@ static struct mrpc_data *try_create_mrpc_data(struct mrpc_interface *interface, 
 		data->response_params = mrpc_method_create_response_params(method);
 		data->method_id = method_id;
 	}
+	else
+	{
+		ff_log_debug(L"the interface=%p doesn't contain method with method_id=%lu", interface, (uint32_t) method_id);
+	}
 
 	return data;
 }
@@ -47,12 +51,22 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 			result = mrpc_method_read_request_params(data->method, data->request_params, stream);
 			if (result != FF_SUCCESS)
 			{
+				ff_log_debug(L"cannot read request paramters for the method=%p with method_id=%lu from the stream=%p. See previous messages for more info",
+					data->method, (uint32_t) method_id, stream);
 				mrpc_data_delete(data);
 				data = NULL;
 			}
 		}
+		else
+		{
+			ff_log_debug(L"wrong method_id=%lu has been read from the stream=%p for the interface=%p. See previous messages for more info",
+				(uint32_t) method_id, stream, interface);
+		}
 	}
-
+	else
+	{
+		ff_log_debug(L"cannot read method_id from the stream=%p for the interface=%p. See previous messages for more info", stream, interface);
+	}
 	return data;
 }
 
@@ -67,12 +81,22 @@ static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *st
 		if (method_id == data->method_id)
 		{
 			result = mrpc_method_read_response_params(data->method, data->response_params, stream);
+			if (result != FF_SUCCESS)
+			{
+				ff_log_debug(L"cannot read response paramters for the method=%p with method_id=%lu from the stream=%p. See previous messages for more info",
+					data->method, (uint32_t) method_id, stream);
+			}
 		}
 		else
 		{
 			/* wrong method_id received */
+			ff_log_debug(L"wrong method_id=%lu received from the stream=%p. It must be eqal to %lu", (uint32_t) method_id, stream, (uint32_t) data->method_id);
 			result = FF_FAILURE;
 		}
+	}
+	else
+	{
+		ff_log_debug(L"cannot read method_id from the stream=%p for the data=%p. See previous messages for more info", stream, data);
 	}
 	return result;
 }
@@ -88,7 +112,21 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 		if (result == FF_SUCCESS)
 		{
 			result = ff_stream_flush(stream);
+			if (result != FF_SUCCESS)
+			{
+				ff_log_debug(L"cannot flush the stream=%p after writing response parameters for the method=%p with method_id=%lu. See previous messages for more info",
+					stream, data->method, (uint32_t) data->method_id);
+			}
 		}
+		else
+		{
+			ff_log_debug(L"cannot write response parameters for the method=%p with method_id=%lu to the stream=%p. See previous messages for more info",
+				data->method, (uint32_t) data->method_id, stream);
+		}
+	}
+	else
+	{
+		ff_log_debug(L"canot write method_id=%lu to the stream=%p. See previous messages for more info", (uint32_t) data->method_id, stream);
 	}
 	return result;
 }
@@ -104,9 +142,22 @@ static enum ff_result write_request(struct mrpc_data *data, struct ff_stream *st
 		if (result == FF_SUCCESS)
 		{
 			result = ff_stream_flush(stream);
+			if (result != FF_SUCCESS)
+			{
+				ff_log_debug(L"cannot flush the stream=%p after writing response parameters for the method=%p with method_id=%lu. See prevois messages for more info",
+					stream, data->method, (uint32_t) data->method_id);
+			}
+		}
+		else
+		{
+			ff_log_debug(L"cannot write request paramters for the method=%p with method_id=%lu to the stream=%p. See previous messages for more info",
+				data->method, (uint32_t) data->method_id, stream);
 		}
 	}
-
+	else
+	{
+		ff_log_debug(L"cannot write method_id=%lu to the stream=%p. See previous messages for more info", (uint32_t) data->method_id, stream);
+	}
 	return result;
 }
 
@@ -139,7 +190,15 @@ enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, v
 	{
 		mrpc_method_invoke_callback(data->method, data, service_ctx);
 		result = write_response(data, stream);
+		if (result != FF_SUCCESS)
+		{
+			ff_log_debug(L"cannot write response for data=%p to the stream=%p. See previous messages for more info", data, stream);
+		}
 		mrpc_data_delete(data);
+    }
+    else
+    {
+    	ff_log_debug(L"cannot read request from the stream=%p for the interface=%p. See previous messages for more info", stream, interface);
     }
 
     return result;
@@ -153,6 +212,14 @@ enum ff_result mrpc_data_invoke_remote_call(struct mrpc_data *data, struct ff_st
 	if (result == FF_SUCCESS)
 	{
 		result = read_response(data, stream);
+		if (result != FF_SUCCESS)
+		{
+			ff_log_debug(L"cannot read response for data=%p from the stream=%p. See previous messages for more info", data, stream);
+		}
+	}
+	else
+	{
+		ff_log_debug(L"cannot write request for data=%p to the stream=%p. See previous messages for more info", data, stream);
 	}
 
 	return result;
