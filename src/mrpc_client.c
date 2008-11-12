@@ -33,7 +33,7 @@ static void main_client_func(void *ctx)
 		if (stream == NULL)
 		{
 			/* the mrpc_client_delete() was called */
-			ff_log_debug(L"cannot establish connection for the client=%p, because the mrpc_client_delete() has been called", client);
+			ff_log_debug(L"cannot establish connection for the client=%p, because the mrpc_client_stop() has been called", client);
 			break;
 		}
 		mrpc_client_stream_processor_process_stream(client->stream_processor, stream);
