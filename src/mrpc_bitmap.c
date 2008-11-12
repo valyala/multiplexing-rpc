@@ -53,6 +53,7 @@ int mrpc_bitmap_acquire_bit(struct mrpc_bitmap *bitmap)
 	}
 	if (i == bitmap->size)
 	{
+		ff_log_debug(L"all bits are occupied in the bitmap=%p", bitmap);
 		n = -1;
 	}
 	return n;
