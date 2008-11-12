@@ -113,6 +113,7 @@ static void main_server_func(void *ctx)
 		client_stream = ff_stream_acceptor_accept(server->stream_acceptor);
 		if (client_stream == NULL)
 		{
+			ff_log_debug(L"mrpc_server_stop() has been called, so the stream_acceptor=%p of the server=%p returned NULL", server->stream_acceptor, server);
 			break;
 		}
 		stream_processor = acquire_stream_processor(server);
