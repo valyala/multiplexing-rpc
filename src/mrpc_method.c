@@ -94,6 +94,7 @@ static enum ff_result read_params(struct mrpc_param **params, int param_cnt, str
 		result = mrpc_param_read_from_stream(param, stream);
 		if (result != FF_SUCCESS)
 		{
+			ff_log_debug(L"cannot read parameter number %d from the stream=%p. See previous messages for more info", i, stream);
 			break;
 		}
 	}
@@ -116,6 +117,7 @@ static enum ff_result write_params(struct mrpc_param **params, int param_cnt, st
 		result = mrpc_param_write_to_stream(param, stream);
 		if (result != FF_SUCCESS)
 		{
+			ff_log_debug(L"cannot write paramter number %d to the stream=%p. See previous messages for more info", i, stream);
 			break;
 		}
 	}
@@ -228,6 +230,10 @@ enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struc
 	ff_assert(method->is_key == NULL);
 
 	result = read_params(request_params, method->request_params_cnt, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot read %d request parameters for the method=%p from the stream=%p. See previous messages for more info", method->request_params_cnt, method, stream);
+	}
 	return result;
 }
 
@@ -239,6 +245,10 @@ enum ff_result mrpc_method_read_response_params(struct mrpc_method *method, stru
 	ff_assert(method->is_key != NULL);
 
 	result = read_params(response_params, method->response_params_cnt, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot read %d response paramters for the method=%p from the stream=%p. See previous messages for more info", method->response_params_cnt, method, stream);
+	}
 	return result;
 }
 
@@ -250,6 +260,10 @@ enum ff_result mrpc_method_write_request_params(struct mrpc_method *method, stru
 	ff_assert(method->is_key != NULL);
 
 	result = write_params(request_params, method->request_params_cnt, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot write %d request paramters for the method=%p to the stream=%p. See previous messages for more info", method->request_params_cnt, method, stream);
+	}
 	return result;
 }
 
@@ -261,6 +275,10 @@ enum ff_result mrpc_method_write_response_params(struct mrpc_method *method, str
 	ff_assert(method->is_key == NULL);
 
 	result = write_params(response_params, method->response_params_cnt, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot write %d response paramters for the method=%d to the stream=%p. See previouse messages for more info", method->response_params_cnt, method, stream);
+	}
 	return result;
 }
 
