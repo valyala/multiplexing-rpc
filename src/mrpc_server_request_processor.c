@@ -33,6 +33,11 @@ static void process_request_func(void *ctx)
 
 	mrpc_packet_stream_initialize(request_processor->packet_stream, request_processor->request_id);
 	result = mrpc_data_process_remote_call(request_processor->service_interface, request_processor->service_ctx, request_processor->stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot process remote call from the stream=%p using the service_interface=%p, service_ctx=%p",
+			request_processor->stream, request_processor->service_interface, request_processor->service_ctx);
+	}
 	mrpc_packet_stream_shutdown(request_processor->packet_stream);
 	if (result != FF_SUCCESS)
 	{
