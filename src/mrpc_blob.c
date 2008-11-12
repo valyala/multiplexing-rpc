@@ -75,6 +75,10 @@ static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf,
 		{
 			data->curr_pos += len;
 		}
+		else
+		{
+			ff_log_debug(L"error while reading from the blob stream=%p to the buf=%p, len=%d. See previous messages for more info", stream, buf, len);
+		}
 	}
 	return result;
 }
@@ -101,6 +105,10 @@ static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void 
 		{
 			data->curr_pos += len;
 		}
+		else
+		{
+			ff_log_debug(L"error while writing to the blob stream=%p from the buf=%p, len=%d. See previous messages for more info", stream, buf, len);
+		}
 	}
 	return result;
 }
@@ -121,6 +129,10 @@ static enum ff_result flush_blob_stream(struct ff_stream *stream)
 		{
 			data->blob->state = BLOB_COMPLETE;
 		}
+	}
+	else
+	{
+		ff_log_debug(L"error while flushing the blob stream=%p. See previous messages for more info", stream);
 	}
 	return result;
 }
@@ -325,7 +337,7 @@ uint32_t mrpc_blob_get_hash(struct mrpc_blob *blob, uint32_t start_value)
 	}
 	if (result != FF_SUCCESS)
 	{
-		ff_log_warning(L"cannot calculate hash value for the blob. See previous message for details");
+		ff_log_warning(L"cannot calculate hash value for the blob=%p, start_value=%lu", blob, start_value);
 	}
 	return hash_value;
 }
