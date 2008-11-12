@@ -32,6 +32,10 @@ enum ff_result mrpc_uint64_serialize(uint64_t data, struct ff_stream *stream)
 	while (data != 0);
 
 	result = ff_stream_write(stream, buf, len);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot write %d bytes of the serialized uint64 data=%llu to the stream=%p. See previous messages for more info", len, data, stream);
+	}
 	return result;
 }
 
@@ -46,12 +50,14 @@ enum ff_result mrpc_uint64_unserialize(uint64_t *data, struct ff_stream *stream)
 	{
 		if (bits_len >= 64)
 		{
+			ff_log_debug(L"unexpected length of uint64 value read from the stream=%p. It must be less than or equal to 64", stream);
 			result = FF_FAILURE;
 			goto end;
 		}
 		result = ff_stream_read(stream, &octet, 1);
 		if (result != FF_SUCCESS)
 		{
+			ff_log_debug(L"cannot read an octet for bits [%d:%d] from the stream=%p. See previous messages for more info", bits_len, bits_len + 8, stream);
 			goto end;
 		}
 		u_data |= ((uint64_t) (octet & OCTET_MASK)) << bits_len;
@@ -76,7 +82,10 @@ enum ff_result mrpc_int64_serialize(int64_t data, struct ff_stream *stream)
 	 */
 	u_data = (data << 1) ^ (data >> 63);
 	result = mrpc_uint64_serialize(u_data, stream);
-
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot serialize uint64 u_data=%llu to the stream=%p. See previous messages for more info", u_data, stream);
+	}
 	return result;
 }
 
@@ -94,7 +103,10 @@ enum ff_result mrpc_int64_unserialize(int64_t *data, struct ff_stream *stream)
 		u_data = (u_data >> 1) ^ (-((int64_t)(u_data & 0x01)));
 		*data = (int64_t) u_data;
 	}
-
+	else
+	{
+		ff_log_debug(L"cannot unserialize uint64 from the stream=%p. See previous messages for more info", stream);
+	}
 	return result;
 }
 
@@ -103,6 +115,10 @@ enum ff_result mrpc_uint32_serialize(uint32_t data, struct ff_stream *stream)
 	enum ff_result result;
 
 	result = mrpc_uint64_serialize((uint64_t) data, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot serialize uint32 data=%lu to the stream=%p. See previous messages for more info", data, stream);
+	}
 	return result;
 }
 
@@ -120,8 +136,13 @@ enum ff_result mrpc_uint32_unserialize(uint32_t *data, struct ff_stream *stream)
 		}
 		else
 		{
+			ff_log_debug(L"value u_data=%llu read from the stream=%p cannot exceed the %llu", u_data, stream, (uint64_t) MAX_UINT32_VALUE);
 			result = FF_FAILURE;
 		}
+	}
+	else
+	{
+		ff_log_debug(L"cannot unserialize uint64 data from the stream=%p. See previous messages for more info", stream);
 	}
 	return result;
 }
@@ -136,7 +157,10 @@ enum ff_result mrpc_int32_serialize(int32_t data, struct ff_stream *stream)
 	 */
 	u_data = (data << 1) ^ (data >> 31);
 	result = mrpc_uint32_serialize(u_data, stream);
-
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot serialize uint64 u_data=%lu to the stream=%p. See previous messages for more info", u_data, stream);
+	}
 	return result;
 }
 
@@ -154,6 +178,9 @@ enum ff_result mrpc_int32_unserialize(int32_t *data, struct ff_stream *stream)
 		u_data = (u_data >> 1) ^ (-(int32_t)((u_data & 0x01)));
 		*data = (int32_t) u_data;
 	}
-
+	else
+	{
+		ff_log_debug(L"cannot unserialize uint32 data from the stream=%p. See previous messages for more info", stream);
+	}
 	return result;
 }
