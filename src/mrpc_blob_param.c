@@ -87,10 +87,17 @@ static uint32_t get_blob_param_hash(struct mrpc_param *param, uint32_t start_val
 {
 	struct blob_param *blob_param;
 	uint32_t hash_value;
+	enum ff_result result;
 
 	blob_param = (struct blob_param *) mrpc_param_get_ctx(param);
 	ff_assert(blob_param->value != NULL);
-	hash_value = mrpc_blob_get_hash(blob_param->value, start_value);
+
+	hash_value = start_value;
+	result = mrpc_blob_get_hash(blob_param->value, start_value, &hash_value);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_warning(L"cannot calculate hash value for the blob param=%p", param);
+	}
 	return hash_value;
 }
 
