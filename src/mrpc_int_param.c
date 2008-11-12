@@ -27,6 +27,10 @@ static enum ff_result read_uint64_param_from_stream(struct mrpc_param *param, st
 	uint64_param = (struct uint64_param *) mrpc_param_get_ctx(param);
 	ff_assert(uint64_param->value == 0);
 	result = mrpc_uint64_unserialize(&uint64_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot unserialize the uint64 param=%p from the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -37,6 +41,10 @@ static enum ff_result write_uint64_param_to_stream(struct mrpc_param *param, str
 
 	uint64_param = (struct uint64_param *) mrpc_param_get_ctx(param);
 	result = mrpc_uint64_serialize(uint64_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot serialize the uint64 param=%p to the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -114,6 +122,10 @@ static enum ff_result read_int64_param_from_stream(struct mrpc_param *param, str
 	int64_param = (struct int64_param *) mrpc_param_get_ctx(param);
 	ff_assert(int64_param->value == 0);
 	result = mrpc_int64_unserialize(&int64_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot unserialize the int64 param=%p from the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -124,6 +136,10 @@ static enum ff_result write_int64_param_to_stream(struct mrpc_param *param, stru
 
 	int64_param = (struct int64_param *) mrpc_param_get_ctx(param);
 	result = mrpc_int64_serialize(int64_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot serialize the int64 param=%p to the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -201,6 +217,10 @@ static enum ff_result read_uint32_param_from_stream(struct mrpc_param *param, st
 	uint32_param = (struct uint32_param *) mrpc_param_get_ctx(param);
 	ff_assert(uint32_param->value == 0);
 	result = mrpc_uint32_unserialize(&uint32_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot unserialize the uint32 param=%p from the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -211,6 +231,10 @@ static enum ff_result write_uint32_param_to_stream(struct mrpc_param *param, str
 
 	uint32_param = (struct uint32_param *) mrpc_param_get_ctx(param);
 	result = mrpc_uint32_serialize(uint32_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot serialize the uint32 param=%p to the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -285,6 +309,10 @@ static enum ff_result read_int32_param_from_stream(struct mrpc_param *param, str
 	int32_param = (struct int32_param *) mrpc_param_get_ctx(param);
 	ff_assert(int32_param->value == 0);
 	result = mrpc_int32_unserialize(&int32_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot unserialize the int32 param=%p from the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -295,6 +323,10 @@ static enum ff_result write_int32_param_to_stream(struct mrpc_param *param, stru
 
 	int32_param = (struct int32_param *) mrpc_param_get_ctx(param);
 	result = mrpc_int32_serialize(int32_param->value, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot unserialize the int32 param=%p to the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
