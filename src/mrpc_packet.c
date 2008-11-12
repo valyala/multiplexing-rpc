@@ -118,11 +118,13 @@ enum ff_result mrpc_packet_read_from_stream(struct mrpc_packet *packet, struct f
 	result = ff_stream_read(stream, &packet->request_id, 1);
 	if (result != FF_SUCCESS)
 	{
+		ff_log_debug(L"cannot read request_id from the stream=%p for the packet=%p. See previous messages for more info", stream, packet);
 		goto end;
 	}
 	result = mrpc_uint32_unserialize(&tmp, stream);
 	if (result != FF_SUCCESS)
 	{
+		ff_log_debug(L"cannot read packet type and size from the stream=%p for the packet=%p. See previous messages for more info", stream, packet);
 		goto end;
 	}
 	packet->type = (enum mrpc_packet_type) (tmp & 0x03);
@@ -132,10 +134,15 @@ enum ff_result mrpc_packet_read_from_stream(struct mrpc_packet *packet, struct f
 	packet->size = (int) (tmp >> 2);
 	if (packet->size > MAX_PACKET_SIZE)
 	{
+		ff_log_debug(L"wrong packet_size=%d has been read from the stream=%p for the packet=%p. It mustn't exceed the %d", packet->size, stream, packet, MAX_PACKET_SIZE);
 		result = FF_FAILURE;
 		goto end;
 	}
 	result = ff_stream_read(stream, packet->buf, packet->size);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot read packet's body with size=%d from the stream=%p for the packet=%p. See previous messages for more info", packet->size, stream, packet);
+	}
 
 end:
 	return result;
@@ -152,15 +159,21 @@ enum ff_result mrpc_packet_write_to_stream(struct mrpc_packet *packet, struct ff
 	result = ff_stream_write(stream, &packet->request_id, 1);
 	if (result != FF_SUCCESS)
 	{
+		ff_log_debug(L"cannot write request_id=%lu to the stream=%p for the packet=%p. See previous messages for more info", (uint32_t) packet->request_id, stream, packet);
 		goto end;
 	}
 	tmp = ((uint32_t) packet->type) | (((uint32_t) packet->size) << 2);
 	result = mrpc_uint32_serialize(tmp, stream);
 	if (result != FF_SUCCESS)
 	{
+		ff_log_debug(L"cannot serialize packet type and size (%lu) to the stream=%p for the packet=%p. See previous messages for more info", tmp, stream, packet);
 		goto end;
 	}
 	result = ff_stream_write(stream, packet->buf, packet->size);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot write packet's boyd with size=%d to the stream=%p for the packet=%p. See previous messages for more info", packet->size, stream, packet);
+	}
 
 end:
 	return result;
