@@ -66,6 +66,10 @@ enum ff_result mrpc_client_request_processor_invoke_rpc(struct mrpc_client_reque
 
 	mrpc_packet_stream_initialize(request_processor->packet_stream, request_processor->request_id);
 	result = mrpc_data_invoke_remote_call(data, request_processor->stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot invoke rpc for the data=%p on the request_processor=%p. See previous messages for more info", data, request_processor);
+	}
 	mrpc_packet_stream_shutdown(request_processor->packet_stream);
 
 	return result;
