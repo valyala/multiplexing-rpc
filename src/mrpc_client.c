@@ -33,6 +33,7 @@ static void main_client_func(void *ctx)
 		if (stream == NULL)
 		{
 			/* the mrpc_client_delete() was called */
+			ff_log_debug(L"cannot establish connection for the client=%p, because the mrpc_client_delete() has been called", client);
 			break;
 		}
 		mrpc_client_stream_processor_process_stream(client->stream_processor, stream);
@@ -100,6 +101,7 @@ enum ff_result mrpc_client_invoke_rpc(struct mrpc_client *client, struct mrpc_da
 		{
 			break;
 		}
+		ff_log_warning(L"cannot invoke rpc (data=%p) on the client=%p at try %d", data, client, tries_cnt);
 		if (tries_cnt >= MAX_RPC_TRIES_CNT)
 		{
 			break;
@@ -108,6 +110,7 @@ enum ff_result mrpc_client_invoke_rpc(struct mrpc_client *client, struct mrpc_da
 		if (result == FF_SUCCESS)
 		{
 			/* mrpc_client_stop() was called */
+			ff_log_debug(L"mrpc_client_stop() was called on the client=%p, so stop trying to invoke rpc (data=%p)", client, data);
 			result = FF_FAILURE;
 			break;
 		}
