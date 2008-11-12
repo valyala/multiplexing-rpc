@@ -35,6 +35,10 @@ enum ff_result mrpc_param_read_from_stream(struct mrpc_param *param, struct ff_s
 	enum ff_result result;
 
 	result = param->vtable->read_from_stream(param, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot read the param=%p from the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
@@ -43,6 +47,10 @@ enum ff_result mrpc_param_write_to_stream(struct mrpc_param *param, struct ff_st
 	enum ff_result result;
 
 	result = param->vtable->write_to_stream(param, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot write the param=%p to the stream=%p. See previous messages for more info", param, stream);
+	}
 	return result;
 }
 
