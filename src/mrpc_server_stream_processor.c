@@ -136,6 +136,11 @@ static void stream_writer_func(void *ctx)
 			break;
 		}
 		result = mrpc_packet_write_to_stream(packet, stream_processor->stream);
+		if (result != FF_SUCCESS)
+		{
+			ff_log_debug(L"cannot write packet=%p to the stream=%p of the stream_processor=%p. See previous messages for more info",
+				packet, stream_processor->stream, stream_processor);
+		}
 		release_server_packet(stream_processor, packet);
 
 		/* below is an optimization, which is used for minimizing the number of
@@ -155,6 +160,10 @@ static void stream_writer_func(void *ctx)
 		if (result == FF_SUCCESS && is_empty)
 		{
 			result = ff_stream_flush(stream_processor->stream);
+			if (result != FF_SUCCESS)
+			{
+				ff_log_debug(L"cannot flush the stream=%p of the stream_processor=%p. See previous messages for more info", stream_processor->stream, stream_processor);
+			}
 		}
 		if (result == FF_FAILURE)
 		{
@@ -307,15 +316,16 @@ static void stream_reader_func(void *ctx)
 	for (;;)
 	{
 		struct mrpc_packet *packet;
-		enum mrpc_packet_type packet_type;
-		uint8_t request_id;
 		struct mrpc_server_request_processor *request_processor;
+		uint8_t request_id;
+		enum mrpc_packet_type packet_type;
 		enum ff_result result;
 
 		packet = acquire_server_packet(stream_processor);
 		result = mrpc_packet_read_from_stream(packet, stream_processor->stream);
 		if (result != FF_SUCCESS)
 		{
+			ff_log_debug(L"cannot read the packet=%p from the stream=%p. See previous messages for more info", packet, stream_processor->stream);
 			release_server_packet(stream_processor, packet);
 			break;
 		}
@@ -327,10 +337,12 @@ static void stream_reader_func(void *ctx)
 		{
 			if (request_processor != NULL)
 			{
+				ff_log_debug(L"there is the request_processor with the given request_id=%lu, but the packet received "
+							 L"from the stream=%p indicates that this request_processor shouldn't exist. stream_processor=%p",
+							 	(uint32_t) request_id, stream_processor->stream, stream_processor);
 				release_server_packet(stream_processor, packet);
 				break;
 			}
-
 			request_processor = acquire_request_processor(stream_processor, request_id);
 			mrpc_server_request_processor_start(request_processor, stream_processor->service_interface, stream_processor->service_ctx, request_id);
 		}
@@ -339,6 +351,9 @@ static void stream_reader_func(void *ctx)
 			/* packet_type is MRPC_PACKET_MIDDLE or MRPC_PACKET_LAST */
 			if (request_processor == NULL)
 			{
+				ff_log_debug(L"there is no request_processor with the given request_id=%lu, but the packet received "
+							 L"from the stream=%p indicates that this request_processor should exist. stream_processor=%p",
+							 	(uint32_t) request_id, stream_processor->stream, stream_processor);
 				release_server_packet(stream_processor, packet);
 				break;
 			}
@@ -407,15 +422,12 @@ void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *str
 	ff_assert(stream_processor->service_interface == NULL);
 	ff_assert(stream_processor->service_ctx == NULL);
 	ff_assert(stream_processor->stream == NULL);
-	ff_assert(stream_processor->state != STATE_WORKING);
+	ff_assert(stream_processor->state == STATE_STOPPED);
 
 	ff_assert(service_interface != NULL);
 	ff_assert(stream != NULL);
 
-	if (stream_processor->state == STATE_STOPPED)
-	{
-		stream_processor->state = STATE_WORKING;
-	}
+	stream_processor->state = STATE_WORKING;
 	stream_processor->service_interface = service_interface;
 	stream_processor->service_ctx = service_ctx;
 	stream_processor->stream = stream;
@@ -424,10 +436,17 @@ void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *str
 
 void mrpc_server_stream_processor_stop_async(struct mrpc_server_stream_processor *stream_processor)
 {
+	ff_assert(stream_processor->state != STATE_STOPPED);
+
 	if (stream_processor->state == STATE_WORKING)
 	{
 		ff_assert(stream_processor->stream != NULL);
 		stream_processor->state = STATE_STOP_INITIATED;
 		ff_stream_disconnect(stream_processor->stream);
+	}
+	else
+	{
+		ff_assert(stream_processor->state == STATE_STOP_INITIATED);
+		ff_log_debug(L"the stream_processor=%p didn't yet stopped, so do nothing", stream_processor);
 	}
 }
