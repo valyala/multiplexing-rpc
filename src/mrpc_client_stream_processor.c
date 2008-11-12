@@ -456,6 +456,7 @@ enum ff_result mrpc_client_stream_processor_invoke_rpc(struct mrpc_client_stream
 		if (result != FF_SUCCESS)
 		{
 			ff_log_debug(L"cannot invoke rpc for data=%p on the request_processor=%p. See previous messages for more info", data, request_processor);
+			mrpc_client_stream_processor_stop_async(stream_processor);
 		}
 		release_request_processor(stream_processor, request_processor);
 	}
