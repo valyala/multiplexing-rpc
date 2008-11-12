@@ -5,7 +5,6 @@
 #include "private/mrpc_blob.h"
 #include "private/mrpc_blob_serialization.h"
 #include "ff/ff_stream.h"
-#include "ff/ff_log.h"
 
 struct blob_param
 {

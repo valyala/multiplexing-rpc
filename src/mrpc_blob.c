@@ -3,7 +3,6 @@
 #include "private/mrpc_blob.h"
 #include "ff/ff_stream.h"
 #include "ff/ff_file.h"
-#include "ff/ff_log.h"
 #include "ff/arch/ff_arch_misc.h"
 
 /**
