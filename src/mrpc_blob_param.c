@@ -37,7 +37,7 @@ static enum ff_result read_blob_param_from_stream(struct mrpc_param *param, stru
 	}
 	else
 	{
-		ff_log_warning(L"cannot read blob param=%p from the stream=%p. See previous messages for more info", param, stream);
+		ff_log_debug(L"cannot read blob param=%p from the stream=%p. See previous messages for more info", param, stream);
 	}
 	return result;
 }
@@ -52,7 +52,7 @@ static enum ff_result write_blob_param_to_stream(struct mrpc_param *param, struc
 	result = mrpc_blob_serialize(blob_param->value, stream);
 	if (result != FF_SUCCESS)
 	{
-		ff_log_warning(L"cannot write blob param=%p to the stream=%p. See previous messages for more info", param, stream);
+		ff_log_debug(L"cannot write blob param=%p to the stream=%p. See previous messages for more info", param, stream);
 	}
 	return result;
 }
