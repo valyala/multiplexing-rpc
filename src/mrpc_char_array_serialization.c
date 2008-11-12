@@ -24,17 +24,23 @@ enum ff_result mrpc_char_array_serialize(struct mrpc_char_array *char_array, str
 	ff_assert(len >= 0);
 	if (len > MAX_CHAR_ARRAY_SIZE)
 	{
+		ff_log_warning(L"char_array=%p has too large len=%d for serialization. It must be less than or eqal to %d", char_array, len, MAX_CHAR_ARRAY_SIZE);
 		goto end;
 	}
 
 	result = mrpc_uint32_serialize((uint32_t) len, stream);
 	if (result != FF_SUCCESS)
 	{
+		ff_log_debug(L"cannot serialize char_array=%p length len=%d into the stream=%p. See previous messages for more info", char_array, len, stream);
 		goto end;
 	}
 
 	value = mrpc_char_array_get_value(char_array);
 	result = ff_stream_write(stream, value, len);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot write char_array=%p contents with len=%p into the stream=%p. See previous messages for more info", char_array, len, stream);
+	}
 
 end:
 	mrpc_char_array_dec_ref(char_array);
@@ -50,10 +56,12 @@ enum ff_result mrpc_char_array_unserialize(struct mrpc_char_array **char_array, 
 	result = mrpc_uint32_unserialize(&u_len, stream);
 	if (result != FF_SUCCESS)
 	{
+		ff_log_debug(L"cannot unserialize char_array length from the stream=%p. See previous messages for more info", stream);
 		goto end;
 	}
 	if (u_len > MAX_CHAR_ARRAY_SIZE)
 	{
+		ff_log_debug(L"unserialized from the stream=%p length len=%lu of the char_array must be less than or equal to %d", stream, u_len, MAX_CHAR_ARRAY_SIZE);
 		result = FF_FAILURE;
 		goto end;
 	}
@@ -62,6 +70,7 @@ enum ff_result mrpc_char_array_unserialize(struct mrpc_char_array **char_array, 
 	result = ff_stream_read(stream, value, (int) u_len);
 	if (result != FF_SUCCESS)
 	{
+		ff_log_debug(L"cannot read char_array contents with length len=%lu from the stream=%p. See prevsious messages for more info", u_len, stream);
 		ff_free(value);
 		goto end;
 	}
