@@ -67,6 +67,7 @@ static enum ff_result prefetch_current_read_packet(struct mrpc_packet_stream *st
 		packet_type = mrpc_packet_get_type(stream->current_read_packet);
 		if (packet_type != MRPC_PACKET_START && packet_type != MRPC_PACKET_SINGLE)
 		{
+			ff_log_debug(L"wrong packet_type=%d of the first packet in the packet stream=%p", (int) packet_type, stream);
 			release_packet(stream, stream->current_read_packet);
 			stream->current_read_packet = NULL;
 			result = FF_FAILURE;
@@ -75,6 +76,7 @@ static enum ff_result prefetch_current_read_packet(struct mrpc_packet_stream *st
 	else
 	{
 		ff_assert(stream->current_read_packet == NULL);
+		ff_log_debug(L"cannot get next packet from the reader_queue=%p during the timeout=%d", stream->reader_queue, READ_TIMEOUT);
 	}
 
 	return result;
@@ -192,6 +194,7 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 		result = prefetch_current_read_packet(stream);
 		if (result != FF_SUCCESS)
 		{
+			ff_log_debug(L"cannot prefetch the first read packet for the packet stream=%p. See previous messages for more info", stream);
 			goto end;
 		}
 		else
@@ -221,6 +224,7 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 				/* error: the previous packet should be the last in the stream,
 				 * but we didn't read requested len bytes.
 				 */
+				ff_log_debug(L"the packet stream=%p has been finished, but len=%d bytes yet not read to the buf=%p", stream, len, buf);
 				result = FF_FAILURE;
 				goto end;
 			}
@@ -228,6 +232,7 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 			result = ff_blocking_queue_get_with_timeout(stream->reader_queue, (const void **) &packet, READ_TIMEOUT);
 			if (result != FF_SUCCESS)
 			{
+				ff_log_debug(L"cannot get the next packet from the reader_queue=%d during the timeout=%d", stream->reader_queue, READ_TIMEOUT);
 				goto end;
 			}
 			ff_assert(packet != NULL);
@@ -235,6 +240,7 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 			if (packet_type == MRPC_PACKET_START || packet_type == MRPC_PACKET_SINGLE)
 			{
 				/* wrong packet type. */
+				ff_log_debug(L"packet with wrong type=%d has been received from the packet stream=%p", (int) packet_type, stream);
 				release_packet(stream, packet);
 				result = FF_FAILURE;
 				goto end;
@@ -270,6 +276,7 @@ enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const
 	if (packet_type == MRPC_PACKET_END)
 	{
 		/* the stream was already flushed, so it is impossible to write more data to it */
+		ff_log_debug(L"the stream=%p has been already flushed, so it cannot be used for writing the buf=%p, len=%d to it", stream, buf, len);
 		goto end;
 	}
 	ff_assert(packet_type == MRPC_PACKET_START || packet_type == MRPC_PACKET_MIDDLE);
@@ -288,6 +295,8 @@ enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const
 			result = ff_blocking_queue_put_with_timeout(stream->writer_queue, stream->current_write_packet, WRITE_TIMEOUT);
 			if (result != FF_SUCCESS)
 			{
+				ff_log_debug(L"cannot put the current_write_packet=%p to the writer_queue=%p of the stream=%p during the timeout=%d",
+					stream->current_write_packet, stream->writer_queue, stream, WRITE_TIMEOUT);
 				goto end;
 			}
 			stream->current_write_packet = acquire_packet(stream, MRPC_PACKET_MIDDLE);
@@ -309,6 +318,7 @@ enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 		/* the mrpc_packet_stream_write() function wasn't called at all,
 		 * so there is no need to flush the stream
 		 */
+		ff_log_debug(L"the mrpc_packet_stream_write() function didn't called, so there is no need to flush the stream=%p", stream);
 		goto end;
 	}
 
@@ -316,6 +326,7 @@ enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 	if (packet_type == MRPC_PACKET_END)
 	{
 		/* the stream was already flushed */
+		ff_log_debug(L"the stream=%p has been already flushed", stream);
 		goto end;
 	}
 
@@ -332,6 +343,8 @@ enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 	result = ff_blocking_queue_put_with_timeout(stream->writer_queue, stream->current_write_packet, WRITE_TIMEOUT);
 	if (result != FF_SUCCESS)
 	{
+		ff_log_debug(L"cannot put the current_write_packet=%p to the writer_queue=%p of the stream=%p during the timeout=%d",
+			stream->current_write_packet, stream->writer_queue, stream, WRITE_TIMEOUT);
 		release_packet(stream, stream->current_write_packet);
 	}
 	stream->current_write_packet = acquire_packet(stream, MRPC_PACKET_END);
@@ -343,8 +356,13 @@ end:
 void mrpc_packet_stream_disconnect(struct mrpc_packet_stream *stream)
 {
 	struct mrpc_packet *packet;
+	enum ff_result result;
 
-	mrpc_packet_stream_flush(stream);
+	result = mrpc_packet_stream_flush(stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot flush the packet stream=%p. See previous messages for more info", stream);
+	}
 	packet = acquire_packet(stream, MRPC_PACKET_END);
 	ff_blocking_queue_put(stream->reader_queue, packet);
 }
