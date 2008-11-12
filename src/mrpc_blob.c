@@ -80,6 +80,10 @@ static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf,
 			ff_log_debug(L"error while reading from the blob stream=%p to the buf=%p, len=%d. See previous messages for more info", stream, buf, len);
 		}
 	}
+	else
+	{
+		ff_log_debug(L"cannot read len=%d bytes from the blob stream=%p, because only %d bytes left", len, stream, bytes_left);
+	}
 	return result;
 }
 
@@ -109,6 +113,10 @@ static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void 
 		{
 			ff_log_debug(L"error while writing to the blob stream=%p from the buf=%p, len=%d. See previous messages for more info", stream, buf, len);
 		}
+	}
+	else
+	{
+		ff_log_debug(L"cannot write len=%d bytes to the stream=%p, because only %d bytes can be written", len, stream, bytes_left);
 	}
 	return result;
 }
