@@ -338,8 +338,8 @@ static void stream_reader_func(void *ctx)
 			if (request_processor != NULL)
 			{
 				ff_log_debug(L"there is the request_processor with the given request_id=%lu, but the packet received "
-							 L"from the stream=%p indicates that this request_processor shouldn't exist. stream_processor=%p",
-							 	(uint32_t) request_id, stream_processor->stream, stream_processor);
+							 L"from the stream=%p indicates that this request_processor shouldn't exist. stream_processor=%p, packet_type=%d",
+							 	(uint32_t) request_id, stream_processor->stream, stream_processor, (int) packet_type);
 				release_server_packet(stream_processor, packet);
 				break;
 			}
@@ -352,8 +352,8 @@ static void stream_reader_func(void *ctx)
 			if (request_processor == NULL)
 			{
 				ff_log_debug(L"there is no request_processor with the given request_id=%lu, but the packet received "
-							 L"from the stream=%p indicates that this request_processor should exist. stream_processor=%p",
-							 	(uint32_t) request_id, stream_processor->stream, stream_processor);
+							 L"from the stream=%p indicates that this request_processor should exist. stream_processor=%p, packet_type=%d",
+							 	(uint32_t) request_id, stream_processor->stream, stream_processor, (int) packet_type);
 				release_server_packet(stream_processor, packet);
 				break;
 			}
