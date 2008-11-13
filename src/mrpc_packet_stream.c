@@ -89,6 +89,10 @@ static void release_current_read_packet(struct mrpc_packet_stream *stream)
 		release_packet(stream, stream->current_read_packet);
 		stream->current_read_packet = NULL;
 	}
+	else
+	{
+		ff_log_debug(L"the packet stream=%p has been shutdowned without reading from it", stream);
+	}
 }
 
 static void acquire_current_write_packet(struct mrpc_packet_stream *stream)
@@ -104,9 +108,17 @@ static void release_current_write_packet(struct mrpc_packet_stream *stream)
 		enum mrpc_packet_type packet_type;
 
 		packet_type = mrpc_packet_get_type(stream->current_write_packet);
-		ff_assert(packet_type == MRPC_PACKET_END);
+		ff_assert(packet_type != MRPC_PACKET_SINGLE);
+		if (packet_type != MRPC_PACKET_END)
+		{
+			ff_log_debug(L"the packet stream=%p has been shutdowned without previous flushing. packet_type=%d", stream, (int) packet_type);
+		}
 		release_packet(stream, stream->current_write_packet);
 		stream->current_write_packet = NULL;
+	}
+	else
+	{
+		ff_log_debug(L"the packet stream=%p has been shutdowned without writing to it", stream);
 	}
 }
 
@@ -170,13 +182,6 @@ void mrpc_packet_stream_initialize(struct mrpc_packet_stream *stream, uint8_t re
 
 void mrpc_packet_stream_shutdown(struct mrpc_packet_stream *stream)
 {
-	enum ff_result result;
-
-	result = mrpc_packet_stream_flush(stream);
-	if (result == FF_FAILURE)
-	{
-		ff_log_debug(L"the packet stream=%p has been already flushed, so it won't be flushed on stream shutdown. See previous messages for more info", stream);
-	}
 	release_current_write_packet(stream);
 	ff_assert(stream->current_write_packet == NULL);
 	release_current_read_packet(stream);
@@ -362,13 +367,7 @@ end:
 void mrpc_packet_stream_disconnect(struct mrpc_packet_stream *stream)
 {
 	struct mrpc_packet *packet;
-	enum ff_result result;
 
-	result = mrpc_packet_stream_flush(stream);
-	if (result != FF_SUCCESS)
-	{
-		ff_log_debug(L"cannot flush the packet stream=%p. See previous messages for more info", stream);
-	}
 	packet = acquire_packet(stream, MRPC_PACKET_END);
 	ff_blocking_queue_put(stream->reader_queue, packet);
 }
