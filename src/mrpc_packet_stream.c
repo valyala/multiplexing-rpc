@@ -284,12 +284,6 @@ enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const
 
 	p = (const char *) buf;
 	packet_type = mrpc_packet_get_type(stream->current_write_packet);
-	if (packet_type == MRPC_PACKET_END)
-	{
-		/* the stream was already flushed, so it is impossible to write more data to it */
-		ff_log_debug(L"the stream=%p has been already flushed, so it cannot be used for writing the buf=%p, len=%d to it", stream, buf, len);
-		goto end;
-	}
 	ff_assert(packet_type == MRPC_PACKET_START || packet_type == MRPC_PACKET_MIDDLE);
 	while (len > 0)
 	{
@@ -322,25 +316,11 @@ end:
 enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 {
 	enum mrpc_packet_type packet_type;
-	enum ff_result result = FF_FAILURE;
+	enum ff_result result;
 
-	if (stream->current_write_packet == NULL)
-	{
-		/* the mrpc_packet_stream_write() function wasn't called at all,
-		 * so there is no need to flush the stream
-		 */
-		ff_log_debug(L"the mrpc_packet_stream_write() function didn't called, so there is no need to flush the stream=%p", stream);
-		goto end;
-	}
+	ff_assert(stream->current_write_packet != NULL);
 
 	packet_type = mrpc_packet_get_type(stream->current_write_packet);
-	if (packet_type == MRPC_PACKET_END)
-	{
-		/* the stream was already flushed */
-		ff_log_debug(L"the stream=%p has been already flushed", stream);
-		goto end;
-	}
-
 	ff_assert(packet_type == MRPC_PACKET_START || packet_type == MRPC_PACKET_MIDDLE);
 	if (packet_type == MRPC_PACKET_START)
 	{
@@ -360,7 +340,6 @@ enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 	}
 	stream->current_write_packet = acquire_packet(stream, MRPC_PACKET_END);
 
-end:
 	return result;
 }
 

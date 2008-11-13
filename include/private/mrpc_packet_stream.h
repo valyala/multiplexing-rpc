@@ -62,12 +62,15 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 
 /**
  * Writes exactly len bytes from the buf into the stream.
+ * It cannot be called after the mrpc_packet_stream_flush() call.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
 enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const void *buf, int len);
 
 /**
  * Flushes the write buffer of the stream.
+ * It can be called only after at least single successful call to the mrpc_packet_stream_write().
+ * It cannot be called multiple times.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
 enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream);
