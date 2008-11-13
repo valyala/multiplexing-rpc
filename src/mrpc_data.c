@@ -109,16 +109,7 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 	if (result == FF_SUCCESS)
 	{
 		result = mrpc_method_write_response_params(data->method, data->response_params, stream);
-		if (result == FF_SUCCESS)
-		{
-			result = ff_stream_flush(stream);
-			if (result != FF_SUCCESS)
-			{
-				ff_log_debug(L"cannot flush the stream=%p after writing response parameters for the method=%p with method_id=%lu. See previous messages for more info",
-					stream, data->method, (uint32_t) data->method_id);
-			}
-		}
-		else
+		if (result != FF_SUCCESS)
 		{
 			ff_log_debug(L"cannot write response parameters for the method=%p with method_id=%lu to the stream=%p. See previous messages for more info",
 				data->method, (uint32_t) data->method_id, stream);
@@ -139,16 +130,7 @@ static enum ff_result write_request(struct mrpc_data *data, struct ff_stream *st
 	if (result == FF_SUCCESS)
 	{
 		result = mrpc_method_write_request_params(data->method, data->request_params, stream);
-		if (result == FF_SUCCESS)
-		{
-			result = ff_stream_flush(stream);
-			if (result != FF_SUCCESS)
-			{
-				ff_log_debug(L"cannot flush the stream=%p after writing response parameters for the method=%p with method_id=%lu. See prevois messages for more info",
-					stream, data->method, (uint32_t) data->method_id);
-			}
-		}
-		else
+		if (result != FF_SUCCESS)
 		{
 			ff_log_debug(L"cannot write request paramters for the method=%p with method_id=%lu to the stream=%p. See previous messages for more info",
 				data->method, (uint32_t) data->method_id, stream);
@@ -194,7 +176,25 @@ enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, v
 		{
 			ff_log_debug(L"cannot write response for data=%p to the stream=%p. See previous messages for more info", data, stream);
 		}
+
+		/* stream flushing must be performed after data will be deleted,
+		 * because mrpc_data_delete() can block, so the response will be sent to the client, which, in turn
+		 * can issue yet another request to the server with the request_id, which is occupied by the current
+		 * request processor. So the server won't process this request.
+		 */
 		mrpc_data_delete(data);
+		if (result == FF_SUCCESS)
+		{
+			/* it is assumed that the ff_stream_flush() won't block, otherwise the client can send yet anohter
+			 * request with the same request_id while the current request processor will be blocked here.
+			 */
+			result = ff_stream_flush(stream);
+			if (result != FF_SUCCESS)
+			{
+				ff_log_debug(L"cannot flush the stream=%p after writing response for the method=%p with method_id=%lu. See previous messages for more info",
+					stream, data->method, (uint32_t) data->method_id);
+			}
+		}
     }
     else
     {
@@ -211,10 +211,19 @@ enum ff_result mrpc_data_invoke_remote_call(struct mrpc_data *data, struct ff_st
 	result = write_request(data, stream);
 	if (result == FF_SUCCESS)
 	{
-		result = read_response(data, stream);
-		if (result != FF_SUCCESS)
+		result = ff_stream_flush(stream);
+		if (result == FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot read response for data=%p from the stream=%p. See previous messages for more info", data, stream);
+			result = read_response(data, stream);
+			if (result != FF_SUCCESS)
+			{
+				ff_log_debug(L"cannot read response for data=%p from the stream=%p. See previous messages for more info", data, stream);
+			}
+		}
+		else
+		{
+			ff_log_debug(L"cannot flush the stream=%p after writing request for the method=%p with method_id=%lu. See prevois messages for more info",
+				stream, data->method, (uint32_t) data->method_id);
 		}
 	}
 	else
