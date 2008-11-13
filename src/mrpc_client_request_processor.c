@@ -52,7 +52,7 @@ uint8_t mrpc_client_request_processor_get_request_id(struct mrpc_client_request_
 
 void mrpc_client_request_processor_stop_async(struct mrpc_client_request_processor *request_processor)
 {
-	ff_stream_disconnect(request_processor->stream);
+	mrpc_packet_stream_disconnect(request_processor->packet_stream);
 }
 
 void mrpc_client_request_processor_push_packet(struct mrpc_client_request_processor *request_processor, struct mrpc_packet *packet)

@@ -60,10 +60,8 @@ static enum ff_result flush_packet_stream(struct ff_stream *stream)
 
 static void disconnect_packet_stream(struct ff_stream *stream)
 {
-	struct mrpc_packet_stream *packet_stream;
-
-	packet_stream = (struct mrpc_packet_stream *) ff_stream_get_ctx(stream);
-	mrpc_packet_stream_disconnect(packet_stream);
+	ff_assert(0);
+	/* this function mustn't be called. call mrpc_packet_stream_disconnect() instead. */
 }
 
 static struct ff_stream_vtable packet_stream_vtable =

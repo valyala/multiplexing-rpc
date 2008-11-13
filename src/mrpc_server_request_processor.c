@@ -100,7 +100,7 @@ void mrpc_server_request_processor_stop_async(struct mrpc_server_request_process
 {
 	ff_assert(request_processor->service_interface != NULL);
 
-	ff_stream_disconnect(request_processor->stream);
+	mrpc_packet_stream_disconnect(request_processor->packet_stream);
 }
 
 void mrpc_server_request_processor_push_packet(struct mrpc_server_request_processor *request_processor, struct mrpc_packet *packet)
