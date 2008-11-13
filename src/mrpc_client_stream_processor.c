@@ -24,6 +24,7 @@
  * mrpc_client_stream_processor. These packets are used when receiving data from the underlying stream.
  * Also they are used by the mrpc_client_request_processor when serializing rpc requests in the
  * mrpc_client_request_processor_invoke_rpc().
+ * In order to avoid deadlocks this number must be not less than 2 * (MAX_REQUEST_PROCESSORS_CNT).
  * Note that these packets are allocated on demand using the ff_pool, so the MAX_PACKETS_CNT value can be quite high
  * without sacrificing available memory.
  * TODO: determine the optimal size of this parameter.
