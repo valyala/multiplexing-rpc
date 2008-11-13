@@ -7,14 +7,10 @@
 #include "ff/ff_event.h"
 #include "ff/ff_core.h"
 
-#define MAX_RPC_TRIES_CNT 3
-#define RPC_RETRY_TIMEOUT 200
-
 struct mrpc_client
 {
 	struct ff_stream_connector *stream_connector;
 	struct ff_event *stop_event;
-	struct ff_event *must_shutdown_event;
 	struct mrpc_client_stream_processor *stream_processor;
 };
 
@@ -49,7 +45,6 @@ struct mrpc_client *mrpc_client_create()
 	client = (struct mrpc_client *) ff_malloc(sizeof(*client));
 	client->stream_connector = NULL;
 	client->stop_event = ff_event_create(FF_EVENT_AUTO);
-	client->must_shutdown_event = ff_event_create(FF_EVENT_MANUAL);
 	client->stream_processor = mrpc_client_stream_processor_create();
 
 	return client;
@@ -60,7 +55,6 @@ void mrpc_client_delete(struct mrpc_client *client)
 	ff_assert(client->stream_connector == NULL);
 
 	mrpc_client_stream_processor_delete(client->stream_processor);
-	ff_event_delete(client->must_shutdown_event);
 	ff_event_delete(client->stop_event);
 	ff_free(client);
 }
@@ -72,7 +66,6 @@ void mrpc_client_start(struct mrpc_client *client, struct ff_stream_connector *s
 
 	client->stream_connector = stream_connector;
 	ff_stream_connector_initialize(client->stream_connector);
-	ff_event_reset(client->must_shutdown_event);
 	ff_core_fiberpool_execute_async(main_client_func, client);
 }
 
@@ -81,7 +74,6 @@ void mrpc_client_stop(struct mrpc_client *client)
 	ff_assert(client->stream_connector != NULL);
 
 	ff_stream_connector_shutdown(client->stream_connector);
-	ff_event_set(client->must_shutdown_event);
 	mrpc_client_stream_processor_stop_async(client->stream_processor);
 	ff_event_wait(client->stop_event);
 
@@ -91,29 +83,11 @@ void mrpc_client_stop(struct mrpc_client *client)
 enum ff_result mrpc_client_invoke_rpc(struct mrpc_client *client, struct mrpc_data *data)
 {
 	enum ff_result result;
-	int tries_cnt = 0;
 
-	for (;;)
+	result = mrpc_client_stream_processor_invoke_rpc(client->stream_processor, data);
+	if (result != FF_SUCCESS)
 	{
-		tries_cnt++;
-		result = mrpc_client_stream_processor_invoke_rpc(client->stream_processor, data);
-		if (result == FF_SUCCESS)
-		{
-			break;
-		}
-		ff_log_warning(L"cannot invoke rpc (data=%p) on the client=%p at try %d", data, client, tries_cnt);
-		if (tries_cnt >= MAX_RPC_TRIES_CNT)
-		{
-			break;
-		}
-		result = ff_event_wait_with_timeout(client->must_shutdown_event, RPC_RETRY_TIMEOUT);
-		if (result == FF_SUCCESS)
-		{
-			/* mrpc_client_stop() was called */
-			ff_log_debug(L"mrpc_client_stop() was called on the client=%p, so stop trying to invoke rpc (data=%p)", client, data);
-			result = FF_FAILURE;
-			break;
-		}
+		ff_log_debug(L"cannot invoke rpc (data=%p) on the client=%p. See previous messages for more info", data, client);
 	}
 	return result;
 }
