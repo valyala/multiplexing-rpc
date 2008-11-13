@@ -2069,8 +2069,8 @@ static void test_client_server_rpc_multiple_clients()
 	mrpc_server_start(server, server_interface, service_ctx, stream_acceptor);
 	data.event = ff_event_create(FF_EVENT_MANUAL);
 	data.port = 8601;
-	data.workers_cnt = 10;
-	for (i = 0; i < 10; i++)
+	data.workers_cnt = 20;
+	for (i = 0; i < 20; i++)
 	{
 		ff_core_fiberpool_execute_async(client_server_rpc_multiple_clients_fiberpool_func, &data);
 	}
