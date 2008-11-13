@@ -20,13 +20,6 @@
 #define MAX_REQUEST_PROCESSORS_CNT 0x100
 
 /**
- * the maximum number of mrpc_packet packets pending in the writer queue.
- * these packets are written by the stream_writer_func to the underlying stream.
- * TODO: determine the optimal size of this parameter.
- */
-#define MAX_WRITER_QUEUE_SIZE 500
-
-/**
  * the maximum number of mrpc_packet packets, which can be used by the instance of the
  * mrpc_server_stream_processor. These packets are used when receiving data from the underlying stream.
  * Also they are used by the mrpc_server_request_processor when serializing rpc responses.
@@ -384,7 +377,20 @@ struct mrpc_server_stream_processor *mrpc_server_stream_processor_create(mrpc_se
 	stream_processor->request_processors_stop_event = ff_event_create(FF_EVENT_AUTO);
 	stream_processor->request_processors_pool = ff_pool_create(MAX_REQUEST_PROCESSORS_CNT, create_request_processor, stream_processor, delete_request_processor);
 	stream_processor->packets_pool = ff_pool_create(MAX_PACKETS_CNT, create_packet, stream_processor, delete_packet);
-	stream_processor->writer_queue = ff_blocking_queue_create(MAX_WRITER_QUEUE_SIZE);
+
+	/* in fact, writer_queue's size must be unlimited in order to avoid blocking of
+	 * mrpc_server_request_processor's worker on mrpc_packet_stream's flush,
+	 * which is the last operation before the client will receive response and will be able
+	 * to send new request with the same request_id to the server. If the worker
+	 * will block on the flush, then the server can receive new request with the request_id,
+	 * which belongs to worker, before the corresponding mrpc_server_request_processor will be released,
+	 * so it won't be able to process the new request, which will lead to client-server connection termination.
+	 *
+	 * However, the stream processor can operate only with packets from the packets_pool with
+	 * limited size (MAX_PACKETS_CNT). So, it is safe to set writer_queue's size to MAX_PACKETS_CNT,
+	 * because this limit won't never be overflowed.
+	 */
+	stream_processor->writer_queue = ff_blocking_queue_create(MAX_PACKETS_CNT);
 
 	for (i = 0; i < MAX_REQUEST_PROCESSORS_CNT; i++)
 	{

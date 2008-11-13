@@ -20,13 +20,6 @@
 #define MAX_REQUEST_PROCESSORS_CNT 0x100
 
 /**
- * the maximum number of mrpc_packet packets pending in the writer queue.
- * these packets are written by the stream_writer_func to the underlying stream.
- * TODO: determine the optimal size of this parameter.
- */
-#define MAX_WRITER_QUEUE_SIZE 500
-
-/**
  * the maximum number of mrpc_packet packets, which can be used by the instance of the
  * mrpc_client_stream_processor. These packets are used when receiving data from the underlying stream.
  * Also they are used by the mrpc_client_request_processor when serializing rpc requests in the
@@ -322,7 +315,11 @@ struct mrpc_client_stream_processor *mrpc_client_stream_processor_create()
 	int i;
 
 	stream_processor = (struct mrpc_client_stream_processor *) ff_malloc(sizeof(*stream_processor));
-	stream_processor->writer_queue = ff_blocking_queue_create(MAX_WRITER_QUEUE_SIZE);
+
+	/* the maximum number of packets in the writer_queue is limited by the packets_pool size (MAX_PACKETS_CNT),
+	 * because only packets from those pool can be used by the stream_processor.
+	 */
+	stream_processor->writer_queue = ff_blocking_queue_create(MAX_PACKETS_CNT);
 	stream_processor->writer_stop_event = ff_event_create(FF_EVENT_AUTO);
 	stream_processor->request_processors_bitmap = mrpc_bitmap_create(MAX_REQUEST_PROCESSORS_CNT);
 	stream_processor->request_processors_pool = ff_pool_create(MAX_REQUEST_PROCESSORS_CNT, create_request_processor, stream_processor, delete_request_processor);
