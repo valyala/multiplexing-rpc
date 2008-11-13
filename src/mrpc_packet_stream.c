@@ -13,16 +13,13 @@
 
 /**
  * Timeout (in milliseconds) for the mrpc_packet_stream_read() function.
- * TODO: determine optimal value for this parameter.
+ * This timeout prevents DoS from malicious peers, which don't send packets
+ * to the stream's reader_queue, so blocking the mrpc_packet_stream_read() callers forever,
+ * which can lead to workers shortage.
+ * This timeout shouldn't be small, because this can lead to frequent failures of the mrpc_packet_stream_read(),
+ * because it won't wait for the next data packet.
  */
-#define READ_TIMEOUT 2000
-
-/**
- * Timeout (in milliseconds) for the mrpc_packet_stream_write() and
- * mrpc_packet_stream_flush() functions.
- * TODO: determine optimal value for this parameter.
- */
-#define WRITE_TIMEOUT 2000
+#define READ_TIMEOUT (120 * 1000)
 
 struct mrpc_packet_stream
 {
@@ -271,7 +268,6 @@ enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const
 {
 	const char *p;
 	enum mrpc_packet_type packet_type;
-	enum ff_result result = FF_FAILURE;
 
 	ff_assert(len >= 0);
 
@@ -297,26 +293,17 @@ enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const
 
 		if (len > 0)
 		{
-			result = ff_blocking_queue_put_with_timeout(stream->writer_queue, stream->current_write_packet, WRITE_TIMEOUT);
-			if (result != FF_SUCCESS)
-			{
-				ff_log_debug(L"cannot put the current_write_packet=%p to the writer_queue=%p of the stream=%p during the timeout=%d",
-					stream->current_write_packet, stream->writer_queue, stream, WRITE_TIMEOUT);
-				goto end;
-			}
+			ff_blocking_queue_put(stream->writer_queue, stream->current_write_packet);
 			stream->current_write_packet = acquire_packet(stream, MRPC_PACKET_MIDDLE);
 		}
 	}
-	result = FF_SUCCESS;
 
-end:
-	return result;
+	return FF_SUCCESS;
 }
 
 enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 {
 	enum mrpc_packet_type packet_type;
-	enum ff_result result;
 
 	ff_assert(stream->current_write_packet != NULL);
 
@@ -331,16 +318,10 @@ enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 		packet_type = MRPC_PACKET_END;
 	}
 	mrpc_packet_set_type(stream->current_write_packet, packet_type);
-	result = ff_blocking_queue_put_with_timeout(stream->writer_queue, stream->current_write_packet, WRITE_TIMEOUT);
-	if (result != FF_SUCCESS)
-	{
-		ff_log_debug(L"cannot put the current_write_packet=%p to the writer_queue=%p of the stream=%p during the timeout=%d",
-			stream->current_write_packet, stream->writer_queue, stream, WRITE_TIMEOUT);
-		release_packet(stream, stream->current_write_packet);
-	}
+	ff_blocking_queue_put(stream->writer_queue, stream->current_write_packet);
 	stream->current_write_packet = acquire_packet(stream, MRPC_PACKET_END);
 
-	return result;
+	return FF_SUCCESS;
 }
 
 void mrpc_packet_stream_disconnect(struct mrpc_packet_stream *stream)
