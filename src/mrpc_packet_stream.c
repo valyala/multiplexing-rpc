@@ -170,7 +170,13 @@ void mrpc_packet_stream_initialize(struct mrpc_packet_stream *stream, uint8_t re
 
 void mrpc_packet_stream_shutdown(struct mrpc_packet_stream *stream)
 {
-	mrpc_packet_stream_flush(stream);
+	enum ff_result result;
+
+	result = mrpc_packet_stream_flush(stream);
+	if (result == FF_FAILURE)
+	{
+		ff_log_debug(L"the packet stream=%p has been already flushed, so it won't be flushed on stream shutdown. See previous messages for more info", stream);
+	}
 	release_current_write_packet(stream);
 	ff_assert(stream->current_write_packet == NULL);
 	release_current_read_packet(stream);
@@ -311,7 +317,7 @@ end:
 enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 {
 	enum mrpc_packet_type packet_type;
-	enum ff_result result = FF_SUCCESS;
+	enum ff_result result = FF_FAILURE;
 
 	if (stream->current_write_packet == NULL)
 	{
