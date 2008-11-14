@@ -11,7 +11,6 @@ struct mrpc_data
 	struct mrpc_method *method;
 	struct mrpc_param **request_params;
 	struct mrpc_param **response_params;
-	uint8_t method_id;
 };
 
 static struct mrpc_data *try_create_mrpc_data(struct mrpc_interface *interface, uint8_t method_id)
@@ -26,7 +25,6 @@ static struct mrpc_data *try_create_mrpc_data(struct mrpc_interface *interface, 
 		data->method = method;
 		data->request_params = mrpc_method_create_request_params(method);
 		data->response_params = mrpc_method_create_response_params(method);
-		data->method_id = method_id;
 	}
 	else
 	{
@@ -92,11 +90,11 @@ static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *st
 		result = ff_stream_read(stream, &empty_byte, 1);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot read an empty byte from the stream=%p for the method=%p, method_id=%lu. See previous messages for more info", stream, data->method, (uint32_t) data->method_id);
+			ff_log_debug(L"cannot read an empty byte from the stream=%p for the method=%p. See previous messages for more info", stream, data->method);
 		}
 		if (empty_byte != 0)
 		{
-			ff_log_debug(L"wrong empty_byte=%d read from the stream=%p for the method=%p, method_id=%lu. Expected value is 0", empty_byte, stream, data->method, (uint32_t) data->method_id);
+			ff_log_debug(L"wrong empty_byte=%d read from the stream=%p for the method=%p. Expected value is 0", empty_byte, stream, data->method);
 			result = FF_FAILURE;
 		}
 	}
@@ -105,7 +103,7 @@ static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *st
 		result = mrpc_method_read_response_params(data->method, data->response_params, stream);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot read response paramters for the method=%p, method_id=%lu from the stream=%p. See previous messages for more info", data->method, (uint32_t) data->method_id, stream);
+			ff_log_debug(L"cannot read response paramters for the method=%p from the stream=%p. See previous messages for more info", data->method, stream);
 		}
 	}
 
@@ -128,7 +126,7 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 		result = ff_stream_write(stream, &empty_byte, 1);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot write an empty byte to the stream=%p for the method=%p, method_id=%lu. See previous messages for more info", stream, data->method, (uint32_t) data->method_id);
+			ff_log_debug(L"cannot write an empty byte to the stream=%p for the method=%p. See previous messages for more info", stream, data->method);
 		}
 	}
 	else
@@ -136,7 +134,7 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 		result = mrpc_method_write_response_params(data->method, data->response_params, stream);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot write response parameters for the method=%p, method_id=%lu to the stream=%p. See previous messages for more info", data->method, (uint32_t) data->method_id, stream);
+			ff_log_debug(L"cannot write response parameters for the method=%p to the stream=%p. See previous messages for more info", data->method, stream);
 		}
 	}
 
@@ -146,8 +144,10 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 static enum ff_result write_request(struct mrpc_data *data, struct ff_stream *stream)
 {
 	enum ff_result result;
+	uint8_t method_id;
 
-	result = ff_stream_write(stream, &data->method_id, 1);
+	method_id = mrpc_method_get_method_id(data->method);
+	result = ff_stream_write(stream, &method_id, 1);
 	if (result == FF_SUCCESS)
 	{
 		int request_params_cnt;
@@ -158,13 +158,13 @@ static enum ff_result write_request(struct mrpc_data *data, struct ff_stream *st
 			result = mrpc_method_write_request_params(data->method, data->request_params, stream);
 			if (result != FF_SUCCESS)
 			{
-				ff_log_debug(L"cannot write request paramters for the method=%p, method_id=%lu to the stream=%p. See previous messages for more info", data->method, (uint32_t) data->method_id, stream);
+				ff_log_debug(L"cannot write request paramters for the method=%p to the stream=%p. See previous messages for more info", data->method, stream);
 			}
 		}
 	}
 	else
 	{
-		ff_log_debug(L"cannot write method_id=%lu to the stream=%p. See previous messages for more info", (uint32_t) data->method_id, stream);
+		ff_log_debug(L"cannot write method_id=%lu to the stream=%p. See previous messages for more info", (uint32_t) method_id, stream);
 	}
 	return result;
 }
@@ -217,8 +217,7 @@ enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, v
 			result = ff_stream_flush(stream);
 			if (result != FF_SUCCESS)
 			{
-				ff_log_debug(L"cannot flush the stream=%p after writing response for the method=%p with method_id=%lu. See previous messages for more info",
-					stream, data->method, (uint32_t) data->method_id);
+				ff_log_debug(L"cannot flush the stream=%p after writing response for the method=%p. See previous messages for more info", stream, data->method);
 			}
 		}
     }
@@ -248,8 +247,7 @@ enum ff_result mrpc_data_invoke_remote_call(struct mrpc_data *data, struct ff_st
 		}
 		else
 		{
-			ff_log_debug(L"cannot flush the stream=%p after writing request for the method=%p with method_id=%lu. See prevois messages for more info",
-				stream, data->method, (uint32_t) data->method_id);
+			ff_log_debug(L"cannot flush the stream=%p after writing request for the method=%p. See prevois messages for more info", stream, data->method);
 		}
 	}
 	else

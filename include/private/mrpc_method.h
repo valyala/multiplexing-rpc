@@ -19,7 +19,7 @@ extern "C" {
  * Always returns correct result.
  */
 struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructor *request_param_constructors,
-	const mrpc_param_constructor *response_param_constructors, mrpc_method_callback callback);
+	const mrpc_param_constructor *response_param_constructors, mrpc_method_callback callback, uint8_t method_id);
 
 /**
  * Creates the client method.
@@ -32,7 +32,7 @@ struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructo
  * Always returns correct result.
  */
 struct mrpc_method *mrpc_method_create_client_method(const mrpc_param_constructor *request_param_constructors,
-	const mrpc_param_constructor *response_param_constructors, const int *is_key);
+	const mrpc_param_constructor *response_param_constructors, const int *is_key, uint8_t method_id);
 
 /**
  * Deletes the method, which could be created by the mrpc_method_create_server_method()
@@ -142,6 +142,11 @@ int mrpc_method_get_request_params_cnt(struct mrpc_method *method);
  * returns the number of response paramters for the given method
  */
 int mrpc_method_get_response_params_cnt(struct mrpc_method *method);
+
+/**
+ * returns method_id, which was passed to the mrpc_method_create_{client|server}_method()
+ */
+uint8_t mrpc_method_get_method_id(struct mrpc_method *method);
 
 #ifdef __cplusplus
 }

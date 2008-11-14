@@ -39,6 +39,7 @@ struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_cli
 	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
 	interface->methods_cnt = get_methods_cnt((const void **) method_descriptions);
 	ff_assert(interface->methods_cnt > 0);
+	ff_assert(interface->methods_cnt <= MAX_METHODS_CNT);
 	interface->methods = (struct mrpc_method **) ff_calloc(interface->methods_cnt, sizeof(interface->methods[0]));
 	for (i = 0; i < interface->methods_cnt; i++)
 	{
@@ -47,7 +48,7 @@ struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_cli
 
 		method_description = method_descriptions[i];
 		ff_assert(method_description != NULL);
-		method = mrpc_method_create_client_method(method_description->request_param_constructors, method_description->response_param_constructors, method_description->is_key);
+		method = mrpc_method_create_client_method(method_description->request_param_constructors, method_description->response_param_constructors, method_description->is_key, (uint8_t) i);
 		ff_assert(method != NULL);
 		interface->methods[i] = method;
 	}
@@ -63,6 +64,7 @@ struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_ser
 	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
 	interface->methods_cnt = get_methods_cnt((const void **) method_descriptions);
 	ff_assert(interface->methods_cnt > 0);
+	ff_assert(interface->methods_cnt <= MAX_METHODS_CNT);
 	interface->methods = (struct mrpc_method **) ff_calloc(interface->methods_cnt, sizeof(interface->methods[0]));
 	for (i = 0; i < interface->methods_cnt; i++)
 	{
@@ -71,7 +73,7 @@ struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_ser
 
 		method_description = method_descriptions[i];
 		ff_assert(method_description != NULL);
-		method = mrpc_method_create_server_method(method_description->request_param_constructors, method_description->response_param_constructors, method_description->callback);
+		method = mrpc_method_create_server_method(method_description->request_param_constructors, method_description->response_param_constructors, method_description->callback, (uint8_t) i);
 		ff_assert(method != NULL);
 		interface->methods[i] = method;
 	}

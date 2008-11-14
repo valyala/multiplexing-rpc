@@ -19,6 +19,7 @@ struct mrpc_method
 	const int *is_key;
 	int request_params_cnt;
 	int response_params_cnt;
+	uint8_t method_id;
 };
 
 static int get_constructors_cnt(const mrpc_param_constructor *param_constructors)
@@ -151,7 +152,7 @@ static void set_param_value(struct mrpc_param **params, const void *value, int p
 }
 
 struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructor *request_param_constructors,
-	const mrpc_param_constructor *response_param_constructors, mrpc_method_callback callback)
+	const mrpc_param_constructor *response_param_constructors, mrpc_method_callback callback, uint8_t method_id)
 {
 	struct mrpc_method *method;
 
@@ -166,12 +167,13 @@ struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructo
 	method->is_key = NULL;
 	method->request_params_cnt = get_constructors_cnt(request_param_constructors);
 	method->response_params_cnt = get_constructors_cnt(response_param_constructors);
+	method->method_id = method_id;
 
 	return method;
 }
 
 struct mrpc_method *mrpc_method_create_client_method(const mrpc_param_constructor *request_param_constructors,
-	const mrpc_param_constructor *response_param_constructors, const int *is_key)
+	const mrpc_param_constructor *response_param_constructors, const int *is_key, uint8_t method_id)
 {
 	struct mrpc_method *method;
 
@@ -186,6 +188,7 @@ struct mrpc_method *mrpc_method_create_client_method(const mrpc_param_constructo
 	method->is_key = is_key;
 	method->request_params_cnt = get_constructors_cnt(request_param_constructors);
 	method->response_params_cnt = get_constructors_cnt(response_param_constructors);
+	method->method_id = method_id;
 
 	return method;
 }
@@ -365,4 +368,9 @@ int mrpc_method_get_response_params_cnt(struct mrpc_method *method)
 	ff_assert(method->response_params_cnt >= 0);
 
 	return method->response_params_cnt;
+}
+
+uint8_t mrpc_method_get_method_id(struct mrpc_method *method)
+{
+	return method->method_id;
 }
