@@ -6,7 +6,6 @@
 #include "mrpc/mrpc_wchar_array_param.h"
 #include "mrpc/mrpc_blob_param.h"
 #include "mrpc/mrpc_param.h"
-#include "mrpc/mrpc_method_factory.h"
 #include "mrpc/mrpc_method.h"
 #include "mrpc/mrpc_interface.h"
 #include "mrpc/mrpc_data.h"
@@ -339,140 +338,135 @@ static void test_blob_all()
 #pragma endregion
 
 
-#pragma region mrpc_method tests
-
-static void test_method_client_create_delete()
-{
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		mrpc_int32_param_create,
-		mrpc_uint64_param_create,
-		mrpc_int64_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_blob_param_create,
-		mrpc_wchar_array_param_create,
-		mrpc_char_array_param_create,
-		NULL,
-	};
-	static const int is_key[] =
-	{
-		1,
-		0,
-		0,
-		1,
-	};
-
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	ASSERT(method != NULL, "cannot create client method");
-	mrpc_method_delete(method);
-}
-
-static void method_server_create_delete_callback(struct mrpc_data *data, void *service_ctx)
-{
-	ASSERT(0, "this callback shouldn't be called");
-}
-
-static void test_method_server_create_delete()
-{
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_blob_param_create,
-		NULL,
-	};
-
-	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, method_server_create_delete_callback);
-	ASSERT(method != NULL, "cannot create server method");
-	mrpc_method_delete(method);
-}
-
-static void test_method_all()
-{
-	ff_core_initialize(LOG_FILENAME);
-	test_method_client_create_delete();
-	test_method_server_create_delete();
-	ff_core_shutdown();
-}
-
-/* end of mrpc_method tests */
-#pragma endregion
-
 #pragma region mrpc_interface tests
 
-static struct mrpc_method *interface_create_delete_method_constructor1()
+static void test_interface_client_create_delete()
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
+	struct mrpc_interface *interface;
+
+	static const mrpc_param_constructor request_param_constructors1[] =
 	{
 		mrpc_uint32_param_create,
 		NULL,
 	};
-	static const mrpc_param_constructor response_param_constructors[] =
+	static const mrpc_param_constructor response_param_constructors1[] =
 	{
 		NULL,
 	};
-	static const int is_key[] =
+	static const int is_key1[] =
 	{
 		0,
 	};
+	static const struct mrpc_method_client_description method_description1 =
+	{
+		request_param_constructors1,
+		response_param_constructors1,
+		is_key1
+	};
 
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static struct mrpc_method *interface_create_delete_method_constructor2()
-{
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
+	static const mrpc_param_constructor request_param_constructors2[] =
 	{
 		NULL,
 	};
-	static const mrpc_param_constructor response_param_constructors[] =
+	static const mrpc_param_constructor response_param_constructors2[] =
 	{
 		mrpc_wchar_array_param_create,
 		mrpc_uint32_param_create,
 		mrpc_uint64_param_create,
 		NULL,
 	};
-	static const int is_key[] =
+	static const int is_key2[] =
 	{
 		0, /* fake value */
 	};
-
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static void test_interface_create_delete()
-{
-	struct mrpc_interface *interface;
-	static const mrpc_method_constructor method_constructors[] =
+	static const struct mrpc_method_client_description method_description2 =
 	{
-		interface_create_delete_method_constructor1,
-		interface_create_delete_method_constructor2,
+		request_param_constructors2,
+		response_param_constructors2,
+		is_key2
+	};
+
+	static const struct mrpc_method_client_description *method_descriptions[] =
+	{
+		&method_description1,
+		&method_description2,
 		NULL,
 	};
 
-	interface = mrpc_interface_create(method_constructors);
-	ASSERT(interface != NULL, "mrpc_interface_create() must return valid result");
+	interface = mrpc_interface_client_create(method_descriptions);
+	ASSERT(interface != NULL, "mrpc_interface_client_create() must return valid result");
+	mrpc_interface_delete(interface);
+}
+
+static void interface_server_create_delete_callback1(struct mrpc_data *data, void *service_ctx)
+{
+	ASSERT(0, "this callback mustn't be called");
+}
+
+static void interface_server_create_delete_callback2(struct mrpc_data *data, void *service_ctx)
+{
+	ASSERT(0, "this callback mustn't be called");
+}
+
+static void test_interface_server_create_delete()
+{
+	struct mrpc_interface *interface;
+
+	static const mrpc_param_constructor request_param_constructors1[] =
+	{
+		mrpc_uint32_param_create,
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors1[] =
+	{
+		NULL,
+	};
+	static const struct mrpc_method_server_description method_description1 =
+	{
+		request_param_constructors1,
+		response_param_constructors1,
+		interface_server_create_delete_callback1
+	};
+
+	static const mrpc_param_constructor request_param_constructors2[] =
+	{
+		NULL,
+	};
+	static const mrpc_param_constructor response_param_constructors2[] =
+	{
+		mrpc_wchar_array_param_create,
+		mrpc_uint32_param_create,
+		mrpc_uint64_param_create,
+		NULL,
+	};
+	static const int is_key2[] =
+	{
+		0, /* fake value */
+	};
+	static const struct mrpc_method_server_description method_description2 =
+	{
+		request_param_constructors2,
+		response_param_constructors2,
+		interface_server_create_delete_callback2
+	};
+
+	static const struct mrpc_method_server_description *method_descriptions[] =
+	{
+		&method_description1,
+		&method_description2,
+		NULL,
+	};
+
+	interface = mrpc_interface_server_create(method_descriptions);
+	ASSERT(interface != NULL, "mrpc_interface_server_create() must return valid result");
 	mrpc_interface_delete(interface);
 }
 
 static void test_interface_all()
 {
 	ff_core_initialize(LOG_FILENAME);
-	test_interface_create_delete();
+	test_interface_client_create_delete();
+	test_interface_server_create_delete();
 	ff_core_shutdown();
 }
 
@@ -481,119 +475,111 @@ static void test_interface_all()
 
 #pragma region mrpc_data tests
 
-static struct mrpc_method *data_method_constructor1_client()
+static const mrpc_param_constructor data_client_request_param_constructors1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		mrpc_uint64_param_create,
-		mrpc_wchar_array_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_char_array_param_create,
-		mrpc_blob_param_create,
-		mrpc_uint64_param_create,
-		NULL,
-	};
-	static const int is_key[] =
-	{
-		0,
-		1,
-		1
-	};
-
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static struct mrpc_method *data_method_constructor2_client()
+	mrpc_uint32_param_create,
+	mrpc_uint64_param_create,
+	mrpc_wchar_array_param_create,
+	NULL,
+};
+static const mrpc_param_constructor data_client_response_param_constructors1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_int32_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		NULL,
-	};
-	static const int is_key[] =
-	{
-		0,
-	};
-
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static const mrpc_method_constructor data_method_constructors_client[] =
+	mrpc_char_array_param_create,
+	mrpc_blob_param_create,
+	mrpc_uint64_param_create,
+	NULL,
+};
+static const int is_key1[] =
 {
-	data_method_constructor1_client,
-	data_method_constructor2_client,
+	0,
+	1,
+	1
+};
+static const struct mrpc_method_client_description data_client_method_description1 =
+{
+	data_client_request_param_constructors1,
+	data_client_response_param_constructors1,
+	is_key1
+};
+
+static const mrpc_param_constructor data_client_request_param_constructors2[] =
+{
+	mrpc_int32_param_create,
+	NULL,
+};
+static const mrpc_param_constructor data_client_response_param_constructors2[] =
+{
+	NULL,
+};
+static const int is_key2[] =
+{
+	0,
+};
+static const struct mrpc_method_client_description data_client_method_description2 =
+{
+	data_client_request_param_constructors2,
+	data_client_response_param_constructors2,
+	is_key2
+};
+
+static const struct mrpc_method_client_description *data_client_method_descriptions[] =
+{
+	&data_client_method_description1,
+	&data_client_method_description2,
 	NULL,
 };
 
-static void data_method_callback1(struct mrpc_data *data, void *service_ctx)
+static void data_server_method_callback1(struct mrpc_data *data, void *service_ctx)
 {
 	ASSERT(0, "this callback shouldn't be called");
 }
 
-static void data_method_callback2(struct mrpc_data *data, void *service_ctx)
+static void data_server_method_callback2(struct mrpc_data *data, void *service_ctx)
 {
 	ASSERT(0, "this callback shouldn't be called");
 }
 
-static struct mrpc_method *data_method_constructor1_server()
+static const mrpc_param_constructor data_server_request_param_constructors1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_int64_param_create,
-		mrpc_char_array_param_create,
-		mrpc_int32_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		mrpc_uint64_param_create,
-		mrpc_wchar_array_param_create,
-		NULL,
-	};
-
-	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, data_method_callback1);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static struct mrpc_method *data_method_constructor2_server()
+	mrpc_int64_param_create,
+	mrpc_char_array_param_create,
+	mrpc_int32_param_create,
+	NULL,
+};
+static const mrpc_param_constructor data_server_response_param_constructors1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_int32_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		NULL,
-	};
-
-	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, data_method_callback2);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static const mrpc_method_constructor data_method_constructors_server[] =
+	mrpc_uint32_param_create,
+	mrpc_uint64_param_create,
+	mrpc_wchar_array_param_create,
+	NULL,
+};
+static const struct mrpc_method_server_description data_server_method_description1 =
 {
-	data_method_constructor1_server,
-	data_method_constructor2_server,
+	data_server_request_param_constructors1,
+	data_server_response_param_constructors1,
+	data_server_method_callback1
+};
+
+static const mrpc_param_constructor data_server_request_param_constructors2[] =
+{
+	mrpc_int32_param_create,
+	NULL,
+};
+static const mrpc_param_constructor data_server_response_param_constructors2[] =
+{
+	NULL,
+};
+static const struct mrpc_method_server_description data_server_method_description2 =
+{
+	data_server_request_param_constructors2,
+	data_server_response_param_constructors2,
+	data_server_method_callback2
+};
+
+static const struct mrpc_method_server_description *data_server_method_descriptions[] =
+{
+	&data_server_method_description1,
+	&data_server_method_description2,
 	NULL,
 };
 
@@ -602,7 +588,7 @@ static void test_data_create_delete()
 	struct mrpc_interface *interface;
 	struct mrpc_data *data;
 
-	interface = mrpc_interface_create(data_method_constructors_client);
+	interface = mrpc_interface_client_create(data_client_method_descriptions);
 	ASSERT(interface != NULL, "interface cannot be NULL");
 
 	data = mrpc_data_create(interface, 0);
@@ -626,7 +612,7 @@ static void test_data_basic_client()
 	uint32_t u32_value;
 	uint32_t hash_value;
 
-	interface = mrpc_interface_create(data_method_constructors_client);
+	interface = mrpc_interface_client_create(data_client_method_descriptions);
 	ASSERT(interface != NULL, "interface cannot be NULL");
 
 	data = mrpc_data_create(interface, 0);
@@ -656,7 +642,7 @@ static void test_data_basic_server()
 	uint64_t u64_value;
 	uint32_t u32_value;
 
-	interface = mrpc_interface_create(data_method_constructors_server);
+	interface = mrpc_interface_server_create(data_server_method_descriptions);
 	ASSERT(interface != NULL, "interface cannot be NULL");
 
 	data = mrpc_data_create(interface, 0);
@@ -771,147 +757,135 @@ static void server_method_callback3(struct mrpc_data *data, void *service_ctx)
 	/* nothing to do */
 }
 
-static struct mrpc_method *server_method_constructor1()
+static const mrpc_param_constructor server_request_param_constructors1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_int32_param_create,
-		mrpc_blob_param_create,
-		mrpc_wchar_array_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_char_array_param_create,
-		mrpc_uint64_param_create,
-		NULL,
-	};
-
-	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, server_method_callback1);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static struct mrpc_method *server_method_constructor2()
+	mrpc_int32_param_create,
+	mrpc_blob_param_create,
+	mrpc_wchar_array_param_create,
+	NULL,
+};
+static const mrpc_param_constructor server_response_param_constructors1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		NULL,
-	};
-
-	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, server_method_callback2);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static struct mrpc_method *server_method_constructor3()
+	mrpc_char_array_param_create,
+	mrpc_uint64_param_create,
+	NULL,
+};
+static const struct mrpc_method_server_description server_method_description1 =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		NULL,
-	};
+	server_request_param_constructors1,
+	server_response_param_constructors1,
+	server_method_callback1
+};
 
-	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, server_method_callback3);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static const mrpc_method_constructor server_method_constructors[] =
+static const mrpc_param_constructor server_request_param_constructors2[] =
 {
-	server_method_constructor1,
-	server_method_constructor2,
-	server_method_constructor3,
+	NULL,
+};
+static const mrpc_param_constructor server_response_param_constructors2[] =
+{
+	mrpc_uint32_param_create,
+	NULL,
+};
+static const struct mrpc_method_server_description server_method_description2 =
+{
+	server_request_param_constructors2,
+	server_response_param_constructors2,
+	server_method_callback2
+};
+
+static const mrpc_param_constructor server_request_param_constructors3[] =
+{
+	NULL,
+};
+static const mrpc_param_constructor server_response_param_constructors3[] =
+{
+	NULL,
+};
+static const struct mrpc_method_server_description server_method_description3 =
+{
+	server_request_param_constructors3,
+	server_response_param_constructors3,
+	server_method_callback3
+};
+
+static const struct mrpc_method_server_description *server_method_descriptions[] =
+{
+	&server_method_description1,
+	&server_method_description2,
+	&server_method_description3,
 	NULL,
 };
 
-static struct mrpc_method *client_method_constructor1()
+static const mrpc_param_constructor client_request_param_constructors1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_int32_param_create,
-		mrpc_blob_param_create,
-		mrpc_wchar_array_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_char_array_param_create,
-		mrpc_uint64_param_create,
-		NULL,
-	};
-	static const int is_key[] =
-	{
-		1,
-		1,
-		0,
-	};
-
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static struct mrpc_method *client_method_constructor2()
+	mrpc_int32_param_create,
+	mrpc_blob_param_create,
+	mrpc_wchar_array_param_create,
+	NULL,
+};
+static const mrpc_param_constructor client_response_param_constructors1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		NULL,
-	};
-	static const int is_key[] =
-	{
-		0, /* fake parameter */
-	};
-
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static struct mrpc_method *client_method_constructor3()
+	mrpc_char_array_param_create,
+	mrpc_uint64_param_create,
+	NULL,
+};
+static const int client_is_key1[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		NULL,
-	};
-	static const int is_key[] =
-	{
-		0, /* fake parameter */
-	};
-
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	ASSERT(method != NULL, "unexpected value returned");
-	return method;
-}
-
-static const mrpc_method_constructor client_method_constructors[] =
+	1,
+	1,
+	0,
+};
+static const struct mrpc_method_client_description client_method_description1 =
 {
-	client_method_constructor1,
-	client_method_constructor2,
-	client_method_constructor3,
+	client_request_param_constructors1,
+	client_response_param_constructors1,
+	client_is_key1
+};
+
+static const mrpc_param_constructor client_request_param_constructors2[] =
+{
+	NULL,
+};
+static const mrpc_param_constructor client_response_param_constructors2[] =
+{
+	mrpc_uint32_param_create,
+	NULL,
+};
+static const int client_is_key2[] =
+{
+	0, /* fake parameter */
+};
+static const struct mrpc_method_client_description client_method_description2 =
+{
+	client_request_param_constructors2,
+	client_response_param_constructors2,
+	client_is_key2
+};
+
+static const mrpc_param_constructor client_request_param_constructors3[] =
+{
+	NULL,
+};
+static const mrpc_param_constructor client_response_param_constructors3[] =
+{
+	NULL,
+};
+static const int client_is_key3[] =
+{
+	0, /* fake parameter */
+};
+static const struct mrpc_method_client_description client_method_description3 =
+{
+	client_request_param_constructors3,
+	client_response_param_constructors3,
+	client_is_key3
+};
+
+static const struct mrpc_method_client_description *client_method_descriptions[] =
+{
+	&client_method_description1,
+	&client_method_description2,
+	&client_method_description3,
 	NULL,
 };
 
@@ -1022,7 +996,7 @@ static void test_server_start_stop()
 	struct ff_arch_net_addr *addr;
 	enum ff_result result;
 
-	service_interface = mrpc_interface_create(server_method_constructors);
+	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8595);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1046,7 +1020,7 @@ static void test_server_start_stop_multiple()
 	int i;
 	enum ff_result result;
 
-	service_interface = mrpc_interface_create(server_method_constructors);
+	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8596);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1087,7 +1061,7 @@ static void server_multiple_instances_fiberpool_func(void *ctx)
 	data = (struct server_multiple_instances_data *) ctx;
 	port = data->port;
 	data->port++;
-	service_interface = mrpc_interface_create(server_method_constructors);
+	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1135,7 +1109,7 @@ static void test_server_accept()
 	struct ff_arch_net_addr *addr;
 	enum ff_result result;
 
-	service_interface = mrpc_interface_create(server_method_constructors);
+	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8597);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1237,7 +1211,7 @@ static void test_client_server_connect()
 	int i;
 	enum ff_result result;
 
-	service_interface = mrpc_interface_create(server_method_constructors);
+	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8598);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1270,7 +1244,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 	int i;
 	enum ff_result result;
 
-	client_interface = mrpc_interface_create(client_method_constructors);
+	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1367,7 +1341,7 @@ static void test_client_server_rpc()
 	struct ff_arch_net_addr *addr;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_create(server_method_constructors);
+	server_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8599);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1415,7 +1389,7 @@ static void test_client_server_rpc_multiple_clients()
 	int i;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_create(server_method_constructors);
+	server_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8601);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1470,85 +1444,83 @@ static void server_echo_callback(struct mrpc_data *data, void *service_ctx)
 	mrpc_data_set_response_param_value(data, 6, blob);
 }
 
-static struct mrpc_method *server_echo_method_constructor()
+static const mrpc_param_constructor server_echo_request_param_constructors[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		mrpc_int32_param_create,
-		mrpc_uint64_param_create,
-		mrpc_int64_param_create,
-		mrpc_char_array_param_create,
-		mrpc_wchar_array_param_create,
-		mrpc_blob_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		mrpc_int32_param_create,
-		mrpc_uint64_param_create,
-		mrpc_int64_param_create,
-		mrpc_char_array_param_create,
-		mrpc_wchar_array_param_create,
-		mrpc_blob_param_create,
-		NULL,
-	};
-
-	method = mrpc_method_create_server_method(request_param_constructors, response_param_constructors, server_echo_callback);
-	return method;
-}
-
-static const mrpc_method_constructor server_echo_interface_constructors[] =
+	mrpc_uint32_param_create,
+	mrpc_int32_param_create,
+	mrpc_uint64_param_create,
+	mrpc_int64_param_create,
+	mrpc_char_array_param_create,
+	mrpc_wchar_array_param_create,
+	mrpc_blob_param_create,
+	NULL,
+};
+static const mrpc_param_constructor server_echo_response_param_constructors[] =
 {
-	server_echo_method_constructor,
+	mrpc_uint32_param_create,
+	mrpc_int32_param_create,
+	mrpc_uint64_param_create,
+	mrpc_int64_param_create,
+	mrpc_char_array_param_create,
+	mrpc_wchar_array_param_create,
+	mrpc_blob_param_create,
+	NULL,
+};
+static const struct mrpc_method_server_description server_echo_method_description =
+{
+	server_echo_request_param_constructors,
+	server_echo_response_param_constructors,
+	server_echo_callback
+};
+
+static const struct mrpc_method_server_description *server_echo_method_descriptions[] =
+{
+	&server_echo_method_description,
 	NULL,
 };
 
-static struct mrpc_method *client_echo_method_constructor()
+static const mrpc_param_constructor client_echo_request_param_constructors[] =
 {
-	struct mrpc_method *method;
-	static const mrpc_param_constructor request_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		mrpc_int32_param_create,
-		mrpc_uint64_param_create,
-		mrpc_int64_param_create,
-		mrpc_char_array_param_create,
-		mrpc_wchar_array_param_create,
-		mrpc_blob_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors[] =
-	{
-		mrpc_uint32_param_create,
-		mrpc_int32_param_create,
-		mrpc_uint64_param_create,
-		mrpc_int64_param_create,
-		mrpc_char_array_param_create,
-		mrpc_wchar_array_param_create,
-		mrpc_blob_param_create,
-		NULL,
-	};
-	static const int is_key[] =
-	{
-		1,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-	};
-
-	method = mrpc_method_create_client_method(request_param_constructors, response_param_constructors, is_key);
-	return method;
-}
-
-static const mrpc_method_constructor client_echo_interface_constructors[] =
+	mrpc_uint32_param_create,
+	mrpc_int32_param_create,
+	mrpc_uint64_param_create,
+	mrpc_int64_param_create,
+	mrpc_char_array_param_create,
+	mrpc_wchar_array_param_create,
+	mrpc_blob_param_create,
+	NULL,
+};
+static const mrpc_param_constructor client_echo_response_param_constructors[] =
 {
-	client_echo_method_constructor,
+	mrpc_uint32_param_create,
+	mrpc_int32_param_create,
+	mrpc_uint64_param_create,
+	mrpc_int64_param_create,
+	mrpc_char_array_param_create,
+	mrpc_wchar_array_param_create,
+	mrpc_blob_param_create,
+	NULL,
+};
+static const int client_echo_is_key[] =
+{
+	1,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+};
+static const struct mrpc_method_client_description client_echo_method_description =
+{
+	client_echo_request_param_constructors,
+	client_echo_response_param_constructors,
+	client_echo_is_key
+};
+
+static const struct mrpc_method_client_description *client_echo_method_descriptions[] =
+{
+	&client_echo_method_description,
 	NULL,
 };
 
@@ -1772,7 +1744,7 @@ static void client_server_echo_client(int port, int iterations_cnt)
 	int i;
 	enum ff_result result;
 
-	client_interface = mrpc_interface_create(client_echo_interface_constructors);
+	client_interface = mrpc_interface_client_create(client_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1798,7 +1770,7 @@ static void test_client_server_echo_rpc()
 	struct mrpc_server *server;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_create(server_echo_interface_constructors);
+	server_interface = mrpc_interface_server_create(server_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10101);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1847,7 +1819,7 @@ static void test_client_server_echo_rpc_multiple_clients()
 	int i;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_create(server_echo_interface_constructors);
+	server_interface = mrpc_interface_server_create(server_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10997);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1904,7 +1876,7 @@ static void client_server_echo_client_concurrent(int port, int workers_cnt)
 	int i;
 	enum ff_result result;
 
-	client_interface = mrpc_interface_create(client_echo_interface_constructors);
+	client_interface = mrpc_interface_client_create(client_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1938,7 +1910,7 @@ static void test_client_server_echo_rpc_concurrent()
 	struct mrpc_server *server;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_create(server_echo_interface_constructors);
+	server_interface = mrpc_interface_server_create(server_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10102);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -1983,7 +1955,6 @@ static void test_all()
 	test_char_array_all();
 	test_wchar_array_all();
 	test_blob_all();
-	test_method_all();
 	test_interface_all();
 	test_data_all();
 	test_client_server_all();

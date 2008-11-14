@@ -222,10 +222,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\mrpc\mrpc_method_factory.h"
-					>
-				</File>
-				<File
 					RelativePath=".\include\mrpc\mrpc_param.h"
 					>
 				</File>
@@ -311,10 +307,6 @@
 				</File>
 				<File
 					RelativePath=".\include\private\mrpc_method.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_method_factory.h"
 					>
 				</File>
 				<File

@@ -1,7 +1,6 @@
 #include "private/mrpc_common.h"
 
 #include "private/mrpc_method.h"
-#include "private/mrpc_method_factory.h"
 #include "private/mrpc_param.h"
 #include "private/mrpc_data.h"
 #include "ff/ff_stream.h"
