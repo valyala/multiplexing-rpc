@@ -228,6 +228,7 @@ enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struc
 
 	ff_assert(method->callback != NULL);
 	ff_assert(method->is_key == NULL);
+	ff_assert(method->request_params_cnt > 0);
 
 	result = read_params(request_params, method->request_params_cnt, stream);
 	if (result != FF_SUCCESS)
@@ -243,6 +244,7 @@ enum ff_result mrpc_method_read_response_params(struct mrpc_method *method, stru
 
 	ff_assert(method->callback == NULL);
 	ff_assert(method->is_key != NULL);
+	ff_assert(method->response_params_cnt > 0);
 
 	result = read_params(response_params, method->response_params_cnt, stream);
 	if (result != FF_SUCCESS)
@@ -258,6 +260,7 @@ enum ff_result mrpc_method_write_request_params(struct mrpc_method *method, stru
 
 	ff_assert(method->callback == NULL);
 	ff_assert(method->is_key != NULL);
+	ff_assert(method->request_params_cnt > 0);
 
 	result = write_params(request_params, method->request_params_cnt, stream);
 	if (result != FF_SUCCESS)
@@ -273,6 +276,7 @@ enum ff_result mrpc_method_write_response_params(struct mrpc_method *method, str
 
 	ff_assert(method->callback != NULL);
 	ff_assert(method->is_key == NULL);
+	ff_assert(method->response_params_cnt > 0);
 
 	result = write_params(response_params, method->response_params_cnt, stream);
 	if (result != FF_SUCCESS)
@@ -348,4 +352,18 @@ void mrpc_method_invoke_callback(struct mrpc_method *method, struct mrpc_data *d
 	ff_assert(method->is_key == NULL);
 
 	method->callback(data, service_ctx);
+}
+
+int mrpc_method_get_request_params_cnt(struct mrpc_method *method)
+{
+	ff_assert(method->request_params_cnt >= 0);
+
+	return method->request_params_cnt;
+}
+
+int mrpc_method_get_response_params_cnt(struct mrpc_method *method)
+{
+	ff_assert(method->response_params_cnt >= 0);
+
+	return method->response_params_cnt;
 }

@@ -35,6 +35,7 @@ void mrpc_method_delete_response_params(struct mrpc_method *method, struct mrpc_
 /**
  * reads request parameters for the given method from the given stream.
  * This function must be called by the rpc server in order to obtain method's request parameters sent by client.
+ * This function can be called only if the mrpc_method_get_request_params_cnt() returns non-zero value.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
 enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream);
@@ -42,6 +43,7 @@ enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struc
 /**
  * reads response parameters for the given method from the given stream.
  * This function must be called be the rpc client in order to obtain method's response parameters sent by server.
+ * This function can be called only if the mrpc_method_get_response_params_cnt() returns non-zero value.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
 enum ff_result mrpc_method_read_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream);
@@ -49,6 +51,7 @@ enum ff_result mrpc_method_read_response_params(struct mrpc_method *method, stru
 /**
  * writes request parameters for the given method to the given stream.
  * This function must be called by the rpc client in order to send method's request parameters to the server.
+ * This function can be called only if the mrpc_method_get_request_params_cnt() returns non-zero value.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
 enum ff_result mrpc_method_write_request_params(struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream);
@@ -56,6 +59,7 @@ enum ff_result mrpc_method_write_request_params(struct mrpc_method *method, stru
 /**
  * writes response parameters for the given method to the given stream.
  * This function must be called by the rpc server in order to send method's response parameters to the client.
+ * This function can be called only if the mrpc_method_get_response_params_cnt() returns non-zero value.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
 enum ff_result mrpc_method_write_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream);
@@ -98,6 +102,16 @@ uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start
  * The callback is passed to the mrpc_method_create_server_method() function.
  */
 void mrpc_method_invoke_callback(struct mrpc_method *method, struct mrpc_data *data, void *service_ctx);
+
+/**
+ * returns the number of request paramters for the given method
+ */
+int mrpc_method_get_request_params_cnt(struct mrpc_method *method);
+
+/**
+ * returns the number of response paramters for the given method
+ */
+int mrpc_method_get_response_params_cnt(struct mrpc_method *method);
 
 #ifdef __cplusplus
 }
