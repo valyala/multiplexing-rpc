@@ -46,7 +46,7 @@ struct mrpc_client_stream_processor
 	struct ff_pool *request_processors_pool;
 	struct ff_event *request_processors_stop_event;
 	struct ff_pool *packets_pool;
-	struct mrpc_client_request_processor *active_request_processors[MAX_REQUEST_PROCESSORS_CNT];
+	struct mrpc_client_request_processor **active_request_processors;
 	struct ff_stream *stream;
 	int active_request_processors_cnt;
 	enum client_stream_processor_state state;
@@ -275,24 +275,21 @@ static void delete_packet(void *ctx)
 	mrpc_packet_delete(packet);
 }
 
-static void stop_request_processor(void *entry, void *ctx, int is_acquired)
-{
-	struct mrpc_client_stream_processor *stream_processor;
-	struct mrpc_client_request_processor *request_processor;
-
-	stream_processor = (struct mrpc_client_stream_processor *) ctx;
-	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
-	request_processor = (struct mrpc_client_request_processor *) entry;
-	if (is_acquired)
-	{
-		mrpc_client_request_processor_stop_async(request_processor);
-	}
-}
-
 static void stop_all_request_processors(struct mrpc_client_stream_processor *stream_processor)
 {
+	int i;
+
 	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
-	ff_pool_for_each_entry(stream_processor->request_processors_pool, stop_request_processor, stream_processor);
+	for (i = 0; i < MAX_REQUEST_PROCESSORS_CNT; i++)
+	{
+		struct mrpc_client_request_processor *request_processor;
+
+		request_processor = stream_processor->active_request_processors[i];
+		if (request_processor != NULL)
+		{
+			mrpc_client_request_processor_stop_async(request_processor);
+		}
+	}
 	ff_event_wait(stream_processor->request_processors_stop_event);
 	ff_assert(stream_processor->active_request_processors_cnt == 0);
 }
@@ -313,7 +310,6 @@ static void stop_stream_writer(struct mrpc_client_stream_processor *stream_proce
 struct mrpc_client_stream_processor *mrpc_client_stream_processor_create()
 {
 	struct mrpc_client_stream_processor *stream_processor;
-	int i;
 
 	stream_processor = (struct mrpc_client_stream_processor *) ff_malloc(sizeof(*stream_processor));
 
@@ -326,11 +322,7 @@ struct mrpc_client_stream_processor *mrpc_client_stream_processor_create()
 	stream_processor->request_processors_pool = ff_pool_create(MAX_REQUEST_PROCESSORS_CNT, create_request_processor, stream_processor, delete_request_processor);
 	stream_processor->request_processors_stop_event = ff_event_create(FF_EVENT_AUTO);
 	stream_processor->packets_pool = ff_pool_create(MAX_PACKETS_CNT, create_packet, stream_processor, delete_packet);
-
-	for (i = 0; i < MAX_REQUEST_PROCESSORS_CNT; i++)
-	{
-		stream_processor->active_request_processors[i] = NULL;
-	}
+	stream_processor->active_request_processors = (struct mrpc_client_request_processor **) ff_calloc(MAX_REQUEST_PROCESSORS_CNT, sizeof(stream_processor->active_request_processors[0]));
 
 	stream_processor->stream = NULL;
 	stream_processor->active_request_processors_cnt = 0;
@@ -350,6 +342,7 @@ void mrpc_client_stream_processor_delete(struct mrpc_client_stream_processor *st
 	 */
 	ff_assert(stream_processor->state != STATE_WORKING);
 
+	ff_free(stream_processor->active_request_processors);
 	ff_pool_delete(stream_processor->packets_pool);
 	ff_event_delete(stream_processor->request_processors_stop_event);
 	ff_pool_delete(stream_processor->request_processors_pool);

@@ -18,11 +18,19 @@ struct mrpc_server_stream_processor;
 typedef void (*mrpc_server_stream_processor_release_func)(void *release_func_ctx, struct mrpc_server_stream_processor *stream_processor);
 
 /**
+ * the callback must relase the given id.
+ * This callback is called before the stream processor will be deleted.
+ */
+typedef void (*mrpc_server_stream_processor_release_id_func)(void *release_id_func_ctx, int id);
+
+/**
  * Creates a stream processor.
- * release_func must notify that the given stream processor has been stopped.
+ * release_func will be called when the given stream processor has been stopped.
+ * release_id_func will be called at the beginning of the mrpc_server_stream_processor_delete()
  * Alwasy returns correct result.
  */
-struct mrpc_server_stream_processor *mrpc_server_stream_processor_create(mrpc_server_stream_processor_release_func release_func, void *release_func_ctx);
+struct mrpc_server_stream_processor *mrpc_server_stream_processor_create(mrpc_server_stream_processor_release_func release_func, void *release_func_ctx,
+	mrpc_server_stream_processor_release_id_func release_id_func, void *release_id_func_ctx, int id);
 
 /**
  * Deletes the given stream_processor.
@@ -45,6 +53,12 @@ void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *str
  * This function returns immediately.
  */
 void mrpc_server_stream_processor_stop_async(struct mrpc_server_stream_processor *stream_processor);
+
+/**
+ * returns the id of the given stream processor.
+ * This id is passed to the mrpc_server_stream_processor_create()
+ */
+int mrpc_server_stream_processor_get_id(struct mrpc_server_stream_processor *stream_processor);
 
 #ifdef __cplusplus
 }
