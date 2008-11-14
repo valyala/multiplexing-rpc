@@ -9,14 +9,6 @@
 #include "ff/ff_pool.h"
 #include "ff/ff_core.h"
 
-/**
- * maximum number of simultaneously working server stream processors.
- * Actually this is equivalent to the maximum number of distinct connections,
- * which the server is able to process in parallel.
- * Value of this parameter was chosen arbitrarly.
- */
-#define MAX_STREAM_PROCESSORS_CNT 200
-
 struct mrpc_server
 {
 	struct mrpc_interface *service_interface;
@@ -27,14 +19,17 @@ struct mrpc_server
 	struct mrpc_bitmap *stream_processors_bitmap;
 	struct ff_pool *stream_processors_pool;
 	struct mrpc_server_stream_processor **active_stream_processors;
+	int max_stream_processors_cnt;
 	int active_stream_processors_cnt;
 };
 
 static void stop_all_stream_processors(struct mrpc_server *server)
 {
 	int i;
+	
+	ff_assert(server->max_stream_processors_cnt > 0);
 
-	for (i = 0; i < MAX_STREAM_PROCESSORS_CNT; i++)
+	for (i = 0; i < server->max_stream_processors_cnt; i++)
 	{
 		struct mrpc_server_stream_processor *stream_processor;
 
@@ -54,7 +49,7 @@ static struct mrpc_server_stream_processor *acquire_stream_processor(struct mrpc
 	int stream_processor_id;
 
 	ff_assert(server->active_stream_processors_cnt >= 0);
-	ff_assert(server->active_stream_processors_cnt <= MAX_STREAM_PROCESSORS_CNT);
+	ff_assert(server->active_stream_processors_cnt <= server->max_stream_processors_cnt);
 
 	stream_processor = (struct mrpc_server_stream_processor *) ff_pool_acquire_entry(server->stream_processors_pool);
 	stream_processor_id = mrpc_server_stream_processor_get_id(stream_processor);
@@ -62,7 +57,7 @@ static struct mrpc_server_stream_processor *acquire_stream_processor(struct mrpc
 	server->active_stream_processors[stream_processor_id] = stream_processor;
 
 	server->active_stream_processors_cnt++;
-	ff_assert(server->active_stream_processors_cnt <= MAX_STREAM_PROCESSORS_CNT);
+	ff_assert(server->active_stream_processors_cnt <= server->max_stream_processors_cnt);
 	if (server->active_stream_processors_cnt == 1)
 	{
 		ff_event_reset(server->stream_processors_stop_event);
@@ -79,7 +74,7 @@ static void release_stream_processor(void *ctx, struct mrpc_server_stream_proces
 	server = (struct mrpc_server *) ctx;
 
 	ff_assert(server->active_stream_processors_cnt > 0);
-	ff_assert(server->active_stream_processors_cnt <= MAX_STREAM_PROCESSORS_CNT);
+	ff_assert(server->active_stream_processors_cnt <= server->max_stream_processors_cnt);
 
 	stream_processor_id = mrpc_server_stream_processor_get_id(stream_processor);
 	ff_assert(server->active_stream_processors[stream_processor_id] == stream_processor);
@@ -99,7 +94,7 @@ static int acquire_stream_processor_id(struct mrpc_server *server)
 
 	stream_processor_id = mrpc_bitmap_acquire_bit(server->stream_processors_bitmap);
 	ff_assert(stream_processor_id >= 0);
-	ff_assert(stream_processor_id < MAX_STREAM_PROCESSORS_CNT);
+	ff_assert(stream_processor_id < server->max_stream_processors_cnt);
 
 	return stream_processor_id;
 }
@@ -108,10 +103,10 @@ static void release_stream_processor_id(void *ctx, int stream_processor_id)
 {
 	struct mrpc_server *server;
 
-	ff_assert(stream_processor_id >= 0);
-	ff_assert(stream_processor_id < MAX_STREAM_PROCESSORS_CNT);
-
 	server = (struct mrpc_server *) ctx;
+	ff_assert(stream_processor_id >= 0);
+	ff_assert(stream_processor_id < server->max_stream_processors_cnt);
+
 	mrpc_bitmap_release_bit(server->stream_processors_bitmap, stream_processor_id);
 }
 
@@ -162,9 +157,11 @@ static void main_server_func(void *ctx)
 	ff_event_set(server->stop_event);
 }
 
-struct mrpc_server *mrpc_server_create()
+struct mrpc_server *mrpc_server_create(int max_stream_processors_cnt)
 {
 	struct mrpc_server *server;
+
+	ff_assert(max_stream_processors_cnt > 0);
 
 	server = (struct mrpc_server *) ff_malloc(sizeof(*server));
 	server->service_interface = NULL;
@@ -172,9 +169,10 @@ struct mrpc_server *mrpc_server_create()
 	server->stream_acceptor = NULL;
 	server->stop_event = ff_event_create(FF_EVENT_AUTO);
 	server->stream_processors_stop_event = ff_event_create(FF_EVENT_AUTO);
-	server->stream_processors_bitmap = mrpc_bitmap_create(MAX_STREAM_PROCESSORS_CNT);
-	server->stream_processors_pool = ff_pool_create(MAX_STREAM_PROCESSORS_CNT, create_stream_processor, server, delete_stream_processor);
-	server->active_stream_processors = (struct mrpc_server_stream_processor **) ff_calloc(MAX_STREAM_PROCESSORS_CNT, sizeof(server->active_stream_processors[0]));
+	server->stream_processors_bitmap = mrpc_bitmap_create(max_stream_processors_cnt);
+	server->stream_processors_pool = ff_pool_create(max_stream_processors_cnt, create_stream_processor, server, delete_stream_processor);
+	server->active_stream_processors = (struct mrpc_server_stream_processor **) ff_calloc(max_stream_processors_cnt, sizeof(server->active_stream_processors[0]));
+	server->max_stream_processors_cnt = max_stream_processors_cnt;
 	server->active_stream_processors_cnt = 0;
 
 	return server;

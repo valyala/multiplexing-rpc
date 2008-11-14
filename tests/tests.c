@@ -688,7 +688,7 @@ static void test_server_create_delete()
 {
 	struct mrpc_server *server;
 
-	server = mrpc_server_create();
+	server = mrpc_server_create(10);
 	ASSERT(server != NULL, "server cannot be NULL");
 	mrpc_server_delete(server);
 }
@@ -1001,7 +1001,7 @@ static void test_server_start_stop()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8595);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(10);
 	service_ctx = (void *) 1234ul;
 	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
 	mrpc_server_stop(server);
@@ -1025,7 +1025,7 @@ static void test_server_start_stop_multiple()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8596);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
 	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
 	ff_core_sleep(100);
@@ -1066,7 +1066,7 @@ static void server_multiple_instances_fiberpool_func(void *ctx)
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
 
 	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
@@ -1114,7 +1114,7 @@ static void test_server_accept()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8597);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
 	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
 
@@ -1216,7 +1216,7 @@ static void test_client_server_connect()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8598);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
 	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
 
@@ -1346,7 +1346,7 @@ static void test_client_server_rpc()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8599);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
 	mrpc_server_start(server, server_interface, service_ctx, stream_acceptor);
 
@@ -1394,7 +1394,7 @@ static void test_client_server_rpc_multiple_clients()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8601);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
 	mrpc_server_start(server, server_interface, service_ctx, stream_acceptor);
 	data.event = ff_event_create(FF_EVENT_MANUAL);
@@ -1775,7 +1775,7 @@ static void test_client_server_echo_rpc()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10101);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	mrpc_server_start(server, server_interface, server_ctx, stream_acceptor);
 
 	client_server_echo_client(10101, 5);
@@ -1824,7 +1824,7 @@ static void test_client_server_echo_rpc_multiple_clients()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10997);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	mrpc_server_start(server, server_interface, server_ctx, stream_acceptor);
 
 	data.event = ff_event_create(FF_EVENT_MANUAL);
@@ -1915,7 +1915,7 @@ static void test_client_server_echo_rpc_concurrent()
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10102);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	server = mrpc_server_create();
+	server = mrpc_server_create(100);
 	mrpc_server_start(server, server_interface, server_ctx, stream_acceptor);
 
 	client_server_echo_client_concurrent(10102, 10);

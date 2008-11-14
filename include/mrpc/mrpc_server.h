@@ -12,11 +12,11 @@ extern "C" {
 struct mrpc_server;
 
 /**
- * Creates a rpc server.
+ * Creates a rpc server, which can simultaneously service up to max_stream_processors client connections.
  * The returned rpc server must be started using the mrpc_server_start() before it will process client's requests.
  * Always returns correct result.
  */
-MRPC_API struct mrpc_server *mrpc_server_create();
+MRPC_API struct mrpc_server *mrpc_server_create(int max_stream_processors);
 
 /**
  * Deletes the given server.
