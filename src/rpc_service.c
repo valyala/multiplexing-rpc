@@ -81,24 +81,23 @@ static void foo_callback(struct mrpc_data *data, void *service_ctx)
 	mrpc_data_set_response_param_value(data, 0, &d);
 }
 
-static struct mrpc_method *create_foo_method()
+static const struct mrpc_method_server_description foo_method_description =
 {
-	struct mrpc_method *method;
+	foo_request_param_constructors,
+	foo_response_param_constructors,
+	foo_callback
+};
 
-	method = mrpc_method_create_server_method(foo_request_param_constructors, foo_response_param_constructors, foo_callback);
-	return method;
-}
-
-static const mrpc_method_constructor foo_method_constructors[] =
+static const struct mrpc_method_server_description *foo_method_descriptions[] =
 {
-	create_foo_method,
+	foo_method_description,
 	NULL
-}
+};
 
 struct mrpc_interface *foo_interface_create()
 {
 	struct mrpc_interface *interface;
 
-	interface = mrpc_interface_create(foo_method_constructors);
+	interface = mrpc_interface_server_create(foo_method_descriptions);
 	return interface;
 }
