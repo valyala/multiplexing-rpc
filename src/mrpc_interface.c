@@ -34,14 +34,15 @@ static int get_methods_cnt(const void **method_descriptions)
 struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_client_description **method_descriptions)
 {
 	struct mrpc_interface *interface;
+	struct mrpc_method **methods;
 	int i;
+	int methods_cnt;
 
-	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
-	interface->methods_cnt = get_methods_cnt((const void **) method_descriptions);
-	ff_assert(interface->methods_cnt > 0);
-	ff_assert(interface->methods_cnt <= MAX_METHODS_CNT);
-	interface->methods = (struct mrpc_method **) ff_calloc(interface->methods_cnt, sizeof(interface->methods[0]));
-	for (i = 0; i < interface->methods_cnt; i++)
+	methods_cnt = get_methods_cnt((const void **) method_descriptions);
+	ff_assert(methods_cnt > 0);
+	ff_assert(methods_cnt <= MAX_METHODS_CNT);
+	methods = (struct mrpc_method **) ff_calloc(interface->methods_cnt, sizeof(interface->methods[0]));
+	for (i = 0; i < methods_cnt; i++)
 	{
 		const struct mrpc_method_client_description *method_description;
 		struct mrpc_method *method;
@@ -50,8 +51,12 @@ struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_cli
 		ff_assert(method_description != NULL);
 		method = mrpc_method_create_client_method(method_description->request_param_constructors, method_description->response_param_constructors, method_description->is_key, (uint8_t) i);
 		ff_assert(method != NULL);
-		interface->methods[i] = method;
+		methods[i] = method;
 	}
+
+	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
+	interface->methods = methods;
+	interface->methods_cnt = methods_cnt;
 
 	return interface;
 }
@@ -59,14 +64,15 @@ struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_cli
 struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_server_description **method_descriptions)
 {
 	struct mrpc_interface *interface;
+	struct mrpc_method **methods;
 	int i;
+	int methods_cnt;
 
-	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
-	interface->methods_cnt = get_methods_cnt((const void **) method_descriptions);
-	ff_assert(interface->methods_cnt > 0);
-	ff_assert(interface->methods_cnt <= MAX_METHODS_CNT);
-	interface->methods = (struct mrpc_method **) ff_calloc(interface->methods_cnt, sizeof(interface->methods[0]));
-	for (i = 0; i < interface->methods_cnt; i++)
+	methods_cnt = get_methods_cnt((const void **) method_descriptions);
+	ff_assert(methods_cnt > 0);
+	ff_assert(methods_cnt <= MAX_METHODS_CNT);
+	methods = (struct mrpc_method **) ff_calloc(interface->methods_cnt, sizeof(interface->methods[0]));
+	for (i = 0; i < methods_cnt; i++)
 	{
 		const struct mrpc_method_server_description *method_description;
 		struct mrpc_method *method;
@@ -75,26 +81,36 @@ struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_ser
 		ff_assert(method_description != NULL);
 		method = mrpc_method_create_server_method(method_description->request_param_constructors, method_description->response_param_constructors, method_description->callback, (uint8_t) i);
 		ff_assert(method != NULL);
-		interface->methods[i] = method;
+		methods[i] = method;
 	}
+
+	interface = (struct mrpc_interface *) ff_malloc(sizeof(*interface));
+	interface->methods = methods;
+	interface->methods_cnt = methods_cnt;
 
 	return interface;
 }
 
 void mrpc_interface_delete(struct mrpc_interface *interface)
 {
+	struct mrpc_method **methods;
 	int i;
+	int methods_cnt;
 
-	for (i = 0; i < interface->methods_cnt; i++)
+	methods = interface->methods;
+	methods_cnt = interface->methods_cnt;
+	ff_assert(methods_cnt > 0);
+	ff_assert(methods_cnt <= MAX_METHODS_CNT);
+	for (i = 0; i < methods_cnt; i++)
 	{
 		struct mrpc_method *method;
 
-		method = interface->methods[i];
+		method = methods[i];
 		ff_assert(method != NULL);
 		mrpc_method_delete(method);
 	}
 
-	ff_free(interface->methods);
+	ff_free(methods);
 	ff_free(interface);
 }
 
