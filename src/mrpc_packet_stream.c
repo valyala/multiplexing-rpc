@@ -52,28 +52,33 @@ static void release_packet(struct mrpc_packet_stream *stream, struct mrpc_packet
 
 static enum ff_result prefetch_current_read_packet(struct mrpc_packet_stream *stream)
 {
+	struct mrpc_packet *current_read_packet;
+	struct ff_blocking_queue *reader_queue;
 	enum ff_result result;
 
 	ff_assert(stream->current_read_packet == NULL);
-	result = ff_blocking_queue_get_with_timeout(stream->reader_queue, (const void **) &stream->current_read_packet, READ_TIMEOUT);
+	reader_queue = stream->reader_queue;
+	result = ff_blocking_queue_get_with_timeout(reader_queue, (const void **) &current_read_packet, READ_TIMEOUT);
 	if (result == FF_SUCCESS)
 	{
 		enum mrpc_packet_type packet_type;
 
-		ff_assert(stream->current_read_packet != NULL);
-		packet_type = mrpc_packet_get_type(stream->current_read_packet);
+		ff_assert(current_read_packet != NULL);
+		packet_type = mrpc_packet_get_type(current_read_packet);
 		if (packet_type != MRPC_PACKET_START && packet_type != MRPC_PACKET_SINGLE)
 		{
 			ff_log_debug(L"wrong packet_type=%d of the first packet in the packet stream=%p", (int) packet_type, stream);
-			release_packet(stream, stream->current_read_packet);
-			stream->current_read_packet = NULL;
+			release_packet(stream, current_read_packet);
 			result = FF_FAILURE;
+		}
+		else
+		{
+			stream->current_read_packet = current_read_packet;
 		}
 	}
 	else
 	{
-		ff_assert(stream->current_read_packet == NULL);
-		ff_log_debug(L"cannot get next packet from the reader_queue=%p during the timeout=%d", stream->reader_queue, READ_TIMEOUT);
+		ff_log_debug(L"cannot get next packet from the reader_queue=%p during the timeout=%d", reader_queue, READ_TIMEOUT);
 	}
 
 	return result;
@@ -81,9 +86,12 @@ static enum ff_result prefetch_current_read_packet(struct mrpc_packet_stream *st
 
 static void release_current_read_packet(struct mrpc_packet_stream *stream)
 {
-	if (stream->current_read_packet != NULL)
+	struct mrpc_packet *current_read_packet;
+
+	current_read_packet = stream->current_read_packet;
+	if (current_read_packet != NULL)
 	{
-		release_packet(stream, stream->current_read_packet);
+		release_packet(stream, current_read_packet);
 		stream->current_read_packet = NULL;
 	}
 	else
@@ -100,17 +108,20 @@ static void acquire_current_write_packet(struct mrpc_packet_stream *stream)
 
 static void release_current_write_packet(struct mrpc_packet_stream *stream)
 {
-	if (stream->current_write_packet != NULL)
+	struct mrpc_packet *current_write_packet;
+
+	current_write_packet = stream->current_write_packet;
+	if (current_write_packet != NULL)
 	{
 		enum mrpc_packet_type packet_type;
 
-		packet_type = mrpc_packet_get_type(stream->current_write_packet);
+		packet_type = mrpc_packet_get_type(current_write_packet);
 		ff_assert(packet_type != MRPC_PACKET_SINGLE);
 		if (packet_type != MRPC_PACKET_END)
 		{
 			ff_log_debug(L"the packet stream=%p has been shutdowned without previous flushing. packet_type=%d", stream, (int) packet_type);
 		}
-		release_packet(stream, stream->current_write_packet);
+		release_packet(stream, current_write_packet);
 		stream->current_write_packet = NULL;
 	}
 	else
@@ -121,17 +132,20 @@ static void release_current_write_packet(struct mrpc_packet_stream *stream)
 
 static void clear_reader_queue(struct mrpc_packet_stream *stream)
 {
+	struct ff_blocking_queue *reader_queue;
+
+	reader_queue = stream->reader_queue;
 	for (;;)
 	{
 		struct mrpc_packet *packet;
 		int is_empty;
 
-		is_empty = ff_blocking_queue_is_empty(stream->reader_queue);
+		is_empty = ff_blocking_queue_is_empty(reader_queue);
 		if (is_empty)
 		{
 			break;
 		}
-		ff_blocking_queue_get(stream->reader_queue, (const void **) &packet);
+		ff_blocking_queue_get(reader_queue, (const void **) &packet);
 		release_packet(stream, packet);
 	}
 }
@@ -190,13 +204,15 @@ void mrpc_packet_stream_shutdown(struct mrpc_packet_stream *stream)
 
 enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *buf, int len)
 {
+	struct mrpc_packet *current_read_packet;
 	char *p;
 	enum mrpc_packet_type packet_type;
 	enum ff_result result = FF_FAILURE;
 
 	ff_assert(len >= 0);
 
-	if (stream->current_read_packet == NULL)
+	current_read_packet = stream->current_read_packet;
+	if (current_read_packet == NULL)
 	{
 		/* this is the first call of the mrpc_packet_stream_read(), so try to prefetch the current read packet */
 		result = prefetch_current_read_packet(stream);
@@ -208,16 +224,17 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 		else
 		{
 			ff_assert(stream->current_read_packet != NULL);
+			current_read_packet = stream->current_read_packet;
 		}
 	}
 
 	p = (char *) buf;
-	packet_type = mrpc_packet_get_type(stream->current_read_packet);
+	packet_type = mrpc_packet_get_type(current_read_packet);
 	while (len > 0)
 	{
 		int bytes_read;
 
-		bytes_read = mrpc_packet_read_data(stream->current_read_packet, p, len);
+		bytes_read = mrpc_packet_read_data(current_read_packet, p, len);
 		ff_assert(bytes_read >= 0);
 		ff_assert(bytes_read <= len);
 		len -= bytes_read;
@@ -254,38 +271,43 @@ enum ff_result mrpc_packet_stream_read(struct mrpc_packet_stream *stream, void *
 				goto end;
 			}
 
-			release_packet(stream, stream->current_read_packet);
-			stream->current_read_packet = packet;
+			release_packet(stream, current_read_packet);
+			current_read_packet = packet;
 		}
 	}
 	result = FF_SUCCESS;
 
 end:
+	stream->current_read_packet = current_read_packet;
 	return result;
 }
 
 enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const void *buf, int len)
 {
+	struct mrpc_packet *current_write_packet;
+	struct ff_blocking_queue *writer_queue;
 	const char *p;
 	enum mrpc_packet_type packet_type;
 
 	ff_assert(len >= 0);
-
-	if (stream->current_write_packet == NULL)
+	current_write_packet = stream->current_write_packet;
+	if (current_write_packet == NULL)
 	{
 		/* this is the first call of the mrpc_packet_stream_write() function. So acquire the writer packet */
 		acquire_current_write_packet(stream);
 		ff_assert(stream->current_write_packet != NULL);
+		current_write_packet = stream->current_write_packet;
 	}
 
 	p = (const char *) buf;
-	packet_type = mrpc_packet_get_type(stream->current_write_packet);
+	packet_type = mrpc_packet_get_type(current_write_packet);
 	ff_assert(packet_type == MRPC_PACKET_START || packet_type == MRPC_PACKET_MIDDLE);
+	writer_queue = stream->writer_queue;
 	while (len > 0)
 	{
 		int bytes_written;
 
-		bytes_written = mrpc_packet_write_data(stream->current_write_packet, p, len);
+		bytes_written = mrpc_packet_write_data(current_write_packet, p, len);
 		ff_assert(bytes_written >= 0);
 		ff_assert(bytes_written <= len);
 		len -= bytes_written;
@@ -293,21 +315,24 @@ enum ff_result mrpc_packet_stream_write(struct mrpc_packet_stream *stream, const
 
 		if (len > 0)
 		{
-			ff_blocking_queue_put(stream->writer_queue, stream->current_write_packet);
-			stream->current_write_packet = acquire_packet(stream, MRPC_PACKET_MIDDLE);
+			ff_blocking_queue_put(writer_queue, current_write_packet);
+			current_write_packet = acquire_packet(stream, MRPC_PACKET_MIDDLE);
 		}
 	}
 
+	stream->current_write_packet = current_write_packet;
 	return FF_SUCCESS;
 }
 
 enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 {
+	struct mrpc_packet *current_write_packet;
 	enum mrpc_packet_type packet_type;
 
 	ff_assert(stream->current_write_packet != NULL);
+	current_write_packet = stream->current_write_packet;
 
-	packet_type = mrpc_packet_get_type(stream->current_write_packet);
+	packet_type = mrpc_packet_get_type(current_write_packet);
 	ff_assert(packet_type == MRPC_PACKET_START || packet_type == MRPC_PACKET_MIDDLE);
 	if (packet_type == MRPC_PACKET_START)
 	{
@@ -317,8 +342,8 @@ enum ff_result mrpc_packet_stream_flush(struct mrpc_packet_stream *stream)
 	{
 		packet_type = MRPC_PACKET_END;
 	}
-	mrpc_packet_set_type(stream->current_write_packet, packet_type);
-	ff_blocking_queue_put(stream->writer_queue, stream->current_write_packet);
+	mrpc_packet_set_type(current_write_packet, packet_type);
+	ff_blocking_queue_put(stream->writer_queue, current_write_packet);
 	stream->current_write_packet = acquire_packet(stream, MRPC_PACKET_END);
 
 	return FF_SUCCESS;
