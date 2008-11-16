@@ -180,7 +180,7 @@ void generate_server_callback_c(const char *interface_name, struct method *metho
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		fprintf(out_file, "\t\t&request_%s,\n", param->name);
+		fprintf(out_file, "\t\trequest_%s,\n", param->name);
 	}
 	param_list = method->response_params;
 	while (param_list != NULL)
@@ -196,7 +196,7 @@ void generate_server_callback_c(const char *interface_name, struct method *metho
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		fprintf(out_file, "\tmrpc_data_set_response_param_value(data, %d, &response_%s);\n", i, param->name);
+		fprintf(out_file, "\tmrpc_data_set_response_param_value(data, %d, response_%s);\n", i, param->name);
 		param_list = param_list->next;
 		i++;
 	}
@@ -211,7 +211,7 @@ void generate_callback_params_c(struct param_list *param_list, const char *type,
 		struct param *param;
 
 		param = param_list->param;
-		fprintf(out_file, "\t%s%s_%s;\n", param_type_to_c_type(param->type), type, param->name);
+		fprintf(out_file, "\t%s *%s_%s;\n", param_type_to_c_type(param->type), type, param->name);
 		param_list = param_list->next;
 	}
 	fprintf(out_file, "\n");
@@ -221,13 +221,13 @@ const char *param_type_to_c_type(enum param_type param_type)
 {
 	switch (param_type)
 	{
-		case PARAM_UINT32: return "uint32_t ";
-		case PARAM_INT32: return "int32_t ";
-		case PARAM_UINT64: return "uint64_t ";
-		case PARAM_INT64: return "int64_t ";
-		case PARAM_CHAR_ARRAY: return "struct mrpc_char_array *";
-		case PARAM_WCHAR_ARRAY: return "struct mrpc_wchar_array *";
-		case PARAM_BLOB: return "struct mrpc_blob *";
+		case PARAM_UINT32: return "uint32_t";
+		case PARAM_INT32: return "int32_t";
+		case PARAM_UINT64: return "uint64_t";
+		case PARAM_INT64: return "int64_t";
+		case PARAM_CHAR_ARRAY: return "struct mrpc_char_array";
+		case PARAM_WCHAR_ARRAY: return "struct mrpc_wchar_array";
+		case PARAM_BLOB: return "struct mrpc_blob";
 		default: return "unknown_type";
 	}
 }
