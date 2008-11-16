@@ -46,16 +46,18 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 		data = try_create_mrpc_data(interface, method_id);
 		if (data != NULL)
 		{
+			struct mrpc_method *method;
 			int request_params_cnt;
 
-			request_params_cnt = mrpc_method_get_request_params_cnt(data->method);
+			method = data->method;
+			request_params_cnt = mrpc_method_get_request_params_cnt(method);
 			if (request_params_cnt > 0)
 			{
-				result = mrpc_method_read_request_params(data->method, data->request_params, stream);
+				result = mrpc_method_read_request_params(method, data->request_params, stream);
 				if (result != FF_SUCCESS)
 				{
 					ff_log_debug(L"cannot read request paramters for the method=%p with method_id=%lu from the stream=%p. See previous messages for more info",
-						data->method, (uint32_t) method_id, stream);
+						method, (uint32_t) method_id, stream);
 					mrpc_data_delete(data);
 					data = NULL;
 				}
@@ -76,10 +78,12 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 
 static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *stream)
 {
+	struct mrpc_method *method;
 	int response_params_cnt;
 	enum ff_result result;
 
-	response_params_cnt = mrpc_method_get_response_params_cnt(data->method);
+	method = data->method;
+	response_params_cnt = mrpc_method_get_response_params_cnt(method);
 	if (response_params_cnt == 0)
 	{
 		/* read an empty byte from the stream in order to determine the moment,
@@ -90,20 +94,20 @@ static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *st
 		result = ff_stream_read(stream, &empty_byte, 1);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot read an empty byte from the stream=%p for the method=%p. See previous messages for more info", stream, data->method);
+			ff_log_debug(L"cannot read an empty byte from the stream=%p for the method=%p. See previous messages for more info", stream, method);
 		}
 		if (empty_byte != 0)
 		{
-			ff_log_debug(L"wrong empty_byte=%d read from the stream=%p for the method=%p. Expected value is 0", empty_byte, stream, data->method);
+			ff_log_debug(L"wrong empty_byte=%d read from the stream=%p for the method=%p. Expected value is 0", empty_byte, stream, method);
 			result = FF_FAILURE;
 		}
 	}
 	else
 	{
-		result = mrpc_method_read_response_params(data->method, data->response_params, stream);
+		result = mrpc_method_read_response_params(method, data->response_params, stream);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot read response paramters for the method=%p from the stream=%p. See previous messages for more info", data->method, stream);
+			ff_log_debug(L"cannot read response paramters for the method=%p from the stream=%p. See previous messages for more info", method, stream);
 		}
 	}
 
@@ -112,10 +116,12 @@ static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *st
 
 static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *stream)
 {
+	struct mrpc_method *method;
 	int response_params_cnt;
 	enum ff_result result;
 
-	response_params_cnt = mrpc_method_get_response_params_cnt(data->method);
+	method = data->method;
+	response_params_cnt = mrpc_method_get_response_params_cnt(method);
 	if (response_params_cnt == 0)
 	{
 		/* write an empty byte to the stream in order to signal the receiver about response arrival
@@ -126,15 +132,15 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 		result = ff_stream_write(stream, &empty_byte, 1);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot write an empty byte to the stream=%p for the method=%p. See previous messages for more info", stream, data->method);
+			ff_log_debug(L"cannot write an empty byte to the stream=%p for the method=%p. See previous messages for more info", stream, method);
 		}
 	}
 	else
 	{
-		result = mrpc_method_write_response_params(data->method, data->response_params, stream);
+		result = mrpc_method_write_response_params(method, data->response_params, stream);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot write response parameters for the method=%p to the stream=%p. See previous messages for more info", data->method, stream);
+			ff_log_debug(L"cannot write response parameters for the method=%p to the stream=%p. See previous messages for more info", method, stream);
 		}
 	}
 
@@ -143,22 +149,24 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 
 static enum ff_result write_request(struct mrpc_data *data, struct ff_stream *stream)
 {
+	struct mrpc_method *method;
 	enum ff_result result;
 	uint8_t method_id;
 
-	method_id = mrpc_method_get_method_id(data->method);
+	method = data->method;
+	method_id = mrpc_method_get_method_id(method);
 	result = ff_stream_write(stream, &method_id, 1);
 	if (result == FF_SUCCESS)
 	{
 		int request_params_cnt;
 
-		request_params_cnt = mrpc_method_get_request_params_cnt(data->method);
+		request_params_cnt = mrpc_method_get_request_params_cnt(method);
 		if (request_params_cnt > 0)
 		{
-			result = mrpc_method_write_request_params(data->method, data->request_params, stream);
+			result = mrpc_method_write_request_params(method, data->request_params, stream);
 			if (result != FF_SUCCESS)
 			{
-				ff_log_debug(L"cannot write request paramters for the method=%p to the stream=%p. See previous messages for more info", data->method, stream);
+				ff_log_debug(L"cannot write request paramters for the method=%p to the stream=%p. See previous messages for more info", method, stream);
 			}
 		}
 	}
@@ -196,7 +204,10 @@ enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, v
 	data = read_request(interface, stream);
 	if (data != NULL)
 	{
-		mrpc_method_invoke_callback(data->method, data, service_ctx);
+		struct mrpc_method *method;
+
+		method = data->method;
+		mrpc_method_invoke_callback(method, data, service_ctx);
 		result = write_response(data, stream);
 		if (result != FF_SUCCESS)
 		{
@@ -217,7 +228,7 @@ enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, v
 			result = ff_stream_flush(stream);
 			if (result != FF_SUCCESS)
 			{
-				ff_log_debug(L"cannot flush the stream=%p after writing response for the method=%p. See previous messages for more info", stream, data->method);
+				ff_log_debug(L"cannot flush the stream=%p after writing response for the method=%p. See previous messages for more info", stream, method);
 			}
 		}
     }
@@ -247,7 +258,7 @@ enum ff_result mrpc_data_invoke_remote_call(struct mrpc_data *data, struct ff_st
 		}
 		else
 		{
-			ff_log_debug(L"cannot flush the stream=%p after writing request for the method=%p. See prevois messages for more info", stream, data->method);
+			ff_log_debug(L"cannot flush the stream=%p after writing request for the data=%p. See prevois messages for more info", stream, data);
 		}
 	}
 	else
