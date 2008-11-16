@@ -44,28 +44,32 @@ void mrpc_bitmap_delete(struct mrpc_bitmap *bitmap)
 
 int mrpc_bitmap_acquire_bit(struct mrpc_bitmap *bitmap)
 {
+	uint64_t *map;
 	int i;
 	int n;
+	int bitmap_size;
 
 	ff_assert(bitmap->size > 0);
 	ff_assert(bitmap->last_free_bit < bitmap->size);
 
+	map = bitmap->map;
 	n = bitmap->last_free_bit;
-	for (i = 0; i < bitmap->size; i++)
+	bitmap_size = bitmap->size;
+	for (i = 0; i < bitmap_size; i++)
 	{
-		if (GET_BIT(bitmap->map, n) == 0)
+		if (GET_BIT(map, n) == 0)
 		{
-			SET_BIT(bitmap->map, n);
+			SET_BIT(map, n);
 			bitmap->last_free_bit = n;
 			break;
 		}
 		n++;
-		if (n == bitmap->size)
+		if (n == bitmap_size)
 		{
 			n = 0;
 		}
 	}
-	if (i == bitmap->size)
+	if (i == bitmap_size)
 	{
 		ff_log_debug(L"all bits are occupied in the bitmap=%p", bitmap);
 		n = -1;
