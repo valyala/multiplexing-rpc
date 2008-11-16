@@ -322,6 +322,7 @@ void mrpc_method_get_response_param_value(struct mrpc_method *method, int param_
 
 uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start_value, struct mrpc_param **request_params)
 {
+	const int *is_keys;
 	int params_cnt;
 	int i;
 	uint32_t hash_value;
@@ -331,11 +332,12 @@ uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start
 
 	hash_value = start_value;
 	params_cnt = method->request_params_cnt;
+	is_keys = method->is_key;
 	for (i = 0; i < params_cnt; i++)
 	{
 		int is_key;
 
-		is_key = method->is_key[i];
+		is_key = is_keys[i];
 		if (is_key)
 		{
 			struct mrpc_param *param;
