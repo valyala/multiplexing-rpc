@@ -2,9 +2,21 @@
 
 #include "private/mrpc_bitmap.h"
 
+#define GET_BIT_U64(u64, bit_num) (((u64) >> (bit_num)) & 1ull)
+#define SET_BIT_U64(u64, bit_num) (u64) |= 1ull << (bit_num)
+#define CLEAR_BIT_U64(u64, bit_num) (u64) &= ~(1ull << (bit_num))
+#define U64_ARRAY_INDEX(bit_num) ((bit_num) >> 6)
+#define U64_BIT_NUM(bit_num) ((bit_num) & 0x3f)
+
+#define GET_BIT(u64_array, bit_num) GET_BIT_U64((u64_array)[U64_ARRAY_INDEX(bit_num)], U64_BIT_NUM(bit_num))
+#define SET_BIT(u64_array, bit_num) SET_BIT_U64((u64_array)[U64_ARRAY_INDEX(bit_num)], U64_BIT_NUM(bit_num))
+#define CLEAR_BIT(u64_array, bit_num) CLEAR_BIT_U64((u64_array)[U64_ARRAY_INDEX(bit_num)], U64_BIT_NUM(bit_num))
+
+#define GET_U64_ARRAY_SIZE(bits_size) (((bits_size) + 0x3f) >> 6)
+
 struct mrpc_bitmap
 {
-	uint8_t *map;
+	uint64_t *map;
 	int size;
 	int last_free_bit;
 };
@@ -12,11 +24,13 @@ struct mrpc_bitmap
 struct mrpc_bitmap *mrpc_bitmap_create(int size)
 {
 	struct mrpc_bitmap *bitmap;
+	int map_size;
 
 	ff_assert(size > 0);
+	map_size = GET_U64_ARRAY_SIZE(size);
 
 	bitmap = (struct mrpc_bitmap *) ff_malloc(sizeof(*bitmap));
-	bitmap->map = (uint8_t *) ff_calloc(size, sizeof(bitmap->map[0]));
+	bitmap->map = (uint64_t *) ff_calloc(map_size, sizeof(bitmap->map[0]));
 	bitmap->size = size;
 	bitmap->last_free_bit = 0;
 	return bitmap;
@@ -39,9 +53,9 @@ int mrpc_bitmap_acquire_bit(struct mrpc_bitmap *bitmap)
 	n = bitmap->last_free_bit;
 	for (i = 0; i < bitmap->size; i++)
 	{
-		if (bitmap->map[n] == 0)
+		if (GET_BIT(bitmap->map, n) == 0)
 		{
-			bitmap->map[n] = 1;
+			SET_BIT(bitmap->map, n);
 			bitmap->last_free_bit = n;
 			break;
 		}
@@ -63,7 +77,8 @@ void mrpc_bitmap_release_bit(struct mrpc_bitmap *bitmap, int n)
 {
 	ff_assert(bitmap->size > 0);
 	ff_assert(n < bitmap->size);
-	ff_assert(bitmap->map[n] == 1);
+	ff_assert(GET_BIT(bitmap->map, n) == 1);
 
-	bitmap->map[n] = 0;
+	CLEAR_BIT(bitmap->map, n);
 }
+
