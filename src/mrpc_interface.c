@@ -41,7 +41,7 @@ struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_cli
 	methods_cnt = get_methods_cnt((const void **) method_descriptions);
 	ff_assert(methods_cnt > 0);
 	ff_assert(methods_cnt <= MAX_METHODS_CNT);
-	methods = (struct mrpc_method **) ff_calloc(methods_cnt, sizeof(interface->methods[0]));
+	methods = (struct mrpc_method **) ff_calloc(methods_cnt, sizeof(methods[0]));
 	for (i = 0; i < methods_cnt; i++)
 	{
 		const struct mrpc_method_client_description *method_description;
@@ -71,7 +71,7 @@ struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_ser
 	methods_cnt = get_methods_cnt((const void **) method_descriptions);
 	ff_assert(methods_cnt > 0);
 	ff_assert(methods_cnt <= MAX_METHODS_CNT);
-	methods = (struct mrpc_method **) ff_calloc(methods_cnt, sizeof(interface->methods[0]));
+	methods = (struct mrpc_method **) ff_calloc(methods_cnt, sizeof(methods[0]));
 	for (i = 0; i < methods_cnt; i++)
 	{
 		const struct mrpc_method_server_description *method_description;
