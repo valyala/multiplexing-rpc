@@ -25,15 +25,18 @@ struct mrpc_server
 
 static void stop_all_stream_processors(struct mrpc_server *server)
 {
+	struct mrpc_server_stream_processor **active_stream_processors;
+	int max_stream_processors_cnt;
 	int i;
 	
 	ff_assert(server->max_stream_processors_cnt > 0);
-
-	for (i = 0; i < server->max_stream_processors_cnt; i++)
+	active_stream_processors = server->active_stream_processors;
+	max_stream_processors_cnt = server->max_stream_processors_cnt;
+	for (i = 0; i < max_stream_processors_cnt; i++)
 	{
 		struct mrpc_server_stream_processor *stream_processor;
 
-		stream_processor = server->active_stream_processors[i];
+		stream_processor = active_stream_processors[i];
 		if (stream_processor != NULL)
 		{
 			mrpc_server_stream_processor_stop_async(stream_processor);
@@ -133,24 +136,30 @@ static void delete_stream_processor(void *ctx)
 static void main_server_func(void *ctx)
 {
 	struct mrpc_server *server;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct mrpc_interface *service_interface;
+	void *service_ctx;
 
 	server = (struct mrpc_server *) ctx;
 
 	ff_assert(server->active_stream_processors_cnt == 0);
 	ff_event_set(server->stream_processors_stop_event);
+	stream_acceptor = server->stream_acceptor;
+	service_interface = server->service_interface;
+	service_ctx = server->service_ctx;
 	for (;;)
 	{
 		struct mrpc_server_stream_processor *stream_processor;
 		struct ff_stream *client_stream;
 
-		client_stream = ff_stream_acceptor_accept(server->stream_acceptor);
+		client_stream = ff_stream_acceptor_accept(stream_acceptor);
 		if (client_stream == NULL)
 		{
-			ff_log_debug(L"mrpc_server_stop() has been called, so the stream_acceptor=%p of the server=%p returned NULL", server->stream_acceptor, server);
+			ff_log_debug(L"mrpc_server_stop() has been called, so the stream_acceptor=%p of the server=%p returned NULL", stream_acceptor, server);
 			break;
 		}
 		stream_processor = acquire_stream_processor(server);
-		mrpc_server_stream_processor_start(stream_processor, server->service_interface, server->service_ctx, client_stream);
+		mrpc_server_stream_processor_start(stream_processor, service_interface, service_ctx, client_stream);
 	}
 	stop_all_stream_processors(server);
 
@@ -223,3 +232,4 @@ void mrpc_server_stop(struct mrpc_server *server)
 	server->service_ctx = NULL;
 	server->stream_acceptor = NULL;
 }
+
