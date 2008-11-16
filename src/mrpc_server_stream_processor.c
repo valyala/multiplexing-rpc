@@ -93,17 +93,20 @@ static void release_packet(void *ctx, struct mrpc_packet *packet)
 
 static void skip_writer_queue_packets(struct mrpc_server_stream_processor *stream_processor)
 {
+	struct ff_blocking_queue *writer_queue;
+
 	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
+	writer_queue = stream_processor->writer_queue;
 	for (;;)
 	{
 		struct mrpc_packet *packet;
 
-		ff_blocking_queue_get(stream_processor->writer_queue, (const void **) &packet);
+		ff_blocking_queue_get(writer_queue, (const void **) &packet);
 		if (packet == NULL)
 		{
 			int is_empty;
 
-			is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
+			is_empty = ff_blocking_queue_is_empty(writer_queue);
 			ff_assert(is_empty);
 			break;
 		}
@@ -114,29 +117,33 @@ static void skip_writer_queue_packets(struct mrpc_server_stream_processor *strea
 static void stream_writer_func(void *ctx)
 {
 	struct mrpc_server_stream_processor *stream_processor;
+	struct ff_blocking_queue *writer_queue;
+	struct ff_stream *stream;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
 	ff_assert(stream_processor->stream != NULL);
 	ff_assert(stream_processor->state != STATE_STOPPED);
+	writer_queue = stream_processor->writer_queue;
+	stream = stream_processor->stream;
 	for (;;)
 	{
 		struct mrpc_packet *packet;
 		int is_empty;
 		enum ff_result result;
 
-		ff_blocking_queue_get(stream_processor->writer_queue, (const void **) &packet);
+		ff_blocking_queue_get(writer_queue, (const void **) &packet);
 		if (packet == NULL)
 		{
 			ff_assert(stream_processor->state == STATE_STOP_INITIATED);
-			is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
+			is_empty = ff_blocking_queue_is_empty(writer_queue);
 			ff_assert(is_empty);
 			break;
 		}
-		result = mrpc_packet_write_to_stream(packet, stream_processor->stream);
+		result = mrpc_packet_write_to_stream(packet, stream);
 		if (result != FF_SUCCESS)
 		{
 			ff_log_debug(L"cannot write packet=%p to the stream=%p of the stream_processor=%p. See previous messages for more info",
-				packet, stream_processor->stream, stream_processor);
+				packet, stream, stream_processor);
 		}
 		release_server_packet(stream_processor, packet);
 
@@ -153,10 +160,10 @@ static void stream_writer_func(void *ctx)
 		 *     - client is blocked awaiting for response from the server, which is still buffered on the server side;
 		 *     - server is blocked awaiting for next request from the client.
 		 */
-		is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
+		is_empty = ff_blocking_queue_is_empty(writer_queue);
 		if (result == FF_SUCCESS && is_empty)
 		{
-			result = ff_stream_flush(stream_processor->stream);
+			result = ff_stream_flush(stream);
 			if (result != FF_SUCCESS)
 			{
 				ff_log_debug(L"cannot flush the stream=%p of the stream_processor=%p. See previous messages for more info", stream_processor->stream, stream_processor);
@@ -264,14 +271,16 @@ static void delete_packet(void *ctx)
 
 static void stop_all_request_processors(struct mrpc_server_stream_processor *stream_processor)
 {
+	struct mrpc_server_request_processor **active_request_processors;
 	int i;
 
 	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
+	active_request_processors = stream_processor->active_request_processors;
 	for (i = 0; i < MAX_REQUEST_PROCESSORS_CNT; i++)
 	{
 		struct mrpc_server_request_processor *request_processor;
 
-		request_processor = stream_processor->active_request_processors[i];
+		request_processor = active_request_processors[i];
 		if (request_processor != NULL)
 		{
 			mrpc_server_request_processor_stop_async(request_processor);
@@ -297,6 +306,10 @@ static void stop_stream_writer(struct mrpc_server_stream_processor *stream_proce
 static void stream_reader_func(void *ctx)
 {
 	struct mrpc_server_stream_processor *stream_processor;
+	struct ff_stream *stream;
+	struct mrpc_server_request_processor **active_request_processors;
+	struct mrpc_interface *service_interface;
+	void *service_ctx;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
 
@@ -307,6 +320,10 @@ static void stream_reader_func(void *ctx)
 
 	start_stream_writer(stream_processor);
 	ff_event_set(stream_processor->request_processors_stop_event);
+	stream = stream_processor->stream;
+	active_request_processors = stream_processor->active_request_processors;
+	service_interface = stream_processor->service_interface;
+	service_ctx = stream_processor->service_ctx;
 	for (;;)
 	{
 		struct mrpc_packet *packet;
@@ -316,29 +333,29 @@ static void stream_reader_func(void *ctx)
 		enum ff_result result;
 
 		packet = acquire_server_packet(stream_processor);
-		result = mrpc_packet_read_from_stream(packet, stream_processor->stream);
+		result = mrpc_packet_read_from_stream(packet, stream);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot read the packet=%p from the stream=%p. See previous messages for more info", packet, stream_processor->stream);
+			ff_log_debug(L"cannot read the packet=%p from the stream=%p. See previous messages for more info", packet, stream);
 			release_server_packet(stream_processor, packet);
 			break;
 		}
 
 		packet_type = mrpc_packet_get_type(packet);
 		request_id = mrpc_packet_get_request_id(packet);
-		request_processor = stream_processor->active_request_processors[request_id];
+		request_processor = active_request_processors[request_id];
 		if (packet_type == MRPC_PACKET_START || packet_type == MRPC_PACKET_SINGLE)
 		{
 			if (request_processor != NULL)
 			{
 				ff_log_debug(L"there is the request_processor with the given request_id=%lu, but the packet received "
 							 L"from the stream=%p indicates that this request_processor shouldn't exist. stream_processor=%p, packet_type=%d",
-							 	(uint32_t) request_id, stream_processor->stream, stream_processor, (int) packet_type);
+							 	(uint32_t) request_id, stream, stream_processor, (int) packet_type);
 				release_server_packet(stream_processor, packet);
 				break;
 			}
 			request_processor = acquire_request_processor(stream_processor, request_id);
-			mrpc_server_request_processor_start(request_processor, stream_processor->service_interface, stream_processor->service_ctx, request_id);
+			mrpc_server_request_processor_start(request_processor, service_interface, service_ctx, request_id);
 		}
 		else
 		{
@@ -347,7 +364,7 @@ static void stream_reader_func(void *ctx)
 			{
 				ff_log_debug(L"there is no request_processor with the given request_id=%lu, but the packet received "
 							 L"from the stream=%p indicates that this request_processor should exist. stream_processor=%p, packet_type=%d",
-							 	(uint32_t) request_id, stream_processor->stream, stream_processor, (int) packet_type);
+							 	(uint32_t) request_id, stream, stream_processor, (int) packet_type);
 				release_server_packet(stream_processor, packet);
 				break;
 			}

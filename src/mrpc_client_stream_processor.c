@@ -88,17 +88,20 @@ static void release_packet(void *ctx, struct mrpc_packet *packet)
 
 static void skip_writer_queue_packets(struct mrpc_client_stream_processor *stream_processor)
 {
+	struct ff_blocking_queue *writer_queue;
+
 	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
+	writer_queue = stream_processor->writer_queue;
 	for (;;)
 	{
 		struct mrpc_packet *packet;
 
-		ff_blocking_queue_get(stream_processor->writer_queue, (const void **) &packet);
+		ff_blocking_queue_get(writer_queue, (const void **) &packet);
 		if (packet == NULL)
 		{
 			int is_empty;
 
-			is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
+			is_empty = ff_blocking_queue_is_empty(writer_queue);
 			ff_assert(is_empty);
 			break;
 		}
@@ -109,29 +112,33 @@ static void skip_writer_queue_packets(struct mrpc_client_stream_processor *strea
 static void stream_writer_func(void *ctx)
 {
 	struct mrpc_client_stream_processor *stream_processor;
+	struct ff_blocking_queue *writer_queue;
+	struct ff_stream *stream;
 
 	stream_processor = (struct mrpc_client_stream_processor *) ctx;
 	ff_assert(stream_processor->stream != NULL);
 	ff_assert(stream_processor->state != STATE_STOPPED);
+	writer_queue = stream_processor->writer_queue;
+	stream = stream_processor->stream;
 	for (;;)
 	{
 		struct mrpc_packet *packet;
 		int is_empty;
 		enum ff_result result;
 
-		ff_blocking_queue_get(stream_processor->writer_queue, (const void **) &packet);
+		ff_blocking_queue_get(writer_queue, (const void **) &packet);
 		if (packet == NULL)
 		{
 			ff_assert(stream_processor->state == STATE_STOP_INITIATED);
-			is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
+			is_empty = ff_blocking_queue_is_empty(writer_queue);
 			ff_assert(is_empty);
 			break;
 		}
-		result = mrpc_packet_write_to_stream(packet, stream_processor->stream);
+		result = mrpc_packet_write_to_stream(packet, stream);
 		if (result != FF_SUCCESS)
 		{
 			ff_log_debug(L"cannot write packet=%p to the stream=%p of the stream_processor=%p. See previous messages for more info",
-				packet, stream_processor->stream, stream_processor);
+				packet, stream, stream_processor);
 		}
 		release_client_packet(stream_processor, packet);
 
@@ -148,13 +155,13 @@ static void stream_writer_func(void *ctx)
 		 *     - server is blocked awaiting for request from the client, which is still buffered on the client side;
 		 *     - client is blocked awaiting for response from the server.
 		 */
-		is_empty = ff_blocking_queue_is_empty(stream_processor->writer_queue);
+		is_empty = ff_blocking_queue_is_empty(writer_queue);
 		if (result == FF_SUCCESS && is_empty)
 		{
-			result = ff_stream_flush(stream_processor->stream);
+			result = ff_stream_flush(stream);
 			if (result != FF_SUCCESS)
 			{
-				ff_log_debug(L"cannot flush the stream=%p of the stream_processor=%p. See previous messages for more info", stream_processor->stream, stream_processor);
+				ff_log_debug(L"cannot flush the stream=%p of the stream_processor=%p. See previous messages for more info", stream, stream_processor);
 			}
 		}
 		if (result != FF_SUCCESS)
@@ -277,14 +284,16 @@ static void delete_packet(void *ctx)
 
 static void stop_all_request_processors(struct mrpc_client_stream_processor *stream_processor)
 {
+	struct mrpc_client_request_processor **active_request_processors;
 	int i;
 
 	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
+	active_request_processors = stream_processor->active_request_processors;
 	for (i = 0; i < MAX_REQUEST_PROCESSORS_CNT; i++)
 	{
 		struct mrpc_client_request_processor *request_processor;
 
-		request_processor = stream_processor->active_request_processors[i];
+		request_processor = active_request_processors[i];
 		if (request_processor != NULL)
 		{
 			mrpc_client_request_processor_stop_async(request_processor);
@@ -354,6 +363,8 @@ void mrpc_client_stream_processor_delete(struct mrpc_client_stream_processor *st
 
 void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_processor *stream_processor, struct ff_stream *stream)
 {
+	struct mrpc_client_request_processor **active_request_processors;
+
 	ff_assert(stream_processor->stream == NULL);
 	ff_assert(stream_processor->active_request_processors_cnt == 0);
 	ff_assert(stream_processor->state != STATE_WORKING);
@@ -368,7 +379,7 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 	stream_processor->stream = stream;
 	start_stream_writer(stream_processor);
 	ff_event_set(stream_processor->request_processors_stop_event);
-
+	active_request_processors = stream_processor->active_request_processors;
 	for (;;)
 	{
 		struct mrpc_packet *packet;
@@ -386,7 +397,7 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 		}
 
 		request_id = mrpc_packet_get_request_id(packet);
-		request_processor = stream_processor->active_request_processors[request_id];
+		request_processor = active_request_processors[request_id];
 		if (request_processor == NULL)
 		{
 			ff_log_debug(L"there is no active request_processor for the request_id=%lu read from the stream=%p", (uint32_t) request_id, stream);
@@ -395,7 +406,6 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 		}
 		mrpc_client_request_processor_push_packet(request_processor, packet);
 	}
-
 	mrpc_client_stream_processor_stop_async(stream_processor);
 	ff_assert(stream_processor->state == STATE_STOP_INITIATED);
 	stop_all_request_processors(stream_processor);
