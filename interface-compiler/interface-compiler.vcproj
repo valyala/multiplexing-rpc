@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="mrpc-interface-compiler"
+	Name="interface-compiler"
 	ProjectGUID="{D75D0481-F5E0-41B8-AF49-93476E8C15E7}"
-	RootNamespace="mrpcinterfacecompiler"
+	RootNamespace="interfacecompiler"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
