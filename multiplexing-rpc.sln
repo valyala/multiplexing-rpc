@@ -18,7 +18,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multiplexing-rpc-tests", "t
 		{7AFE3833-FD73-4040-8350-DFEB5C8B8A5E} = {7AFE3833-FD73-4040-8350-DFEB5C8B8A5E}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mrpc-interface-compiler", "mrpc-interface-compiler\mrpc-interface-compiler.vcproj", "{D75D0481-F5E0-41B8-AF49-93476E8C15E7}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "interface-compiler", "interface-compiler\mrpc-interface-compiler.vcproj", "{D75D0481-F5E0-41B8-AF49-93476E8C15E7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
