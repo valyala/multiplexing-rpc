@@ -1,5 +1,5 @@
-#ifndef MRPC_API_PUBLIC
-#define MRPC_API_PUBLIC
+#ifndef MRPC_API_PUBLIC_H
+#define MRPC_API_PUBLIC_H
 
 #if defined(WIN32)
 	#define MRPC_API __declspec(dllimport)

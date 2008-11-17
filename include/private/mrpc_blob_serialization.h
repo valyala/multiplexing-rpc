@@ -1,5 +1,5 @@
-#ifndef MRPC_BLOB_SERIALIZATION_PRIVATE
-#define MRPC_BLOB_SERIALIZATION_PRIVATE
+#ifndef MRPC_BLOB_SERIALIZATION_PRIVATE_H
+#define MRPC_BLOB_SERIALIZATION_PRIVATE_H
 
 #include "private/mrpc_common.h"
 #include "private/mrpc_blob.h"

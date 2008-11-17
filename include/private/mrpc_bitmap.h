@@ -1,5 +1,5 @@
-#ifndef MRPC_BITMAP_PRIVATE
-#define MRPC_BITMAP_PRIVATE
+#ifndef MRPC_BITMAP_PRIVATE_H
+#define MRPC_BITMAP_PRIVATE_H
 
 #include "private/mrpc_common.h"
 

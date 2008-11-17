@@ -1,5 +1,5 @@
-#ifndef MRPC_INT_SERIALIZATION_PRIVATE
-#define MRPC_INT_SERIALIZATION_PRIVATE
+#ifndef MRPC_INT_SERIALIZATION_PRIVATE_H
+#define MRPC_INT_SERIALIZATION_PRIVATE_H
 
 #include "private/mrpc_common.h"
 #include "ff/ff_stream.h"

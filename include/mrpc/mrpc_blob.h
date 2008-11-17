@@ -1,5 +1,5 @@
-#ifndef MRPC_BLOB_PUBLIC
-#define MRPC_BLOB_PUBLIC
+#ifndef MRPC_BLOB_PUBLIC_H
+#define MRPC_BLOB_PUBLIC_H
 
 #include "mrpc/mrpc_common.h"
 #include "ff/ff_stream.h"

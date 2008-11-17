@@ -1,5 +1,5 @@
-#ifndef MRPC_WCHAR_ARRAY_PUBLIC
-#define MRPC_WCHAR_ARRAY_PUBLIC
+#ifndef MRPC_WCHAR_ARRAY_PUBLIC_H
+#define MRPC_WCHAR_ARRAY_PUBLIC_H
 
 #include "mrpc/mrpc_common.h"
 

@@ -1,5 +1,5 @@
-#ifndef MRPC_BLOB_PARAM_PUBLIC
-#define MRPC_BLOB_PARAM_PUBLIC
+#ifndef MRPC_BLOB_PARAM_PUBLIC_H
+#define MRPC_BLOB_PARAM_PUBLIC_H
 
 #include "mrpc/mrpc_param.h"
 

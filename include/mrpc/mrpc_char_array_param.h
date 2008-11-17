@@ -1,5 +1,5 @@
-#ifndef MRPC_CHAR_ARRAY_PARAM_PUBLIC
-#define MRPC_CHAR_ARRAY_PARAM_PUBLIC
+#ifndef MRPC_CHAR_ARRAY_PARAM_PUBLIC_H
+#define MRPC_CHAR_ARRAY_PARAM_PUBLIC_H
 
 #include "mrpc/mrpc_param.h"
 

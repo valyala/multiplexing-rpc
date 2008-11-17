@@ -1,5 +1,5 @@
-#ifndef MRPC_CLIENT_STREAM_PROCESSOR_PRIVATE
-#define MRPC_CLIENT_STREAM_PROCESSOR_PRIVATE
+#ifndef MRPC_CLIENT_STREAM_PROCESSOR_PRIVATE_H
+#define MRPC_CLIENT_STREAM_PROCESSOR_PRIVATE_H
 
 #include "private/mrpc_common.h"
 #include "private/mrpc_data.h"

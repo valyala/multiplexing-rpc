@@ -1,5 +1,5 @@
-#ifndef MRPC_DATA_PRIVATE
-#define MRPC_DATA_PRIVATE
+#ifndef MRPC_DATA_PRIVATE_H
+#define MRPC_DATA_PRIVATE_H
 
 #include "mrpc/mrpc_data.h"
 #include "private/mrpc_interface.h"

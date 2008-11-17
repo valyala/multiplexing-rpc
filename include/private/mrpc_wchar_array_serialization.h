@@ -1,5 +1,5 @@
-#ifndef MRPC_WCHAR_ARRAY_SERIALIZATION_PRIVATE
-#define MRPC_WCHAR_ARRAY_SERIALIZATION_PRIVATE
+#ifndef MRPC_WCHAR_ARRAY_SERIALIZATION_PRIVATE_H
+#define MRPC_WCHAR_ARRAY_SERIALIZATION_PRIVATE_H
 
 #include "private/mrpc_common.h"
 #include "private/mrpc_wchar_array.h"

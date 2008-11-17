@@ -1,5 +1,5 @@
-#ifndef MRPC_PARAM_PUBLIC
-#define MRPC_PARAM_PUBLIC
+#ifndef MRPC_PARAM_PUBLIC_H
+#define MRPC_PARAM_PUBLIC_H
 
 #include "mrpc/mrpc_common.h"
 

@@ -1,5 +1,5 @@
-#ifndef MRPC_CLIENT_PRIVATE
-#define MRPC_CLIENT_PRIVATE
+#ifndef MRPC_CLIENT_PRIVATE_H
+#define MRPC_CLIENT_PRIVATE_H
 
 #include "mrpc/mrpc_client.h"
 

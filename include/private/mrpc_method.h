@@ -1,5 +1,5 @@
-#ifndef MRPC_METHOD_PRIVATE
-#define MRPC_METHOD_PRIVATE
+#ifndef MRPC_METHOD_PRIVATE_H
+#define MRPC_METHOD_PRIVATE_H
 
 #include "mrpc/mrpc_method.h"
 #include "private/mrpc_param.h"

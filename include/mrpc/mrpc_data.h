@@ -1,5 +1,5 @@
-#ifndef MRPC_DATA_PUBLIC
-#define MRPC_DATA_PUBLIC
+#ifndef MRPC_DATA_PUBLIC_H
+#define MRPC_DATA_PUBLIC_H
 
 #include "mrpc/mrpc_common.h"
 #include "mrpc/mrpc_interface.h"

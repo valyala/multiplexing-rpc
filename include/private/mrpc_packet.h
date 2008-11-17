@@ -1,5 +1,5 @@
-#ifndef MRPC_PACKET_PRIVATE
-#define MRPC_PACKET_PRIVATE
+#ifndef MRPC_PACKET_PRIVATE_H
+#define MRPC_PACKET_PRIVATE_H
 
 #include "private/mrpc_common.h"
 #include "ff/ff_stream.h"

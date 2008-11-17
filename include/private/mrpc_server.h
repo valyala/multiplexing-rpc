@@ -1,5 +1,5 @@
-#ifndef MRPC_SERVER_PRIVATE
-#define MRPC_SERVER_PRIVATE
+#ifndef MRPC_SERVER_PRIVATE_H
+#define MRPC_SERVER_PRIVATE_H
 
 #include "mrpc/mrpc_server.h"
 

@@ -1,5 +1,5 @@
-#ifndef MRPC_SERVER_PUBLIC
-#define MRPC_SERVER_PUBLIC
+#ifndef MRPC_SERVER_PUBLIC_H
+#define MRPC_SERVER_PUBLIC_H
 
 #include "mrpc/mrpc_common.h"
 #include "mrpc/mrpc_interface.h"

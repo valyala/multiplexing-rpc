@@ -1,5 +1,5 @@
-#ifndef MRPC_PARAM_PRIVATE
-#define MRPC_PARAM_PRIVATE
+#ifndef MRPC_PARAM_PRIVATE_H
+#define MRPC_PARAM_PRIVATE_H
 
 #include "mrpc/mrpc_param.h"
 #include "ff/ff_stream.h"

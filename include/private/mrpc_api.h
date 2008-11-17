@@ -1,5 +1,5 @@
-#ifndef MRPC_API_PRIVATE
-#define MRPC_API_PRIVATE
+#ifndef MRPC_API_PRIVATE_H
+#define MRPC_API_PRIVATE_H
 
 #include "mrpc/mrpc_api.h"
 
