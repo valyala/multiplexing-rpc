@@ -226,6 +226,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\include\mrpc\mrpc_param_constructors.h"
+					>
+				</File>
+				<File
 					RelativePath=".\include\mrpc\mrpc_server.h"
 					>
 				</File>
