@@ -5,13 +5,6 @@
 #include "ff/ff_blocking_queue.h"
 
 /**
- * the maximum size of mrpc_packet packets pending in the reader_queue.
- * these packets are consumed by the mrpc_packet_stream_read() function.
- * TODO: determine optimal value for this parameter.
- */
-#define MAX_READER_QUEUE_SIZE 100
-
-/**
  * Timeout (in milliseconds) for the mrpc_packet_stream_read() function.
  * This timeout prevents DoS from malicious peers, which don't send packets
  * to the stream's reader_queue, so blocking the mrpc_packet_stream_read() callers forever,
@@ -150,7 +143,7 @@ static void clear_reader_queue(struct mrpc_packet_stream *stream)
 	}
 }
 
-struct mrpc_packet_stream *mrpc_packet_stream_create(struct ff_blocking_queue *writer_queue,
+struct mrpc_packet_stream *mrpc_packet_stream_create(struct ff_blocking_queue *writer_queue, int max_reader_queue_size,
 	mrpc_packet_stream_acquire_packet_func acquire_packet_func, mrpc_packet_stream_release_packet_func release_packet_func, void *packet_func_ctx)
 {
 	struct mrpc_packet_stream *stream;
@@ -158,12 +151,13 @@ struct mrpc_packet_stream *mrpc_packet_stream_create(struct ff_blocking_queue *w
 	ff_assert(acquire_packet_func != NULL);
 	ff_assert(release_packet_func != NULL);
 	ff_assert(writer_queue != NULL);
+	ff_assert(max_reader_queue_size > 0);
 
 	stream = (struct mrpc_packet_stream *) ff_malloc(sizeof(*stream));
 	stream->acquire_packet_func = acquire_packet_func;
 	stream->release_packet_func = release_packet_func;
 	stream->packet_func_ctx = packet_func_ctx;
-	stream->reader_queue = ff_blocking_queue_create(MAX_READER_QUEUE_SIZE);
+	stream->reader_queue = ff_blocking_queue_create(max_reader_queue_size);
 	stream->writer_queue = writer_queue;
 	stream->current_read_packet = NULL;
 	stream->current_write_packet = NULL;

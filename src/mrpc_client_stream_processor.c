@@ -198,11 +198,14 @@ static void *create_request_processor(void *ctx)
 	uint8_t request_id;
 
 	stream_processor = (struct mrpc_client_stream_processor *) ctx;
-
 	ff_assert(stream_processor->state != STATE_STOPPED);
+
 	request_id = acquire_request_id(stream_processor);
+	/* The current stream processor can simultaneously use up to MAX_PACKETS_CNT packets.
+	 * So, it will be safe to set the reader queue's size to MAX_PACKETS_CNT.
+	 */
 	request_processor = mrpc_client_request_processor_create(acquire_packet, release_packet, stream_processor, release_request_id, stream_processor,
-		stream_processor->writer_queue, request_id);
+		stream_processor->writer_queue, MAX_PACKETS_CNT, request_id);
 	return request_processor;
 }
 

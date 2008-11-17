@@ -32,12 +32,14 @@ typedef void (*mrpc_server_request_processor_notify_error_func)(void *notify_err
  * after they were parsed into request.
  * writer_queue is used for pushing serialized response packets. Packets from the writer_queue must
  * be released using the same technique as used by the release_packet_func() callback.
+ * The max_reader_queue_size is the maximum number of packets, which can be accumulated in the reader queue,
+ * when calling the mrpc_server_request_processor_push_packet() function.
  * Always returns correct result.
  */
 struct mrpc_server_request_processor *mrpc_server_request_processor_create(mrpc_server_request_processor_release_func release_func, void *release_func_ctx,
 	mrpc_server_request_processor_notify_error_func notify_error_func, void *notify_error_func_ctx,
 	mrpc_packet_stream_acquire_packet_func acquire_packet_func, mrpc_packet_stream_release_packet_func release_packet_func, void *packet_func_ctx,
-	struct ff_blocking_queue *writer_queue);
+	struct ff_blocking_queue *writer_queue, int max_reader_queue_size);
 
 /**
  * Deletes the given request_processor.

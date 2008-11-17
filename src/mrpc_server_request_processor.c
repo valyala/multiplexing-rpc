@@ -60,16 +60,19 @@ static void process_request_func(void *ctx)
 struct mrpc_server_request_processor *mrpc_server_request_processor_create(mrpc_server_request_processor_release_func release_func, void *release_func_ctx,
 	mrpc_server_request_processor_notify_error_func notify_error_func, void *notify_error_func_ctx,
 	mrpc_packet_stream_acquire_packet_func acquire_packet_func, mrpc_packet_stream_release_packet_func release_packet_func, void *packet_func_ctx,
-	struct ff_blocking_queue *writer_queue)
+	struct ff_blocking_queue *writer_queue, int max_reader_queue_size)
 {
 	struct mrpc_server_request_processor *request_processor;
+
+	ff_assert(max_reader_queue_size > 0);
 
 	request_processor = (struct mrpc_server_request_processor *) ff_malloc(sizeof(*request_processor));
 	request_processor->release_func = release_func;
 	request_processor->release_func_ctx = release_func_ctx;
 	request_processor->notify_error_func = notify_error_func;
 	request_processor->notify_error_func_ctx = notify_error_func_ctx;
-	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, acquire_packet_func, release_packet_func, packet_func_ctx);
+	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, max_reader_queue_size,
+		acquire_packet_func, release_packet_func, packet_func_ctx);
 	request_processor->stream = mrpc_packet_stream_factory_create_stream(request_processor->packet_stream);
 
 	request_processor->service_interface = NULL;

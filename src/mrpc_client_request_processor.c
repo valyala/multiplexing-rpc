@@ -20,12 +20,15 @@ struct mrpc_client_request_processor
 struct mrpc_client_request_processor *mrpc_client_request_processor_create(mrpc_packet_stream_acquire_packet_func acquire_packet_func,
 	mrpc_packet_stream_release_packet_func release_packet_func, void *packet_func_ctx,
 	mrpc_client_request_processor_release_request_id_func release_request_id_func, void *request_id_func_ctx,
-	struct ff_blocking_queue *writer_queue, uint8_t request_id)
+	struct ff_blocking_queue *writer_queue, int max_reader_queue_size, uint8_t request_id)
 {
 	struct mrpc_client_request_processor *request_processor;
 
+	ff_assert(max_reader_queue_size > 0);
+
 	request_processor = (struct mrpc_client_request_processor *) ff_malloc(sizeof(*request_processor));
-	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, acquire_packet_func, release_packet_func, packet_func_ctx);
+	request_processor->packet_stream = mrpc_packet_stream_create(writer_queue, max_reader_queue_size,
+		acquire_packet_func, release_packet_func, packet_func_ctx);
 	request_processor->stream = mrpc_packet_stream_factory_create_stream(request_processor->packet_stream);
 	request_processor->release_request_id_func = release_request_id_func;
 	request_processor->request_id_func_ctx = request_id_func_ctx;

@@ -28,11 +28,13 @@ struct mrpc_packet_stream;
  * writer_queue is used for pushing packets written by the mrpc_packet_stream_write() and mrpc_packet_stream_flush().
  * packets from the writer_queue must be deleted using the same technique as used by
  * the mrpc_packet_stream_release_packet_func() callback.
+ * max_reader_queue_size is the maximum number of packets, which can be accumulated in the reader queue
+ * by calling the mrpc_packet_stream_push_packet() function.
  * acquire_packet_func and release_packet_func are used for acquiring packets for pushing them into the writer_queue
  * and releasing packets pushed to the mrpc_packet_stream_push_packet() function.
  * Always returns correct result.
  */
-struct mrpc_packet_stream *mrpc_packet_stream_create(struct ff_blocking_queue *writer_queue,
+struct mrpc_packet_stream *mrpc_packet_stream_create(struct ff_blocking_queue *writer_queue, int max_reader_queue_size,
 	mrpc_packet_stream_acquire_packet_func acquire_packet_func, mrpc_packet_stream_release_packet_func release_packet_func, void *packet_func_ctx);
 
 /**
