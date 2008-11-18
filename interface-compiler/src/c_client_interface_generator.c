@@ -5,6 +5,9 @@
 
 #include <stdarg.h>
 
+#define FILENAME_BUF_SIZE 200
+
+static char filename_buf[FILENAME_BUF_SIZE];
 static FILE *file;
 
 static void die(const char *format, ...)
@@ -27,7 +30,7 @@ static void dump(const char *format, ...)
 	len = vfprintf(file, format, args_ptr);
 	if (len <= 0)
 	{
-		die("error when writing data to the output file");
+		die("error when writing data to the file [%s]", filename_buf);
 		exit(EXIT_FAILURE);
 	}
 	va_end(args_ptr);
@@ -124,11 +127,10 @@ static void dump_interface_source(struct interface *interface)
 
 	dump("/* auto-generated code for the client interface [%s] */\n", interface->name);
 
-	dump("#include \"client_interface_%s.h\"\n", interface->name);
-	dump("#include \"client_service_%s.h\"\n\n", interface->name);
+	dump("#include \"mrpc/mrpc_common.h\"\n\n");
+	dump("#include \"client_interface_%s.h\"\n\n", interface->name);
 	dump("#include \"mrpc/mrpc_interface.h\"\n"
 	     "#include \"mrpc/mrpc_method.h\"\n"
-		 "#include \"mrpc/mrpc_data.h\"\n"
 	     "#include \"mrpc/mrpc_param_constructors.h\"\n\n"
 	);
 
@@ -158,6 +160,19 @@ static void dump_interface_source(struct interface *interface)
 		 "\treturn interface;\n}\n",
 		 interface->name
 	);
+}
+
+static void dump_interface_header(struct interface *interface)
+{
+	dump("#ifndef CLIENT_INTERFACE_%s_H\n#define CLIENT_INTERFACE_%s_H\n\n", interface->name, interface->name);
+	dump("#include \"mrpc/mrpc_interface.h\"\n\n");
+	dump("#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
+
+	dump_interface_constructor_declaration(interface);
+	dump(";\n\n");
+
+	dump("#ifdef __cplusplus\n}\n#endif\n\n");
+	dump("#endif\n");
 }
 
 static void dump_service_method_declaration(struct interface *interface, struct method *method)
@@ -229,6 +244,7 @@ static void dump_service_method(struct interface *interface, struct method *meth
 		param_list = param_list->next;
 		i++;
 	}
+	dump("\n");
 
 	param_list = method->response_params;
 	while (param_list != NULL)
@@ -276,7 +292,7 @@ static void dump_service_method(struct interface *interface, struct method *meth
 		param_list = param_list->next;
 	}
 
-	dump("\nend:\n"
+	dump("end:\n"
 		 "\tmrpc_data_delete(data);\n"
 		 "\treturn result;\n}\n\n"
 	);
@@ -288,15 +304,15 @@ static void dump_service_source(struct interface *interface)
 	struct method *method;
 	int i;
 
-	dump("include \"client_service_%s.h\"\n\n", interface->name);
-	dump("#include \"mrpc/mrpc_common.h\"\n"
-		"#include \"mrpc/mrpc_blob.h\"\n"
-		"#include \"mrpc/mrpc_char_array.h\"\n"
-		"#include \"mrpc/mrpc_wchar_array.h\"\n\n"
+	dump("#include \"mrpc/mrpc_common.h\"\n\n");
+	dump("#include \"client_service_%s.h\"\n\n", interface->name);
+	dump("#include \"mrpc/mrpc_blob.h\"\n"
+		 "#include \"mrpc/mrpc_char_array.h\"\n"
+		 "#include \"mrpc/mrpc_wchar_array.h\"\n\n"
 	);
 	dump("#include \"mrpc/mrpc_interface.h\"\n"
-	     "#include \"mrpc/mrpc_method.h\"\n"
-		 "#include \"mrpc/mrpc_data.h\"\n\n"
+		 "#include \"mrpc/mrpc_data.h\"\n"
+		 "#include \"mrpc/mrpc_client.h\"\n\n"
 	);
 
     method_list = interface->methods;
@@ -310,29 +326,18 @@ static void dump_service_source(struct interface *interface)
     }
 }
 
-static void dump_interface_header(struct interface *interface)
-{
-	dump("#ifndef CLIENT_INTERFACE_%s_H\n#define CLIENT_INTERFACE_%s_H\n\n", interface->name, interface->name);
-	dump("#include \"mrpc/mrpc_interface.h\"\n\n");
-	dump("#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
-
-	dump_interface_constructor_declaration(interface);
-	dump(";\n\n");
-
-	dump("#ifdef __cplusplus\n}\n#endif\n\n");
-	dump("#endif\n");
-}
-
 static void dump_service_header(struct interface *interface)
 {
 	struct method_list *method_list;
 	struct method *method;
 
 	dump("#ifndef CLIENT_SERVICE_%s_H\n#define CLIENT_SERVICE_%s_H\n\n", interface->name, interface->name);
-	dump("#include \"mrpc/mrpc_common.h\"\n"
-		"#include \"mrpc/mrpc_blob.h\"\n"
-		"#include \"mrpc/mrpc_char_array.h\"\n"
-		"#include \"mrpc/mrpc_wchar_array.h\"\n\n"
+	dump("#include \"mrpc/mrpc_common.h\"\n\n"
+		 "#include \"mrpc/mrpc_blob.h\"\n"
+		 "#include \"mrpc/mrpc_char_array.h\"\n"
+		 "#include \"mrpc/mrpc_wchar_array.h\"\n\n"
+		 "#include \"mrpc/mrpc_interface.h\"\n"
+		 "#include \"mrpc/mrpc_client.h\"\n\n"
 	);
 	dump("#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
 
@@ -351,10 +356,56 @@ static void dump_service_header(struct interface *interface)
 
 void c_client_interface_generator_generate(struct interface *interface)
 {
-	file = stdout;
-	dump_interface_source(interface);
-	dump_interface_header(interface);
+	int len;
 
+	len = snprintf(filename_buf, FILENAME_BUF_SIZE, "client_interface_%s.c", interface->name);
+	if (len >= FILENAME_BUF_SIZE)
+	{
+		die("the interface's name=[%s] is too long for creating client_interface_%s.c file", interface->name, interface->name);
+	}
+	file = fopen(filename_buf, "wt");
+	if (file == NULL)
+	{
+		die("canot create the file=[%s]. errno=%d", filename_buf, errno);
+	}
+	dump_interface_source(interface);
+	fflush(file);
+	fclose(file);
+	printf("file %s has been generated\n", filename_buf);
+
+	len = snprintf(filename_buf, FILENAME_BUF_SIZE, "client_interface_%s.h", interface->name);
+	assert(len < FILENAME_BUF_SIZE);
+	file = fopen(filename_buf, "wt");
+	if (file == NULL)
+	{
+		die("canot create the file=[%s]. errno=%d", filename_buf, errno);
+	}
+	dump_interface_header(interface);
+	fflush(file);
+	fclose(file);
+	printf("file %s has been generated\n", filename_buf);
+
+	len = snprintf(filename_buf, FILENAME_BUF_SIZE, "client_service_%s.c", interface->name);
+	assert(len < FILENAME_BUF_SIZE);
+	file = fopen(filename_buf, "wt");
+	if (file == NULL)
+	{
+		die("canot create the file=[%s]. errno=%d", filename_buf, errno);
+	}
 	dump_service_source(interface);
+	fflush(file);
+	fclose(file);
+	printf("file %s has been generated\n", filename_buf);
+
+	len = snprintf(filename_buf, FILENAME_BUF_SIZE, "client_service_%s.h", interface->name);
+	assert(len < FILENAME_BUF_SIZE);
+	file = fopen(filename_buf, "wt");
+	if (file == NULL)
+	{
+		die("canot create the file=[%s]. errno=%d", filename_buf, errno);
+	}
 	dump_service_header(interface);
+	fflush(file);
+	fclose(file);
+	printf("file %s has been generated\n", filename_buf);
 }
