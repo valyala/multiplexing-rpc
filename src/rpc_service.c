@@ -4,9 +4,10 @@ interface foo
 	{
 		request
 		{
-			uint32 a
+			key uint32 a
 			int64 b
-			blob c
+			char_array c
+			key blob d
 		}
 		response
 		{
@@ -28,10 +29,12 @@ interface foo
 INTERFACE ::= "interface" id "{" METHODS_LIST "}"
 METHODS_LIST ::= METHOD { METHOD }
 METHOD ::= "method" id "{" REQUEST_PARAMS RESPONSE_PARAMS "}"
-REQUEST_PARAMS ::= "request" "{" PARAMS_LIST "}"
-RESPONSE_PARAMS ::= "response" "{" PARAMS_LIST "}"
-PARAMS_LIST ::= PARAM { PARAM }
-PARAM ::= TYPE id
+REQUEST_PARAMS ::= "request" "{" REQUEST_PARAMS_LIST "}"
+RESPONSE_PARAMS ::= "response" "{" RESPONSE_PARAMS_LIST "}"
+REQUEST_PARAMS_LIST ::= REQUEST_PARAM { REQUEST_PARAM }
+RESPONSE_PARAMS_LIST ::= RESPONSE_PARAM { RESPONSE_PARAM }
+REQUEST_PARAM ::= [ "key" ] TYPE id
+RESPONSE_PARAM ::= TYPE id
 TYPE ::= "uint32" | "uint64" | "int32" | "int64" | "wchar_array" | "char_array" | "blob"
 
 id = [a-z_][a-z_\d]*
