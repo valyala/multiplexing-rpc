@@ -1,0 +1,96 @@
+# this file contains test interface definition
+
+interface test1
+{
+	# this method contains both empty request and response
+	method empty
+	{
+		request
+		{
+			# empty request
+		}
+		response
+		{
+			# empty response
+		}
+	}
+
+	# this method contains empty request, but non-empty response
+	method empty_request
+	{
+		request
+		{
+			# epmty request
+		}
+		response
+		{
+			# this parameter is dummy
+			blob blob1
+		}
+	}
+
+	# this method contains empty response, but non-empty request
+	method empty_response
+	{
+		request
+		{
+			# this parameter is dummy
+			int32 s32_param
+		}
+		response
+		{
+			# empty response
+		}
+	}
+
+	# this method contains non-empty request and responses
+	method request_response
+	{
+		request
+		{
+			uint64 a
+			char_array b
+		}
+		response
+		{
+			wchar_array c
+			blob d
+		}
+	}
+
+	# this method contains key parameter in the request
+	method key_request1
+	{
+		request
+		{
+			# key parameter
+			key uint32 aaa
+
+			# other parameters
+			wchar_array ddf
+		}
+		response
+		{
+			# empty response
+		}
+	}
+
+	# this method contains multiple key parameters in the request
+	method multi_key
+	{
+		request
+		{
+			key blob a
+			key int64 b
+			blob c
+			key uint64 d
+		}
+		response
+		{
+			wchar_array e
+			int32 f
+		}
+	}
+}
+
+# the end of the interface

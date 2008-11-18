@@ -9,7 +9,7 @@ int main()
 {
 	const struct interface *interface;
 
-	interface = parse_interface("test.txt");
+	interface = parse_interface("test.mrpc-interface");
 
 	c_server_generator_generate(interface);
 	c_client_generator_generate(interface);
