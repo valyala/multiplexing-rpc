@@ -605,8 +605,8 @@ static void test_data_basic_client()
 	struct mrpc_data *data;
 	wchar_t *s;
 	struct mrpc_wchar_array *wchar_array;
-	uint64_t u64_value;
-	uint32_t u32_value;
+	uint64_t *u64_ptr;
+	uint32_t *u32_ptr;
 	uint32_t hash_value;
 
 	interface = mrpc_interface_client_create(data_client_method_descriptions);
@@ -614,17 +614,19 @@ static void test_data_basic_client()
 
 	data = mrpc_data_create(interface, 0);
 	ASSERT(data != NULL, "data cannot be NULL");
-	u32_value = 123458ul;
-	mrpc_data_set_request_param_value(data, 0, &u32_value);
-	u64_value = 18889899089089ull;
-	mrpc_data_set_request_param_value(data, 1, &u64_value);
+	u32_ptr = (uint32_t *) ff_malloc(sizeof(*u32_ptr));
+	*u32_ptr = 123458ul;
+	mrpc_data_set_request_param_value(data, 0, u32_ptr);
+	u64_ptr = (uint64_t *) ff_malloc(sizeof(*u64_ptr));
+	*u64_ptr = 18889899089089ull;
+	mrpc_data_set_request_param_value(data, 1, u64_ptr);
 	s = (wchar_t *) ff_calloc(11, sizeof(s[0]));
 	memcpy(s, L"1234567890", 10 * sizeof(s[0]));
 	wchar_array = mrpc_wchar_array_create(s, 10);
 	mrpc_data_set_request_param_value(data, 2, wchar_array);
 	hash_value = mrpc_data_get_request_hash(data, 12345);
 	ASSERT(hash_value == 1821522797ul, "wrong hash value");
-	/* mrpc_data_delete() will delete wchar_array, which, in turn, will delete s */
+	/* mrpc_data_delete() will delete u32_ptr, u64_ptr and wchar_array, which, in turn, will delete s */
 	mrpc_data_delete(data);
 
 	mrpc_interface_delete(interface);
@@ -636,23 +638,25 @@ static void test_data_basic_server()
 	struct mrpc_data *data;
 	wchar_t *s;
 	struct mrpc_wchar_array *wchar_array;
-	uint64_t u64_value;
-	uint32_t u32_value;
+	uint64_t *u64_ptr;
+	uint32_t *u32_ptr;
 
 	interface = mrpc_interface_server_create(data_server_method_descriptions);
 	ASSERT(interface != NULL, "interface cannot be NULL");
 
 	data = mrpc_data_create(interface, 0);
 	ASSERT(data != NULL, "data cannot be NULL");
-	u32_value = 123458ul;
-	mrpc_data_set_response_param_value(data, 0, &u32_value);
-	u64_value = 18889899089089ull;
-	mrpc_data_set_response_param_value(data, 1, &u64_value);
+	u32_ptr = (uint32_t *) ff_malloc(sizeof(*u32_ptr));
+	*u32_ptr = 123458ul;
+	mrpc_data_set_response_param_value(data, 0, u32_ptr);
+	u64_ptr = (uint64_t *) ff_malloc(sizeof(*u64_ptr));
+	*u64_ptr = 18889899089089ull;
+	mrpc_data_set_response_param_value(data, 1, u64_ptr);
 	s = (wchar_t *) ff_calloc(11, sizeof(s[0]));
 	memcpy(s, L"1234567890", 10 * sizeof(s[0]));
 	wchar_array = mrpc_wchar_array_create(s, 10);
 	mrpc_data_set_response_param_value(data, 2, wchar_array);
-	/* mrpc_data_delete() will delete wchar_array, which, in turn, will delete s */
+	/* mrpc_data_delete() will delete u32_ptr, u64_ptr and wchar_array, which, in turn, will delete s */
 	mrpc_data_delete(data);
 
 	mrpc_interface_delete(interface);
@@ -700,7 +704,7 @@ static void server_method_callback1(struct mrpc_data *data, void *service_ctx)
 	const wchar_t *ws;
 	char *s;
 	char buf[5];
-	uint64_t u64_value;
+	uint64_t *u64_ptr;
 	int len;
 	int is_equal;
 	enum ff_result result;
@@ -733,18 +737,20 @@ static void server_method_callback1(struct mrpc_data *data, void *service_ctx)
 	char_array = mrpc_char_array_create(s, 3);
 	mrpc_data_set_response_param_value(data, 0, char_array);
 
-	u64_value = 7367289343278ull;
-	mrpc_data_set_response_param_value(data, 1, &u64_value);
+	u64_ptr = (uint64_t *) ff_malloc(sizeof(*u64_ptr));
+	*u64_ptr = 7367289343278ull;
+	mrpc_data_set_response_param_value(data, 1, u64_ptr);
 }
 
 static void server_method_callback2(struct mrpc_data *data, void *service_ctx)
 {
-	uint32_t u32_value;
+	uint32_t *u32_ptr;
 
 	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
 
-	u32_value = 5728933ul;
-	mrpc_data_set_response_param_value(data, 0, &u32_value);
+	u32_ptr = (uint32_t *) ff_malloc(sizeof(*u32_ptr));
+	*u32_ptr = 5728933ul;
+	mrpc_data_set_response_param_value(data, 0, u32_ptr);
 }
 
 static void server_method_callback3(struct mrpc_data *data, void *service_ctx)
@@ -1260,7 +1266,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		const char *s;
 		int len;
 		int is_equal;
-		int32_t s32_value;
+		int32_t *s32_ptr;
 		uint64_t *u64_ptr;
 		uint32_t *u32_ptr;
 		uint32_t hash_value;
@@ -1268,8 +1274,9 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		data = mrpc_data_create(client_interface, 0);
 		ASSERT(data != NULL, "data cannot be NULL");
 
-		s32_value = -5433734l;
-		mrpc_data_set_request_param_value(data, 0, &s32_value);
+		s32_ptr = (int32_t *) ff_malloc(sizeof(*s32_ptr));
+		*s32_ptr = -5433734l;
+		mrpc_data_set_request_param_value(data, 0, s32_ptr);
 
 		blob = mrpc_blob_create(5);
 		stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
@@ -1412,30 +1419,38 @@ static void test_client_server_rpc_multiple_clients()
 
 static void server_echo_callback(struct mrpc_data *data, void *service_ctx)
 {
-	uint32_t *u32_ptr;
-	int32_t *s32_ptr;
-	uint64_t *u64_ptr;
-	int64_t *s64_ptr;
+	uint32_t *u32_ptr1, *u32_ptr2;
+	int32_t *s32_ptr1, *s32_ptr2;
+	uint64_t *u64_ptr1, *u64_ptr2;
+	int64_t *s64_ptr1, *s64_ptr2;
 	struct mrpc_char_array *char_array;
 	struct mrpc_wchar_array *wchar_array;
 	struct mrpc_blob *blob;
 
-	mrpc_data_get_request_param_value(data, 0, (void **) &u32_ptr);
-	mrpc_data_get_request_param_value(data, 1, (void **) &s32_ptr);
-	mrpc_data_get_request_param_value(data, 2, (void **) &u64_ptr);
-	mrpc_data_get_request_param_value(data, 3, (void **) &s64_ptr);
+	mrpc_data_get_request_param_value(data, 0, (void **) &u32_ptr1);
+	mrpc_data_get_request_param_value(data, 1, (void **) &s32_ptr1);
+	mrpc_data_get_request_param_value(data, 2, (void **) &u64_ptr1);
+	mrpc_data_get_request_param_value(data, 3, (void **) &s64_ptr1);
 	mrpc_data_get_request_param_value(data, 4, (void **) &char_array);
 	mrpc_data_get_request_param_value(data, 5, (void **) &wchar_array);
 	mrpc_data_get_request_param_value(data, 6, (void **) &blob);
 
+	u32_ptr2 = (uint32_t *) ff_malloc(sizeof(*u32_ptr2));
+	*u32_ptr2 = *u32_ptr1;
+	s32_ptr2 = (int32_t *) ff_malloc(sizeof(*s32_ptr2));
+	*s32_ptr2 = *s32_ptr1;
+	u64_ptr2 = (uint64_t *) ff_malloc(sizeof(*u64_ptr2));
+	*u64_ptr2 = *u64_ptr1;
+	s64_ptr2 = (int64_t *) ff_malloc(sizeof(*s64_ptr2));
+	*s64_ptr2 = *s64_ptr1;
 	mrpc_char_array_inc_ref(char_array);
 	mrpc_wchar_array_inc_ref(wchar_array);
 	mrpc_blob_inc_ref(blob);
 
-	mrpc_data_set_response_param_value(data, 0, u32_ptr);
-	mrpc_data_set_response_param_value(data, 1, s32_ptr);
-	mrpc_data_set_response_param_value(data, 2, u64_ptr);
-	mrpc_data_set_response_param_value(data, 3, s64_ptr);
+	mrpc_data_set_response_param_value(data, 0, u32_ptr2);
+	mrpc_data_set_response_param_value(data, 1, s32_ptr2);
+	mrpc_data_set_response_param_value(data, 2, u64_ptr2);
+	mrpc_data_set_response_param_value(data, 3, s64_ptr2);
 	mrpc_data_set_response_param_value(data, 4, char_array);
 	mrpc_data_set_response_param_value(data, 5, wchar_array);
 	mrpc_data_set_response_param_value(data, 6, blob);
@@ -1674,10 +1689,10 @@ static void client_server_echo_client_rpc(struct mrpc_interface *client_interfac
 	struct mrpc_char_array *char_array1, *char_array2;
 	struct mrpc_wchar_array *wchar_array1, *wchar_array2;
 	struct mrpc_blob *blob1, *blob2;
-	uint32_t *u32_ptr;
-	int32_t *s32_ptr;
-	uint64_t *u64_ptr;
-	int64_t *s64_ptr;
+	uint32_t *u32_ptr1, *u32_ptr2;
+	int32_t *s32_ptr1, *s32_ptr2;
+	uint64_t *u64_ptr1, *u64_ptr2;
+	int64_t *s64_ptr1, *s64_ptr2;
 	uint32_t u32_value;
 	int32_t s32_value;
 	uint64_t u64_value;
@@ -1687,10 +1702,14 @@ static void client_server_echo_client_rpc(struct mrpc_interface *client_interfac
 	data = mrpc_data_create(client_interface, 0);
 	ASSERT(data != NULL, "data cannot be NULL");
 
-	u32_value = 2 * client_server_echo_get_random_uint((1ul << 31) - 1);
-	s32_value = 5 - u32_value;
-	u64_value = 23 * (uint64_t) u32_value;
-	s64_value = 43543 - 4534 * (uint64_t) u32_value;
+	u32_ptr1 = (uint32_t *) ff_malloc(sizeof(*u32_ptr1));
+	u32_value = *u32_ptr1 = 2 * client_server_echo_get_random_uint((1ul << 31) - 1);
+	s32_ptr1 = (int32_t *) ff_malloc(sizeof(*s32_ptr1));
+	s32_value = *s32_ptr1 = 5 - u32_value;
+	u64_ptr1 = (uint64_t *) ff_malloc(sizeof(*u64_ptr1));
+	u64_value = *u64_ptr1 = 23 * (uint64_t) u32_value;
+	s64_ptr1 = (int64_t *) ff_malloc(sizeof(*s64_ptr1));
+	s64_value = *s64_ptr1 = 43543 - 4534 * (uint64_t) u32_value;
 	char_array1 = client_server_echo_create_char_array();
 	wchar_array1 = client_server_echo_create_wchar_array();
 	blob1 = client_server_echo_create_blob();
@@ -1699,10 +1718,10 @@ static void client_server_echo_client_rpc(struct mrpc_interface *client_interfac
 	mrpc_wchar_array_inc_ref(wchar_array1);
 	mrpc_blob_inc_ref(blob1);
 
-	mrpc_data_set_request_param_value(data, 0, &u32_value);
-	mrpc_data_set_request_param_value(data, 1, &s32_value);
-	mrpc_data_set_request_param_value(data, 2, &u64_value);
-	mrpc_data_set_request_param_value(data, 3, &s64_value);
+	mrpc_data_set_request_param_value(data, 0, u32_ptr1);
+	mrpc_data_set_request_param_value(data, 1, s32_ptr1);
+	mrpc_data_set_request_param_value(data, 2, u64_ptr1);
+	mrpc_data_set_request_param_value(data, 3, s64_ptr1);
 	mrpc_data_set_request_param_value(data, 4, char_array1);
 	mrpc_data_set_request_param_value(data, 5, wchar_array1);
 	mrpc_data_set_request_param_value(data, 6, blob1);
@@ -1710,14 +1729,14 @@ static void client_server_echo_client_rpc(struct mrpc_interface *client_interfac
 	result = mrpc_client_invoke_rpc(client, data);
 	ASSERT(result == FF_SUCCESS, "cannot invoke echo rpc");
 
-	mrpc_data_get_response_param_value(data, 0, (void **) &u32_ptr);
-	ASSERT(*u32_ptr == u32_value, "unexpected value");
-	mrpc_data_get_response_param_value(data, 1, (void **) &s32_ptr);
-	ASSERT(*s32_ptr == s32_value, "unexpected value");
-	mrpc_data_get_response_param_value(data, 2, (void **) &u64_ptr);
-	ASSERT(*u64_ptr == u64_value, "unexpected value");
-	mrpc_data_get_response_param_value(data, 3, (void **) &s64_ptr);
-	ASSERT(*s64_ptr == s64_value, "unexpected value");
+	mrpc_data_get_response_param_value(data, 0, (void **) &u32_ptr2);
+	ASSERT(*u32_ptr2 == u32_value, "unexpected value");
+	mrpc_data_get_response_param_value(data, 1, (void **) &s32_ptr2);
+	ASSERT(*s32_ptr2 == s32_value, "unexpected value");
+	mrpc_data_get_response_param_value(data, 2, (void **) &u64_ptr2);
+	ASSERT(*u64_ptr2 == u64_value, "unexpected value");
+	mrpc_data_get_response_param_value(data, 3, (void **) &s64_ptr2);
+	ASSERT(*s64_ptr2 == s64_value, "unexpected value");
 	mrpc_data_get_response_param_value(data, 4, (void **) &char_array2);
 	client_server_echo_compare_char_arrays(char_array1, char_array2);
 	mrpc_data_get_response_param_value(data, 5, (void **) &wchar_array2);
