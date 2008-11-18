@@ -1,5 +1,6 @@
 #include "common.h"
 #include "c_server_interface_generator.h"
+#include "c_client_interface_generator.h"
 
 #include "types.h"
 
@@ -14,6 +15,7 @@ static struct param *create_param(int id, const char *type)
 	param = (struct param *) malloc(sizeof(*param));
 	param->name = name;
 	param->type = (enum param_type) (id % 7);
+	param->is_key = (id & 1);
 	return param;
 }
 
@@ -54,7 +56,7 @@ static struct method_list *create_methods()
 	struct method_list *method_list = NULL;
 	int i;
 
-	for (i = 0; i < 7; i++)
+	for (i = 0; i < 8; i++)
 	{
 		struct method_list *tmp;
 
@@ -82,5 +84,6 @@ int main()
 
 	interface = create_interface();
 	c_server_interface_generator_generate(interface);
+	c_client_interface_generator_generate(interface);
 	return 0;
 }

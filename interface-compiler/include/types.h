@@ -21,6 +21,7 @@ enum param_type
 struct param
 {
 	enum param_type type;
+	int is_key;
 	const char *name;
 };
 

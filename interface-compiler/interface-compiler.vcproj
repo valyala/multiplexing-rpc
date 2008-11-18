@@ -191,6 +191,10 @@
 			Name="src"
 			>
 			<File
+				RelativePath=".\src\c_client_interface_generator.c"
+				>
+			</File>
+			<File
 				RelativePath=".\src\c_server_interface_generator.c"
 				>
 			</File>
