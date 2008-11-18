@@ -160,14 +160,14 @@ static void dump_service_method_declaration(const struct interface *interface, c
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump(",\n\t%s *request_%s", get_param_code_type(param), param->name);
+		dump(",\n\t%s *%s", get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 	param_list = method->response_params;
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump(",\n\t%s **response_%s", get_param_code_type(param), param->name);
+		dump(",\n\t%s **%s", get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 	dump(")");
