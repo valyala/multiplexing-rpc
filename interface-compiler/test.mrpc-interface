@@ -1,4 +1,21 @@
 # this file contains test interface definition
+#
+# As you can see, mrpc interface definition files can contain perl-like single-line comments
+# Here is the mrpc interface definition syntax:
+#
+# INTERFACE ::= "interface" id "{" METHODS_LIST "}"
+# METHODS_LIST ::= METHOD { METHOD }
+# METHOD ::= "method" id "{" REQUEST_PARAMS RESPONSE_PARAMS "}"
+# REQUEST_PARAMS ::= "request" "{" REQUEST_PARAMS_LIST "}"
+# RESPONSE_PARAMS ::= "response" "{" RESPONSE_PARAMS_LIST "}"
+# REQUEST_PARAMS_LIST ::= { REQUEST_PARAM }
+# RESPONSE_PARAMS_LIST ::= { RESPONSE_PARAM }
+# REQUEST_PARAM ::= [ "key" ] TYPE id
+# RESPONSE_PARAM ::= TYPE id
+# TYPE ::= "uint32" | "uint64" | "int32" | "int64" | "wchar_array" | "char_array" | "blob"
+#
+# id = [a-z][a-z_\d]*
+#
 
 interface test1
 {
