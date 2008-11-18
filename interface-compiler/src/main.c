@@ -1,6 +1,6 @@
 #include "common.h"
-#include "c_server_interface_generator.h"
-#include "c_client_interface_generator.h"
+#include "c_server_generator.h"
+#include "c_client_generator.h"
 
 #include "types.h"
 
@@ -83,7 +83,7 @@ int main()
 	struct interface *interface;
 
 	interface = create_interface();
-	c_server_interface_generator_generate(interface);
-	c_client_interface_generator_generate(interface);
+	c_server_generator_generate(interface);
+	c_client_generator_generate(interface);
 	return 0;
 }

@@ -171,7 +171,11 @@
 			Name="include"
 			>
 			<File
-				RelativePath=".\include\c_server_interface_generator.h"
+				RelativePath=".\include\c_client_generator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\c_server_generator.h"
 				>
 			</File>
 			<File
@@ -191,11 +195,11 @@
 			Name="src"
 			>
 			<File
-				RelativePath=".\src\c_client_interface_generator.c"
+				RelativePath=".\src\c_client_generator.c"
 				>
 			</File>
 			<File
-				RelativePath=".\src\c_server_interface_generator.c"
+				RelativePath=".\src\c_server_generator.c"
 				>
 			</File>
 			<File

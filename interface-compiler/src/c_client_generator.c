@@ -1,5 +1,5 @@
 #include "common.h"
-#include "c_client_interface_generator.h"
+#include "c_client_generator.h"
 
 #include "types.h"
 
@@ -323,7 +323,7 @@ static void dump_service_header(struct interface *interface)
 	dump("#endif\n");
 }
 
-void c_client_interface_generator_generate(struct interface *interface)
+void c_client_generator_generate(struct interface *interface)
 {
 	const char *interface_name;
 
