@@ -60,6 +60,8 @@ void dump(const char *format, ...)
 	va_list args_ptr;
 	int len;
 
+	assert(file != NULL);
+
 	va_start(args_ptr, format);
 	len = vfprintf(file, format, args_ptr);
 	if (len <= 0)
