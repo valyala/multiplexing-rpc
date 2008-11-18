@@ -7,6 +7,8 @@ extern "C" {
 
 struct interface;
 
+void interface_delete(struct interface *interface);
+
 #ifdef __cplusplus
 }
 #endif

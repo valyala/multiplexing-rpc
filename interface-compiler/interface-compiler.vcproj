@@ -187,6 +187,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\include\parser.h"
+				>
+			</File>
+			<File
 				RelativePath=".\include\types.h"
 				>
 			</File>
@@ -207,7 +211,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\interface.c"
+				>
+			</File>
+			<File
 				RelativePath=".\src\main.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\parser.c"
 				>
 			</File>
 		</Filter>
