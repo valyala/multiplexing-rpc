@@ -7,6 +7,17 @@
 
 static FILE *file;
 
+static void die(const char *format, ...)
+{
+	va_list args_ptr;
+	
+	va_start(args_ptr, format);
+	vfprintf(stderr, format, args_ptr);
+	fprintf(stderr, "\n");
+	va_end(args_ptr);
+	exit(EXIT_FAILURE);
+}
+
 static void dump(const char *format, ...)
 {
 	va_list args_ptr;
@@ -16,15 +27,15 @@ static void dump(const char *format, ...)
 	len = vfprintf(file, format, args_ptr);
 	if (len <= 0)
 	{
-		fprintf(stderr, "error when writing data to the output file\n");
+		die("error when writing data to the output file");
 		exit(EXIT_FAILURE);
 	}
 	va_end(args_ptr);
 }
 
-static const char *param_type_to_code_type(enum param_type param_type)
+static const char *get_param_code_type(struct param *param)
 {
-	switch (param_type)
+	switch (param->type)
 	{
 		case PARAM_UINT32: return "uint32_t";
 		case PARAM_INT32: return "int32_t";
@@ -33,13 +44,14 @@ static const char *param_type_to_code_type(enum param_type param_type)
 		case PARAM_CHAR_ARRAY: return "struct mrpc_char_array";
 		case PARAM_WCHAR_ARRAY: return "struct mrpc_wchar_array";
 		case PARAM_BLOB: return "struct mrpc_blob";
-		default: return "unknown_type";
+		default: die("unknown_type for the parameter [%s]", param->name);
 	}
+	return NULL;
 }
 
-static const char *param_type_to_code_constructor(enum param_type param_type)
+static const char *get_param_code_constructor(struct param *param)
 {
-	switch (param_type)
+	switch (param->type)
 	{
 		case PARAM_UINT32: return "mrpc_uint32_param_create";
 		case PARAM_INT32: return "mrpc_int32_param_create";
@@ -48,8 +60,9 @@ static const char *param_type_to_code_constructor(enum param_type param_type)
 		case PARAM_CHAR_ARRAY: return "mrpc_char_array_param_create";
 		case PARAM_WCHAR_ARRAY: return "mrpc_wchar_array_param_create";
 		case PARAM_BLOB: return "mrpc_blob_param_create";
-		default: return "unknown_constructor";
+		default: die("unknown_constructor for the parameter [%s]", param->name);
 	}
+	return NULL;
 }
 
 static void dump_callback(struct interface *interface, struct method *method)
@@ -64,7 +77,7 @@ static void dump_callback(struct interface *interface, struct method *method)
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\t%s *request_%s;\n", param_type_to_code_type(param->type), param->name);
+		dump("\t%s *request_%s;\n", get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 
@@ -72,7 +85,7 @@ static void dump_callback(struct interface *interface, struct method *method)
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\t%s *response_%s;\n", param_type_to_code_type(param->type), param->name);
+		dump("\t%s *response_%s;\n", get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 
@@ -132,7 +145,7 @@ static void dump_method(struct interface *interface, struct method *method)
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\t%s, /* %s */\n", param_type_to_code_constructor(param->type), param->name);
+		dump("\t%s, /* %s */\n", get_param_code_constructor(param), param->name);
 		param_list = param_list->next;
 	}
 	dump("\tNULL\n};\n");
@@ -142,7 +155,7 @@ static void dump_method(struct interface *interface, struct method *method)
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\t%s, /* %s */\n", param_type_to_code_constructor(param->type), param->name);
+		dump("\t%s, /* %s */\n", get_param_code_constructor(param), param->name);
 		param_list = param_list->next;
 	}
 	dump("\tNULL\n};\n");
@@ -223,14 +236,14 @@ static void dump_service_method_declaration(struct interface *interface, struct 
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump(",\n\t%s *request_%s", param_type_to_code_type(param->type), param->name);
+		dump(",\n\t%s *request_%s", get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 	param_list = method->response_params;
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump(",\n\t%s **response_%s", param_type_to_code_type(param->type), param->name);
+		dump(",\n\t%s **response_%s", get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 	dump(")");
