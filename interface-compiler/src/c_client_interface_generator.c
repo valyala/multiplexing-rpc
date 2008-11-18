@@ -3,39 +3,6 @@
 
 #include "types.h"
 
-#include <stdarg.h>
-
-#define FILENAME_BUF_SIZE 200
-
-static char filename_buf[FILENAME_BUF_SIZE];
-static FILE *file;
-
-static void die(const char *format, ...)
-{
-	va_list args_ptr;
-	
-	va_start(args_ptr, format);
-	vfprintf(stderr, format, args_ptr);
-	fprintf(stderr, "\n");
-	va_end(args_ptr);
-	exit(EXIT_FAILURE);
-}
-
-static void dump(const char *format, ...)
-{
-	va_list args_ptr;
-	int len;
-
-	va_start(args_ptr, format);
-	len = vfprintf(file, format, args_ptr);
-	if (len <= 0)
-	{
-		die("error when writing data to the file [%s]", filename_buf);
-		exit(EXIT_FAILURE);
-	}
-	va_end(args_ptr);
-}
-
 static const char *get_param_code_type(struct param *param)
 {
 	switch (param->type)
@@ -304,6 +271,8 @@ static void dump_service_source(struct interface *interface)
 	struct method *method;
 	int i;
 
+	dump("/* auto-generated code for the client service [%s] */\n", interface->name);
+
 	dump("#include \"mrpc/mrpc_common.h\"\n\n");
 	dump("#include \"client_service_%s.h\"\n\n", interface->name);
 	dump("#include \"mrpc/mrpc_blob.h\"\n"
@@ -356,56 +325,27 @@ static void dump_service_header(struct interface *interface)
 
 void c_client_interface_generator_generate(struct interface *interface)
 {
-	int len;
+	const char *interface_name;
 
-	len = snprintf(filename_buf, FILENAME_BUF_SIZE, "client_interface_%s.c", interface->name);
-	if (len >= FILENAME_BUF_SIZE)
-	{
-		die("the interface's name=[%s] is too long for creating client_interface_%s.c file", interface->name, interface->name);
-	}
-	file = fopen(filename_buf, "wt");
-	if (file == NULL)
-	{
-		die("canot create the file=[%s]. errno=%d", filename_buf, errno);
-	}
+	interface_name = interface->name;
+
+	open_file("client_interface_%s.c", interface_name);
 	dump_interface_source(interface);
-	fflush(file);
-	fclose(file);
-	printf("file %s has been generated\n", filename_buf);
+	close_file();
+	printf("client_interface_%s.c file has been generated\n", interface_name);
 
-	len = snprintf(filename_buf, FILENAME_BUF_SIZE, "client_interface_%s.h", interface->name);
-	assert(len < FILENAME_BUF_SIZE);
-	file = fopen(filename_buf, "wt");
-	if (file == NULL)
-	{
-		die("canot create the file=[%s]. errno=%d", filename_buf, errno);
-	}
+	open_file("client_interface_%s.h", interface_name);
 	dump_interface_header(interface);
-	fflush(file);
-	fclose(file);
-	printf("file %s has been generated\n", filename_buf);
+	close_file();
+	printf("client_interface_%s.h file has been generated\n", interface_name);
 
-	len = snprintf(filename_buf, FILENAME_BUF_SIZE, "client_service_%s.c", interface->name);
-	assert(len < FILENAME_BUF_SIZE);
-	file = fopen(filename_buf, "wt");
-	if (file == NULL)
-	{
-		die("canot create the file=[%s]. errno=%d", filename_buf, errno);
-	}
+	open_file("client_service_%s.c", interface_name);
 	dump_service_source(interface);
-	fflush(file);
-	fclose(file);
-	printf("file %s has been generated\n", filename_buf);
+	close_file();
+	printf("client_interface_%s.c file has been generated\n", interface_name);
 
-	len = snprintf(filename_buf, FILENAME_BUF_SIZE, "client_service_%s.h", interface->name);
-	assert(len < FILENAME_BUF_SIZE);
-	file = fopen(filename_buf, "wt");
-	if (file == NULL)
-	{
-		die("canot create the file=[%s]. errno=%d", filename_buf, errno);
-	}
+	open_file("client_service_%s.h", interface_name);
 	dump_service_header(interface);
-	fflush(file);
-	fclose(file);
-	printf("file %s has been generated\n", filename_buf);
+	close_file();
+	printf("client_interface_%s.h file has been generated\n", interface_name);
 }
