@@ -7,7 +7,7 @@
 
 int main()
 {
-	struct interface *interface;
+	const struct interface *interface;
 
 	interface = parse_interface("test.txt");
 

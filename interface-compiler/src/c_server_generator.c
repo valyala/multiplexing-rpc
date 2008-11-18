@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-static const char *get_param_code_type(struct param *param)
+static const char *get_param_code_type(const struct param *param)
 {
 	switch (param->type)
 	{
@@ -19,7 +19,7 @@ static const char *get_param_code_type(struct param *param)
 	return NULL;
 }
 
-static const char *get_param_code_constructor(struct param *param)
+static const char *get_param_code_constructor(const struct param *param)
 {
 	switch (param->type)
 	{
@@ -35,10 +35,10 @@ static const char *get_param_code_constructor(struct param *param)
 	return NULL;
 }
 
-static void dump_callback(struct interface *interface, struct method *method)
+static void dump_callback(const struct interface *interface, const struct method *method)
 {
-	struct param_list *param_list;
-	struct param *param;
+	const struct param_list *param_list;
+	const struct param *param;
 	int i;
 
 	dump("static void server_callback_%s_%s(struct mrpc_data *data, void *service_ctx)\n{\n", interface->name, method->name);
@@ -103,10 +103,10 @@ static void dump_callback(struct interface *interface, struct method *method)
 	dump("}\n");
 }
 
-static void dump_method(struct interface *interface, struct method *method)
+static void dump_method(const struct interface *interface, const struct method *method)
 {
-	struct param_list *param_list;
-	struct param *param;
+	const struct param_list *param_list;
+	const struct param *param;
 
 	dump("/* start of the server method [%s] */\n", method->name);
 
@@ -140,17 +140,17 @@ static void dump_method(struct interface *interface, struct method *method)
 	dump("/* end of the server method [%s] */\n\n", method->name);
 }
 
-static void dump_interface_constructor_declaration(struct interface *interface)
+static void dump_interface_constructor_declaration(const struct interface *interface)
 {
 	dump("/* creates the server interface [%s].\n", interface->name);
 	dump(" * delete the interface instance using the mrpc_interface_delete() method\n */\n");
 	dump("struct mrpc_interface *server_interface_%s_create()", interface->name);
 }
 
-static void dump_interface_source(struct interface *interface)
+static void dump_interface_source(const struct interface *interface)
 {
-	struct method_list *method_list;
-	struct method *method;
+	const struct method_list *method_list;
+	const struct method *method;
 
 	dump("/* auto-generated code for the server interface [%s] */\n", interface->name);
 
@@ -195,7 +195,7 @@ static void dump_interface_source(struct interface *interface)
 	);
 }
 
-static void dump_interface_header(struct interface *interface)
+static void dump_interface_header(const struct interface *interface)
 {
 	dump("#ifndef SERVER_INTERFACE_%s_H\n#define SERVER_INTERFACE_%s_H\n\n", interface->name, interface->name);
 	dump("#include \"mrpc/mrpc_interface.h\"\n\n");
@@ -208,10 +208,10 @@ static void dump_interface_header(struct interface *interface)
 	dump("#endif\n");
 }
 
-static void dump_service_method_declaration(struct interface *interface, struct method *method)
+static void dump_service_method_declaration(const struct interface *interface, const struct method *method)
 {
-	struct param_list *param_list;
-	struct param *param;
+	const struct param_list *param_list;
+	const struct param *param;
 
 	dump("/* implements the server method [%s] of the interface [%s] */\n", method->name, interface->name);
 	dump("void server_service_%s_%s(struct server_service_%s *service", interface->name, method->name, interface->name);
@@ -232,29 +232,29 @@ static void dump_service_method_declaration(struct interface *interface, struct 
 	dump(")");
 }
 
-static void dump_service_method(struct interface *interface, struct method *method)
+static void dump_service_method(const struct interface *interface, const struct method *method)
 {
 	dump_service_method_declaration(interface, method);
 	dump("\n{\n\t/* insert code for the [%s] method instead of ff_assert(0)*/\n", method->name);
 	dump("\tff_assert(0);\n}\n\n");
 }
 
-static void dump_service_constructor_declaration(struct interface *interface)
+static void dump_service_constructor_declaration(const struct interface *interface)
 {
 	dump("/* creates the service instance for the server interface [%s] */\n", interface->name);
 	dump("struct server_service_%s *server_service_%s_create()", interface->name, interface->name);
 }
 
-static void dump_service_destructor_declaration(struct interface *interface)
+static void dump_service_destructor_declaration(const struct interface *interface)
 {
 	dump("/* deletes the service instance, which was created by server_service_%s_create() */\n", interface->name);
 	dump("void server_service_%s_delete(struct server_service_%s *service)", interface->name, interface->name);
 }
 
-static void dump_service_source(struct interface *interface)
+static void dump_service_source(const struct interface *interface)
 {
-	struct method_list *method_list;
-	struct method *method;
+	const struct method_list *method_list;
+	const struct method *method;
 
 	dump("#include \"mrpc/mrpc_common.h\"\n\n");
 	dump("#include \"server_service_%s.h\"\n\n", interface->name);
@@ -294,10 +294,10 @@ static void dump_service_source(struct interface *interface)
     }
 }
 
-static void dump_service_header(struct interface *interface)
+static void dump_service_header(const struct interface *interface)
 {
-	struct method_list *method_list;
-	struct method *method;
+	const struct method_list *method_list;
+	const struct method *method;
 
 	dump("#ifndef SERVER_SERVICE_%s_H\n#define SERVER_SERVICE_%s_H\n\n", interface->name, interface->name);
 	dump("#include \"mrpc/mrpc_common.h\"\n\n"
@@ -328,7 +328,7 @@ static void dump_service_header(struct interface *interface)
 	dump("#endif\n");
 }
 
-void c_server_generator_generate(struct interface *interface)
+void c_server_generator_generate(const struct interface *interface)
 {
 	const char *interface_name;
 

@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-static const char *get_param_code_type(struct param *param)
+static const char *get_param_code_type(const struct param *param)
 {
 	switch (param->type)
 	{
@@ -19,7 +19,7 @@ static const char *get_param_code_type(struct param *param)
 	return NULL;
 }
 
-static const char *get_param_code_constructor(struct param *param)
+static const char *get_param_code_constructor(const struct param *param)
 {
 	switch (param->type)
 	{
@@ -35,10 +35,10 @@ static const char *get_param_code_constructor(struct param *param)
 	return NULL;
 }
 
-static void dump_method(struct interface *interface, struct method *method)
+static void dump_method(const struct interface *interface, const struct method *method)
 {
-	struct param_list *param_list;
-	struct param *param;
+	const struct param_list *param_list;
+	const struct param *param;
 
 	dump("/* start of the client method [%s] */\n", method->name);
 
@@ -80,17 +80,17 @@ static void dump_method(struct interface *interface, struct method *method)
 	dump("/* end of the client method [%s] */\n\n", method->name);
 }
 
-static void dump_interface_constructor_declaration(struct interface *interface)
+static void dump_interface_constructor_declaration(const struct interface *interface)
 {
 	dump("/* creates the client interface [%s].\n", interface->name);
 	dump(" * delete the interface instance using the mrpc_interface_delete() method\n */\n");
 	dump("struct mrpc_interface *client_interface_%s_create()", interface->name);
 }
 
-static void dump_interface_source(struct interface *interface)
+static void dump_interface_source(const struct interface *interface)
 {
-	struct method_list *method_list;
-	struct method *method;
+	const struct method_list *method_list;
+	const struct method *method;
 
 	dump("/* auto-generated code for the client interface [%s] */\n", interface->name);
 
@@ -129,7 +129,7 @@ static void dump_interface_source(struct interface *interface)
 	);
 }
 
-static void dump_interface_header(struct interface *interface)
+static void dump_interface_header(const struct interface *interface)
 {
 	dump("#ifndef CLIENT_INTERFACE_%s_H\n#define CLIENT_INTERFACE_%s_H\n\n", interface->name, interface->name);
 	dump("#include \"mrpc/mrpc_interface.h\"\n\n");
@@ -142,10 +142,10 @@ static void dump_interface_header(struct interface *interface)
 	dump("#endif\n");
 }
 
-static void dump_service_method_declaration(struct interface *interface, struct method *method)
+static void dump_service_method_declaration(const struct interface *interface, const struct method *method)
 {
-	struct param_list *param_list;
-	struct param *param;
+	const struct param_list *param_list;
+	const struct param *param;
 
 	dump("/* implements the [%s] method of the client interface [%s].\n", method->name, interface->name);
 	dump(" * The interface must be created using client_interface_%s_create() function.\n", interface->name);
@@ -173,10 +173,10 @@ static void dump_service_method_declaration(struct interface *interface, struct 
 	dump(")");
 }
 
-static void dump_service_method(struct interface *interface, struct method *method, int id)
+static void dump_service_method(const struct interface *interface, const struct method *method, int id)
 {
-	struct param_list *param_list;
-	struct param *param;
+	const struct param_list *param_list;
+	const struct param *param;
 	int i;
 
 	dump_service_method_declaration(interface, method);
@@ -265,10 +265,10 @@ static void dump_service_method(struct interface *interface, struct method *meth
 	);
 }
 
-static void dump_service_source(struct interface *interface)
+static void dump_service_source(const struct interface *interface)
 {
-	struct method_list *method_list;
-	struct method *method;
+	const struct method_list *method_list;
+	const struct method *method;
 	int i;
 
 	dump("/* auto-generated code for the client service [%s] */\n", interface->name);
@@ -295,10 +295,10 @@ static void dump_service_source(struct interface *interface)
     }
 }
 
-static void dump_service_header(struct interface *interface)
+static void dump_service_header(const struct interface *interface)
 {
-	struct method_list *method_list;
-	struct method *method;
+	const struct method_list *method_list;
+	const struct method *method;
 
 	dump("#ifndef CLIENT_SERVICE_%s_H\n#define CLIENT_SERVICE_%s_H\n\n", interface->name, interface->name);
 	dump("#include \"mrpc/mrpc_common.h\"\n\n"
@@ -323,7 +323,7 @@ static void dump_service_header(struct interface *interface)
 	dump("#endif\n");
 }
 
-void c_client_generator_generate(struct interface *interface)
+void c_client_generator_generate(const struct interface *interface)
 {
 	const char *interface_name;
 

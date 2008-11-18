@@ -49,7 +49,7 @@ static struct parser_data parser_ctx;
 
 static void fail()
 {
-	die("unexpected lexeme [%s] found at the line=%d position=%d", parser_ctx.lexeme, parser_ctx.line);
+	die("unexpected lexeme [%s] found at the line=%d", parser_ctx.lexeme, parser_ctx.line);
 }
 
 static int read_next_char()
@@ -183,6 +183,7 @@ static void read_next_lexeme()
 				continue;
 			case STATE_IN_ID:
 				parser_ctx.lexeme_type = LEXEME_ID;
+				unread_char(ch);
 				return;
 			}
 		case '}':
@@ -197,6 +198,7 @@ static void read_next_lexeme()
 				continue;
 			case STATE_IN_ID:
 				parser_ctx.lexeme_type = LEXEME_ID;
+				unread_char(ch);
 				return;
 			}
 		default:
@@ -277,7 +279,7 @@ static void match_id(const char *s)
 	}
 }
 
-static struct param *match_param(enum params_type params_type)
+static const struct param *match_param(enum params_type params_type)
 {
 	struct param *param;
 
@@ -332,7 +334,7 @@ static struct param *match_param(enum params_type params_type)
 	return param;
 }
 
-static struct param_list *match_params(enum params_type params_type)
+static const struct param_list *match_params(enum params_type params_type)
 {
 	struct param_list *first_entry = NULL;
 	struct param_list *last_entry;
@@ -367,7 +369,7 @@ static struct param_list *match_params(enum params_type params_type)
 	return first_entry;
 }
 
-static struct method *match_method()
+static const struct method *match_method()
 {
 	struct method *method;
 
@@ -384,7 +386,7 @@ static struct method *match_method()
 	return method;
 }
 
-static struct method_list *match_methods()
+static const struct method_list *match_methods()
 {
 	struct method_list *first_entry;
 	struct method_list *last_entry;
@@ -406,7 +408,7 @@ static struct method_list *match_methods()
 	return first_entry;
 }
 
-static struct interface *match_interface()
+static const struct interface *match_interface()
 {
 	struct interface *interface;
 
@@ -424,9 +426,9 @@ static struct interface *match_interface()
 	return interface;
 }
 
-struct interface *parse_interface(const char *filename)
+const struct interface *parse_interface(const char *filename)
 {
-	struct interface *interface;
+	const struct interface *interface;
 	int rv;
 
 	parser_ctx.file = fopen(filename, "rt");

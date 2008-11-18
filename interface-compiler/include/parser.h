@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-struct interface *parse_interface(const char *filename);
+const struct interface *parse_interface(const char *filename);
 
 #ifdef __cplusplus
 }

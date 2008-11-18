@@ -27,26 +27,26 @@ struct param
 
 struct param_list
 {
-	struct param *param;
-	struct param_list *next;
+	const struct param *param;
+	const struct param_list *next;
 };
 
 struct method
 {
-	struct param_list *request_params;
-	struct param_list *response_params;
+	const struct param_list *request_params;
+	const struct param_list *response_params;
 	const char *name;
 };
 
 struct method_list
 {
-	struct method *method;
-	struct method_list *next;
+	const struct method *method;
+	const struct method_list *next;
 };
 
 struct interface
 {
-	struct method_list *methods;
+	const struct method_list *methods;
 	const char *name;
 };
 

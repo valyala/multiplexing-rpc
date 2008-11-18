@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-void c_client_generator_generate(struct interface *interface);
+void c_client_generator_generate(const struct interface *interface);
 
 #ifdef __cplusplus
 }
