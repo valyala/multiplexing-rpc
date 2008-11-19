@@ -1,4 +1,4 @@
-CFLAGS=-Wall -fpic -combine -fwhole-program -g -I./include
+CFLAGS=-Wall -fpic -combine -fwhole-program -g -I./include -U_FORTIFY_SOURCE
 LDFLAGS=
 CC=gcc
 
