@@ -47,9 +47,23 @@ enum params_type
 
 static struct parser_data parser_ctx;
 
-static void fail()
+static const char *lexeme_type_to_string(enum lexeme_type lexeme_type)
 {
-	die("unexpected lexeme [%s] found at the line=%d", parser_ctx.lexeme, parser_ctx.line);
+	switch (lexeme_type)
+	{
+	case LEXEME_START: return "begin of file";
+	case LEXEME_STOP: return "end of file";
+	case LEXEME_OPEN_BRACE: return "open curly brace \"{\"";
+	case LEXEME_CLOSE_BRACE: return "close curly brace \"{\"";
+	case LEXEME_ID: return "identifier like [a-z][a-z0-9_]*";
+	default: die("unknown lexeme type=%d passed to the lexeme_type_to_string()", (int) lexeme_type);
+	}
+	return NULL;
+}
+
+static void fail(const char *expected_str)
+{
+	die("unexpected lexeme [%s] found at the line=%d. Expected: %s.", parser_ctx.lexeme, parser_ctx.line, expected_str);
 }
 
 static int read_next_char()
@@ -263,7 +277,10 @@ static void match(enum lexeme_type lexeme_type)
 	}
 	else
 	{
-		fail();
+		const char *s;
+
+		s = lexeme_type_to_string(lexeme_type);
+		fail(s);
 	}
 }
 
@@ -275,7 +292,7 @@ static void match_id(const char *s)
 	}
 	else
 	{
-		fail();
+		fail(s);
 	}
 }
 
@@ -324,7 +341,7 @@ static const struct param *match_param(enum params_type params_type)
 	}
 	else
 	{
-		fail();
+		fail("parameter type");
 	}
 	match(LEXEME_ID);
 
