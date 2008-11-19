@@ -470,210 +470,6 @@ static void test_interface_all()
 /* end of mrpc_interface tests */
 #pragma endregion
 
-#pragma region mrpc_data tests
-
-static const mrpc_param_constructor data_client_request_param_constructors1[] =
-{
-	mrpc_uint32_param_create,
-	mrpc_uint64_param_create,
-	mrpc_wchar_array_param_create,
-	NULL,
-};
-static const mrpc_param_constructor data_client_response_param_constructors1[] =
-{
-	mrpc_char_array_param_create,
-	mrpc_blob_param_create,
-	mrpc_uint64_param_create,
-	NULL,
-};
-static const int is_key1[] =
-{
-	0,
-	1,
-	1
-};
-static const struct mrpc_method_client_description data_client_method_description1 =
-{
-	data_client_request_param_constructors1,
-	data_client_response_param_constructors1,
-	is_key1
-};
-
-static const mrpc_param_constructor data_client_request_param_constructors2[] =
-{
-	mrpc_int32_param_create,
-	NULL,
-};
-static const mrpc_param_constructor data_client_response_param_constructors2[] =
-{
-	NULL,
-};
-static const int is_key2[] =
-{
-	0,
-};
-static const struct mrpc_method_client_description data_client_method_description2 =
-{
-	data_client_request_param_constructors2,
-	data_client_response_param_constructors2,
-	is_key2
-};
-
-static const struct mrpc_method_client_description *data_client_method_descriptions[] =
-{
-	&data_client_method_description1,
-	&data_client_method_description2,
-	NULL,
-};
-
-static void data_server_method_callback1(struct mrpc_data *data, void *service_ctx)
-{
-	ASSERT(0, "this callback shouldn't be called");
-}
-
-static void data_server_method_callback2(struct mrpc_data *data, void *service_ctx)
-{
-	ASSERT(0, "this callback shouldn't be called");
-}
-
-static const mrpc_param_constructor data_server_request_param_constructors1[] =
-{
-	mrpc_int64_param_create,
-	mrpc_char_array_param_create,
-	mrpc_int32_param_create,
-	NULL,
-};
-static const mrpc_param_constructor data_server_response_param_constructors1[] =
-{
-	mrpc_uint32_param_create,
-	mrpc_uint64_param_create,
-	mrpc_wchar_array_param_create,
-	NULL,
-};
-static const struct mrpc_method_server_description data_server_method_description1 =
-{
-	data_server_request_param_constructors1,
-	data_server_response_param_constructors1,
-	data_server_method_callback1
-};
-
-static const mrpc_param_constructor data_server_request_param_constructors2[] =
-{
-	mrpc_int32_param_create,
-	NULL,
-};
-static const mrpc_param_constructor data_server_response_param_constructors2[] =
-{
-	NULL,
-};
-static const struct mrpc_method_server_description data_server_method_description2 =
-{
-	data_server_request_param_constructors2,
-	data_server_response_param_constructors2,
-	data_server_method_callback2
-};
-
-static const struct mrpc_method_server_description *data_server_method_descriptions[] =
-{
-	&data_server_method_description1,
-	&data_server_method_description2,
-	NULL,
-};
-
-static void test_data_create_delete()
-{
-	struct mrpc_interface *interface;
-	struct mrpc_data *data;
-
-	interface = mrpc_interface_client_create(data_client_method_descriptions);
-	ASSERT(interface != NULL, "interface cannot be NULL");
-
-	data = mrpc_data_create(interface, 0);
-	ASSERT(data != NULL, "data cannot be NULL");
-	mrpc_data_delete(data);
-
-	data = mrpc_data_create(interface, 1);
-	ASSERT(data != NULL, "data cannot be NULL");
-	mrpc_data_delete(data);
-
-	mrpc_interface_delete(interface);
-}
-
-static void test_data_basic_client()
-{
-	struct mrpc_interface *interface;
-	struct mrpc_data *data;
-	wchar_t *s;
-	struct mrpc_wchar_array *wchar_array;
-	uint64_t *u64_ptr;
-	uint32_t *u32_ptr;
-	uint32_t hash_value;
-
-	interface = mrpc_interface_client_create(data_client_method_descriptions);
-	ASSERT(interface != NULL, "interface cannot be NULL");
-
-	data = mrpc_data_create(interface, 0);
-	ASSERT(data != NULL, "data cannot be NULL");
-	u32_ptr = (uint32_t *) ff_malloc(sizeof(*u32_ptr));
-	*u32_ptr = 123458ul;
-	mrpc_data_set_request_param_value(data, 0, u32_ptr);
-	u64_ptr = (uint64_t *) ff_malloc(sizeof(*u64_ptr));
-	*u64_ptr = 18889899089089ull;
-	mrpc_data_set_request_param_value(data, 1, u64_ptr);
-	s = (wchar_t *) ff_calloc(11, sizeof(s[0]));
-	memcpy(s, L"1234567890", 10 * sizeof(s[0]));
-	wchar_array = mrpc_wchar_array_create(s, 10);
-	mrpc_data_set_request_param_value(data, 2, wchar_array);
-	hash_value = mrpc_data_get_request_hash(data, 12345);
-	ASSERT(hash_value == 1821522797ul, "wrong hash value");
-	/* mrpc_data_delete() will delete u32_ptr, u64_ptr and wchar_array, which, in turn, will delete s */
-	mrpc_data_delete(data);
-
-	mrpc_interface_delete(interface);
-}
-
-static void test_data_basic_server()
-{
-	struct mrpc_interface *interface;
-	struct mrpc_data *data;
-	wchar_t *s;
-	struct mrpc_wchar_array *wchar_array;
-	uint64_t *u64_ptr;
-	uint32_t *u32_ptr;
-
-	interface = mrpc_interface_server_create(data_server_method_descriptions);
-	ASSERT(interface != NULL, "interface cannot be NULL");
-
-	data = mrpc_data_create(interface, 0);
-	ASSERT(data != NULL, "data cannot be NULL");
-	u32_ptr = (uint32_t *) ff_malloc(sizeof(*u32_ptr));
-	*u32_ptr = 123458ul;
-	mrpc_data_set_response_param_value(data, 0, u32_ptr);
-	u64_ptr = (uint64_t *) ff_malloc(sizeof(*u64_ptr));
-	*u64_ptr = 18889899089089ull;
-	mrpc_data_set_response_param_value(data, 1, u64_ptr);
-	s = (wchar_t *) ff_calloc(11, sizeof(s[0]));
-	memcpy(s, L"1234567890", 10 * sizeof(s[0]));
-	wchar_array = mrpc_wchar_array_create(s, 10);
-	mrpc_data_set_response_param_value(data, 2, wchar_array);
-	/* mrpc_data_delete() will delete u32_ptr, u64_ptr and wchar_array, which, in turn, will delete s */
-	mrpc_data_delete(data);
-
-	mrpc_interface_delete(interface);
-}
-
-static void test_data_all()
-{
-	ff_core_initialize(LOG_FILENAME);
-	test_data_create_delete();
-	test_data_basic_client();
-	test_data_basic_server();
-	ff_core_shutdown();
-}
-
-/* end of mrpc_data tests */
-#pragma endregion
-
 #pragma region mrpc_client and mrpc_server tests
 
 static void test_client_create_delete()
@@ -894,45 +690,51 @@ static const struct mrpc_method_client_description *client_method_descriptions[]
 
 static void test_client_start_stop()
 {
+	struct mrpc_interface *client_interface;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
 	struct ff_arch_net_addr *addr;
 	enum ff_result result;
 
+	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8593);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, stream_connector);
+	mrpc_client_start(client, client_interface, stream_connector);
 	mrpc_client_stop(client);
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
+	mrpc_interface_delete(client_interface);
 }
 
 static void test_client_start_stop_multiple()
 {
+	struct mrpc_interface *client_interface;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
 	struct ff_arch_net_addr *addr;
 	int i;
 	enum ff_result result;
 
+	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8594);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, stream_connector);
+	mrpc_client_start(client, client_interface, stream_connector);
 	ff_core_sleep(100);
 	mrpc_client_stop(client);
 	for (i = 0; i < 10; i++)
 	{
-		mrpc_client_start(client, stream_connector);
+		mrpc_client_start(client, client_interface, stream_connector);
 		mrpc_client_stop(client);
 	}
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
+	mrpc_interface_delete(client_interface);
 }
 
 struct client_multiple_instances_data
@@ -944,6 +746,7 @@ struct client_multiple_instances_data
 
 static void client_multiple_instances_fiberpool_func(void *ctx)
 {
+	struct mrpc_interface *client_interface;
 	struct client_multiple_instances_data *data;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
@@ -954,18 +757,21 @@ static void client_multiple_instances_fiberpool_func(void *ctx)
 	data = (struct client_multiple_instances_data *) ctx;
 	port = data->port;
 	data->port++;
+
+	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
 
-	mrpc_client_start(client, stream_connector);
+	mrpc_client_start(client, client_interface, stream_connector);
 	ff_core_sleep(100);
 	mrpc_client_stop(client);
 
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
+	mrpc_interface_delete(client_interface);
 
 	data->workers_cnt--;
 	if (data->workers_cnt == 0)
@@ -1165,6 +971,7 @@ struct client_server_connect_data
 
 static void client_server_connect_fiberpool_func(void *ctx)
 {
+	struct mrpc_interface *client_interface;
 	struct client_server_connect_data *data;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
@@ -1173,28 +980,30 @@ static void client_server_connect_fiberpool_func(void *ctx)
 	enum ff_result result;
 
 	data = (struct client_server_connect_data *) ctx;
+	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8598);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
 
-	mrpc_client_start(client, stream_connector);
+	mrpc_client_start(client, client_interface, stream_connector);
 	mrpc_client_stop(client);
 
-	mrpc_client_start(client, stream_connector);
+	mrpc_client_start(client, client_interface, stream_connector);
 	ff_core_sleep(100);
 	mrpc_client_stop(client);
 
 	for (i = 0; i < 5; i++)
 	{
-		mrpc_client_start(client, stream_connector);
+		mrpc_client_start(client, client_interface, stream_connector);
 		ff_core_sleep(10);
 		mrpc_client_stop(client);
 	}
 
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
+	mrpc_interface_delete(client_interface);
 
 	data->workers_cnt--;
 	if (data->workers_cnt == 0)
@@ -1240,9 +1049,9 @@ static void test_client_server_connect()
 
 static void client_server_rpc_client(int port, int iterations_cnt)
 {
+	struct mrpc_interface *client_interface;
 	struct ff_arch_net_addr *addr;
 	struct mrpc_client *client;
-	struct mrpc_interface *client_interface;
 	struct ff_stream_connector *stream_connector;
 	int i;
 	enum ff_result result;
@@ -1253,7 +1062,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, stream_connector);
+	mrpc_client_start(client, client_interface, stream_connector);
 
 	for (i = 0; i < iterations_cnt; i++)
 	{
@@ -1271,7 +1080,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		uint32_t *u32_ptr;
 		uint32_t hash_value;
 
-		data = mrpc_data_create(client_interface, 0);
+		data = mrpc_client_create_data(client, 0);
 		ASSERT(data != NULL, "data cannot be NULL");
 
 		s32_ptr = (int32_t *) ff_malloc(sizeof(*s32_ptr));
@@ -1311,7 +1120,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 
 		mrpc_data_delete(data);
 
-		data = mrpc_data_create(client_interface, 1);
+		data = mrpc_client_create_data(client, 1);
 		ASSERT(data != NULL, "data cannot be NULL");
 		hash_value = mrpc_data_get_request_hash(data, 12345);
 		ASSERT(hash_value == 12345, "unexpected hash value");
@@ -1321,7 +1130,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		ASSERT(*u32_ptr == 5728933ul, "unexpected value received");
 		mrpc_data_delete(data);
 
-		data = mrpc_data_create(client_interface, 2);
+		data = mrpc_client_create_data(client, 2);
 		ASSERT(data != NULL, "data cannot be NULL");
 		hash_value = mrpc_data_get_request_hash(data, 3242);
 		ASSERT(hash_value == 3242, "unexpected hash value");
@@ -1683,7 +1492,7 @@ static void client_server_echo_compare_blobs(struct mrpc_blob *blob1, struct mrp
 	ff_stream_delete(stream2);
 }
 
-static void client_server_echo_client_rpc(struct mrpc_interface *client_interface, struct mrpc_client *client)
+static void client_server_echo_client_rpc(struct mrpc_client *client)
 {
 	struct mrpc_data *data;
 	struct mrpc_char_array *char_array1, *char_array2;
@@ -1699,7 +1508,7 @@ static void client_server_echo_client_rpc(struct mrpc_interface *client_interfac
 	int64_t s64_value;
 	enum ff_result result;
 
-	data = mrpc_data_create(client_interface, 0);
+	data = mrpc_client_create_data(client, 0);
 	ASSERT(data != NULL, "data cannot be NULL");
 
 	u32_ptr1 = (uint32_t *) ff_malloc(sizeof(*u32_ptr1));
@@ -1766,10 +1575,10 @@ static void client_server_echo_client(int port, int iterations_cnt)
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, stream_connector);
+	mrpc_client_start(client, client_interface, stream_connector);
 	for (i = 0; i < iterations_cnt; i++)
 	{
-		client_server_echo_client_rpc(client_interface, client);
+		client_server_echo_client_rpc(client);
 	}
 	mrpc_client_stop(client);
 	mrpc_client_delete(client);
@@ -1862,7 +1671,6 @@ static void test_client_server_echo_rpc_multiple_clients()
 struct client_server_echo_rpc_concurrent_data
 {
 	struct ff_event *event;
-	struct mrpc_interface *client_interface;
 	struct mrpc_client *client;
 	int workers_cnt;
 };
@@ -1873,7 +1681,7 @@ static void client_server_echo_rpc_concurrent_fiberpool_func(void *ctx)
 
 	data = (struct client_server_echo_rpc_concurrent_data *) ctx;
 
-	client_server_echo_client_rpc(data->client_interface, data->client);
+	client_server_echo_client_rpc(data->client);
 
 	data->workers_cnt--;
 	if (data->workers_cnt == 0)
@@ -1898,10 +1706,9 @@ static void client_server_echo_client_concurrent(int port, int workers_cnt)
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, stream_connector);
+	mrpc_client_start(client, client_interface, stream_connector);
 
 	data.event = ff_event_create(FF_EVENT_MANUAL);
-	data.client_interface = client_interface;
 	data.client = client;
 	data.workers_cnt = workers_cnt;
 	for (i = 0; i < workers_cnt; i++)
@@ -1972,7 +1779,6 @@ static void test_all()
 	test_wchar_array_all();
 	test_blob_all();
 	test_interface_all();
-	test_data_all();
 	test_client_server_all();
 }
 

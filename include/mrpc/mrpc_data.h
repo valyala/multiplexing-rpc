@@ -2,20 +2,12 @@
 #define MRPC_DATA_PUBLIC_H
 
 #include "mrpc/mrpc_common.h"
-#include "mrpc/mrpc_interface.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct mrpc_data;
-
-/**
- * Creates a mrpc_data for the given method_id from the interface.
- * method_id must be valid id of the method in the given interface.
- * Always returns correct result.
- */
-MRPC_API struct mrpc_data *mrpc_data_create(struct mrpc_interface *interface, uint8_t method_id);
 
 /**
  * Deletes the data.

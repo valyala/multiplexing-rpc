@@ -3,17 +3,13 @@
 
 #include "mrpc/mrpc_common.h"
 #include "mrpc/mrpc_param.h"
+#include "mrpc/mrpc_data.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct mrpc_method;
-
-/* forward declaration of the mrpc_data structure.
- * we cannot include mrpc/mrpc_data.h here, because it will create circular dependency through mrpc/mrpc_interface.h
- */
-struct mrpc_data;
 
 /**
  * This callback should process rpc sent to the server by the client.
