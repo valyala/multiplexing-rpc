@@ -32,7 +32,7 @@
 
 #define ASSERT(expr, msg) assert((expr) && (msg))
 
-#pragma region mrpc_char_array tests
+/* start of rpc_char_array tests */
 
 static void test_char_array_create_delete()
 {
@@ -92,10 +92,9 @@ static void test_char_array_all()
 }
 
 /* end of mrpc_char_array tests */
-#pragma endregion
 
 
-#pragma region mrpc_wchar_array tests
+/* start of mrpc_wchar_array tests */
 
 static void test_wchar_array_create_delete()
 {
@@ -153,10 +152,9 @@ static void test_wchar_array_all()
 }
 
 /* end of mrpc_char_array tests */
-#pragma endregion
 
 
-#pragma region mrpc_blob tests
+/* start of  mrpc_blob tests */
 
 static void test_blob_create_delete()
 {
@@ -332,10 +330,9 @@ static void test_blob_all()
 }
 
 /* end of mrpc_blob tests */
-#pragma endregion
 
 
-#pragma region mrpc_interface tests
+/* start of mrpc_interface tests */
 
 static void test_interface_client_create_delete()
 {
@@ -436,10 +433,6 @@ static void test_interface_server_create_delete()
 		mrpc_uint64_param_create,
 		NULL,
 	};
-	static const int is_key2[] =
-	{
-		0, /* fake value */
-	};
 	static const struct mrpc_method_server_description method_description2 =
 	{
 		request_param_constructors2,
@@ -468,9 +461,8 @@ static void test_interface_all()
 }
 
 /* end of mrpc_interface tests */
-#pragma endregion
 
-#pragma region mrpc_client and mrpc_server tests
+/* start of mrpc_client and mrpc_server tests */
 
 static void test_client_create_delete()
 {
@@ -1771,7 +1763,6 @@ static void test_client_server_all()
 }
 
 /* end of mrpc_client and mrpc_server tests */
-#pragma endregion
 
 static void test_all()
 {
