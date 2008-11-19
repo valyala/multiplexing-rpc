@@ -46,10 +46,10 @@ struct mrpc_server_stream_processor
 	struct ff_pool *packets_pool;
 	struct ff_blocking_queue *writer_queue;
 	struct mrpc_server_request_processor **active_request_processors;
-	int id;
 	struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct ff_stream *stream;
+	int id;
 	int active_request_processors_cnt;
 	enum server_stream_processor_state state;
 };

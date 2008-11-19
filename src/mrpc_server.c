@@ -11,14 +11,14 @@
 
 struct mrpc_server
 {
-	struct mrpc_interface *service_interface;
-	void *service_ctx;
-	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_event *stop_event;
 	struct ff_event *stream_processors_stop_event;
 	struct mrpc_bitmap *stream_processors_bitmap;
 	struct ff_pool *stream_processors_pool;
 	struct mrpc_server_stream_processor **active_stream_processors;
+	struct mrpc_interface *service_interface;
+	void *service_ctx;
+	struct ff_stream_acceptor *stream_acceptor;
 	int max_stream_processors_cnt;
 	int active_stream_processors_cnt;
 };
@@ -173,9 +173,6 @@ struct mrpc_server *mrpc_server_create(int max_stream_processors_cnt)
 	ff_assert(max_stream_processors_cnt > 0);
 
 	server = (struct mrpc_server *) ff_malloc(sizeof(*server));
-	server->service_interface = NULL;
-	server->service_ctx = NULL;
-	server->stream_acceptor = NULL;
 	server->stop_event = ff_event_create(FF_EVENT_AUTO);
 	server->stream_processors_stop_event = ff_event_create(FF_EVENT_AUTO);
 	server->stream_processors_bitmap = mrpc_bitmap_create(max_stream_processors_cnt);
@@ -183,6 +180,10 @@ struct mrpc_server *mrpc_server_create(int max_stream_processors_cnt)
 	server->active_stream_processors = (struct mrpc_server_stream_processor **) ff_calloc(max_stream_processors_cnt, sizeof(server->active_stream_processors[0]));
 	server->max_stream_processors_cnt = max_stream_processors_cnt;
 	server->active_stream_processors_cnt = 0;
+
+	server->service_interface = NULL;
+	server->service_ctx = NULL;
+	server->stream_acceptor = NULL;
 
 	return server;
 }
