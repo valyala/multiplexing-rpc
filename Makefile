@@ -3,7 +3,6 @@ LDFLAGS=-lfiber-framework -shared
 CC=gcc
 
 SRC_DIR=src
-TESTS_DIR=tests
 
 MRPC_LIB_SRCS= \
 	$(SRC_DIR)/mrpc_bitmap.c \
