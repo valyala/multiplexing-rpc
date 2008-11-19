@@ -34,7 +34,7 @@ MRPC_LIB_SRCS= \
 
 default: all
 
-all: libmultiplexing-rpc.so tests
+all: libmultiplexing-rpc.so mrpc-interface-compiler tests
 
 libfiber-framework.so:
 	cd ./external/fiber-framework && make libfiber-framework.so && cp libfiber-framework.so ../../
@@ -42,10 +42,14 @@ libfiber-framework.so:
 libmultiplexing-rpc.so: libfiber-framework.so $(MRPC_LIB_SRCS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -L. -Wl,--rpath -Wl,. -o libmultiplexing-rpc.so $(MRPC_LIB_SRCS)
 
+mrpc-interface-compiler:
+	cd ./interface-compiler && make mrpc-interface-compiler && cp mrpc-interface-compiler ../
+
 tests: libfiber-framework.so libmultiplexing-rpc.so
 	$(CC) -g -I./include -I./external/fiber-framework/include -DHAS_STDINT_H -lfiber-framework -lmultiplexing-rpc -L. -Wl,--rpath -Wl,. -o run-tests $(TESTS_DIR)/tests.c
 
 clean:
 	cd ./external/fiber-framework && make clean
-	rm -f libfiber-framework.so libmultiplexing-rpc.so run-tests
+	cd ./interface-compiler && make clean
+	rm -f libfiber-framework.so libmultiplexing-rpc.so mrpc-interface-compiler run-tests
 

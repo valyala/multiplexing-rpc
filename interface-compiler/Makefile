@@ -14,11 +14,11 @@ INTERFACE_COMPILER_SRCS= \
 
 default: all
 
-all: interface-compiler
+all: mprc-interface-compiler
 
-interface-compiler: $(INTERFACE_COMPILER_SRCS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o interface-compiler $(INTERFACE_COMPILER_SRCS)
+mrpc-interface-compiler: $(INTERFACE_COMPILER_SRCS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o mrpc-interface-compiler $(INTERFACE_COMPILER_SRCS)
 
 clean:
-	rm -f interface-compiler
+	rm -f mrpc-interface-compiler
 
