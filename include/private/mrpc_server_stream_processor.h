@@ -43,7 +43,7 @@ void mrpc_server_stream_processor_delete(struct mrpc_server_stream_processor *st
  * service_interface and service_ctx are used for invoking corresponding server callbacks.
  */
 void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *stream_processor,
-	struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream *stream);
+	const struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream *stream);
 
 /**
  * Notifies the stream_processor to stop ASAP.

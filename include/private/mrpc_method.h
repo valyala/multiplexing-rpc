@@ -18,7 +18,7 @@ extern "C" {
  * The returned method must be deleted using the mrpc_method_delete().
  * Always returns correct result.
  */
-struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructor *request_param_constructors,
+const struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructor *request_param_constructors,
 	const mrpc_param_constructor *response_param_constructors, mrpc_method_callback callback, uint8_t method_id);
 
 /**
@@ -31,36 +31,36 @@ struct mrpc_method *mrpc_method_create_server_method(const mrpc_param_constructo
  * The returned method must be deleted using the mrpc_method_delete().
  * Always returns correct result.
  */
-struct mrpc_method *mrpc_method_create_client_method(const mrpc_param_constructor *request_param_constructors,
+const struct mrpc_method *mrpc_method_create_client_method(const mrpc_param_constructor *request_param_constructors,
 	const mrpc_param_constructor *response_param_constructors, const int *is_key, uint8_t method_id);
 
 /**
  * Deletes the method, which could be created by the mrpc_method_create_server_method()
  * or by the mrpc_method_create_client_method().
  */
-void mrpc_method_delete(struct mrpc_method *method);
+void mrpc_method_delete(const struct mrpc_method *method);
 
 /**
  * creates request parameters for the given method.
  * These parameters should be deleted by the caller using the mrpc_method_delete_request_params().
  */
-struct mrpc_param **mrpc_method_create_request_params(struct mrpc_method *method);
+struct mrpc_param **mrpc_method_create_request_params(const struct mrpc_method *method);
 
 /**
  * creates response parameters for the given method.
  * These parameters should be deleted by the caller using the mrpc_method_delete_response_params().
  */
-struct mrpc_param **mrpc_method_create_response_params(struct mrpc_method *method);
+struct mrpc_param **mrpc_method_create_response_params(const struct mrpc_method *method);
 
 /**
  * deletes request parameters, which was created using the mrpc_method_create_request_params().
  */
-void mrpc_method_delete_request_params(struct mrpc_method *method, struct mrpc_param **request_params);
+void mrpc_method_delete_request_params(const struct mrpc_method *method, struct mrpc_param **request_params);
 
 /**
  * deletes response parameters, which was created using the mrpc_method_create_response_params().
  */
-void mrpc_method_delete_response_params(struct mrpc_method *method, struct mrpc_param **response_params);
+void mrpc_method_delete_response_params(const struct mrpc_method *method, struct mrpc_param **response_params);
 
 /**
  * reads request parameters for the given method from the given stream.
@@ -68,7 +68,7 @@ void mrpc_method_delete_response_params(struct mrpc_method *method, struct mrpc_
  * This function can be called only if the mrpc_method_get_request_params_cnt() returns non-zero value.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream);
+enum ff_result mrpc_method_read_request_params(const struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream);
 
 /**
  * reads response parameters for the given method from the given stream.
@@ -76,7 +76,7 @@ enum ff_result mrpc_method_read_request_params(struct mrpc_method *method, struc
  * This function can be called only if the mrpc_method_get_response_params_cnt() returns non-zero value.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-enum ff_result mrpc_method_read_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream);
+enum ff_result mrpc_method_read_response_params(const struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream);
 
 /**
  * writes request parameters for the given method to the given stream.
@@ -84,7 +84,7 @@ enum ff_result mrpc_method_read_response_params(struct mrpc_method *method, stru
  * This function can be called only if the mrpc_method_get_request_params_cnt() returns non-zero value.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-enum ff_result mrpc_method_write_request_params(struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream);
+enum ff_result mrpc_method_write_request_params(const struct mrpc_method *method, struct mrpc_param **request_params, struct ff_stream *stream);
 
 /**
  * writes response parameters for the given method to the given stream.
@@ -92,38 +92,38 @@ enum ff_result mrpc_method_write_request_params(struct mrpc_method *method, stru
  * This function can be called only if the mrpc_method_get_response_params_cnt() returns non-zero value.
  * Returns FF_SUCCESS on success, FF_FAILURE on error.
  */
-enum ff_result mrpc_method_write_response_params(struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream);
+enum ff_result mrpc_method_write_response_params(const struct mrpc_method *method, struct mrpc_param **response_params, struct ff_stream *stream);
 
 /**
  * Sets the value of the request parameter with param_idx index from the given method to the given value.
  * This function must be called by the rpc client before sending request to the server.
  */
-void mrpc_method_set_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **request_params, const void *value);
+void mrpc_method_set_request_param_value(const struct mrpc_method *method, int param_idx, struct mrpc_param **request_params, const void *value);
 
 /**
  * Sets the value of the response parameter with param_idx index from the given method to the given value.
  * This function must be called by the rpc server before sending response to the client.
  */
-void mrpc_method_set_response_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **response_params, const void *value);
+void mrpc_method_set_response_param_value(const struct mrpc_method *method, int param_idx, struct mrpc_param **response_params, const void *value);
 
 /**
  * Obtains the value of the request parameter with param_idx index from the given method.
  * This function must be called by the rpc server after retreiving request from the client.
  */
-void mrpc_method_get_request_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **request_params, void **value);
+void mrpc_method_get_request_param_value(const struct mrpc_method *method, int param_idx, struct mrpc_param **request_params, void **value);
 
 /**
  * Obtains the value of the response parameter with param_idx index from the given method.
  * This function must be called by the rpc client after retreiving response from the server.
  */
-void mrpc_method_get_response_param_value(struct mrpc_method *method, int param_idx, struct mrpc_param **response_params, void **value);
+void mrpc_method_get_response_param_value(const struct mrpc_method *method, int param_idx, struct mrpc_param **response_params, void **value);
 
 /**
  * Calculates hash value for request parameters of the given method and for the given start_value.
  * This function should be called by the rpc client after setting up all the request parameters in order
  * to determine to which client the given request should be sent. This is usually used in distributed setup.
  */
-uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start_value, struct mrpc_param **request_params);
+uint32_t mrpc_method_get_request_hash(const struct mrpc_method *method, uint32_t start_value, struct mrpc_param **request_params);
 
 /**
  * Invokes the method's callback with the given data and service_ctx.
@@ -131,22 +131,22 @@ uint32_t mrpc_method_get_request_hash(struct mrpc_method *method, uint32_t start
  * from the client.
  * The callback is passed to the mrpc_method_create_server_method() function.
  */
-void mrpc_method_invoke_callback(struct mrpc_method *method, struct mrpc_data *data, void *service_ctx);
+void mrpc_method_invoke_callback(const struct mrpc_method *method, struct mrpc_data *data, void *service_ctx);
 
 /**
  * returns the number of request paramters for the given method
  */
-int mrpc_method_get_request_params_cnt(struct mrpc_method *method);
+int mrpc_method_get_request_params_cnt(const struct mrpc_method *method);
 
 /**
  * returns the number of response paramters for the given method
  */
-int mrpc_method_get_response_params_cnt(struct mrpc_method *method);
+int mrpc_method_get_response_params_cnt(const struct mrpc_method *method);
 
 /**
  * returns method_id, which was passed to the mrpc_method_create_{client|server}_method()
  */
-uint8_t mrpc_method_get_method_id(struct mrpc_method *method);
+uint8_t mrpc_method_get_method_id(const struct mrpc_method *method);
 
 #ifdef __cplusplus
 }

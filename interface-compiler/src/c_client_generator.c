@@ -84,7 +84,7 @@ static void dump_interface_constructor_declaration(const struct interface *inter
 {
 	dump("/* creates the client interface [%s].\n", interface->name);
 	dump(" * delete the interface instance using the mrpc_interface_delete() method\n */\n");
-	dump("struct mrpc_interface *client_interface_%s_create()", interface->name);
+	dump("const struct mrpc_interface *client_interface_%s_create()", interface->name);
 }
 
 static void dump_interface_source(const struct interface *interface)
@@ -122,7 +122,7 @@ static void dump_interface_source(const struct interface *interface)
 	dump("\tNULL\n};\n\n");
 
 	dump_interface_constructor_declaration(interface);
-	dump("\n{\n\tstruct mrpc_interface *interface;\n\n"
+	dump("\n{\n\tconst struct mrpc_interface *interface;\n\n"
 		 "\tinterface = mrpc_interface_client_create(client_method_descriptions_%s);\n"
 		 "\treturn interface;\n}\n",
 		 interface->name

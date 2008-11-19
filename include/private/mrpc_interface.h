@@ -12,7 +12,7 @@ extern "C" {
  * Returns the method with the given method_id from the given interface.
  * Returns NULL if the method_id is invalid for the given interface.
  */
-struct mrpc_method *mrpc_interface_get_method(struct mrpc_interface *interface, uint8_t method_id);
+const struct mrpc_method *mrpc_interface_get_method(const struct mrpc_interface *interface, uint8_t method_id);
 
 #ifdef __cplusplus
 }

@@ -11,7 +11,7 @@
 
 struct mrpc_interface
 {
-	struct mrpc_method **methods;
+	const struct mrpc_method **methods;
 	int methods_cnt;
 };
 
@@ -31,21 +31,21 @@ static int get_methods_cnt(const void **method_descriptions)
 	return methods_cnt;
 }
 
-struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_client_description **method_descriptions)
+const struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_client_description **method_descriptions)
 {
 	struct mrpc_interface *interface;
-	struct mrpc_method **methods;
+	const struct mrpc_method **methods;
 	int i;
 	int methods_cnt;
 
 	methods_cnt = get_methods_cnt((const void **) method_descriptions);
 	ff_assert(methods_cnt > 0);
 	ff_assert(methods_cnt <= MAX_METHODS_CNT);
-	methods = (struct mrpc_method **) ff_calloc(methods_cnt, sizeof(methods[0]));
+	methods = (const struct mrpc_method **) ff_calloc(methods_cnt, sizeof(methods[0]));
 	for (i = 0; i < methods_cnt; i++)
 	{
 		const struct mrpc_method_client_description *method_description;
-		struct mrpc_method *method;
+		const struct mrpc_method *method;
 
 		method_description = method_descriptions[i];
 		ff_assert(method_description != NULL);
@@ -61,21 +61,21 @@ struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_cli
 	return interface;
 }
 
-struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_server_description **method_descriptions)
+const struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_server_description **method_descriptions)
 {
 	struct mrpc_interface *interface;
-	struct mrpc_method **methods;
+	const struct mrpc_method **methods;
 	int i;
 	int methods_cnt;
 
 	methods_cnt = get_methods_cnt((const void **) method_descriptions);
 	ff_assert(methods_cnt > 0);
 	ff_assert(methods_cnt <= MAX_METHODS_CNT);
-	methods = (struct mrpc_method **) ff_calloc(methods_cnt, sizeof(methods[0]));
+	methods = (const struct mrpc_method **) ff_calloc(methods_cnt, sizeof(methods[0]));
 	for (i = 0; i < methods_cnt; i++)
 	{
 		const struct mrpc_method_server_description *method_description;
-		struct mrpc_method *method;
+		const struct mrpc_method *method;
 
 		method_description = method_descriptions[i];
 		ff_assert(method_description != NULL);
@@ -91,9 +91,9 @@ struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_ser
 	return interface;
 }
 
-void mrpc_interface_delete(struct mrpc_interface *interface)
+void mrpc_interface_delete(const struct mrpc_interface *interface)
 {
-	struct mrpc_method **methods;
+	const struct mrpc_method **methods;
 	int i;
 	int methods_cnt;
 
@@ -103,20 +103,20 @@ void mrpc_interface_delete(struct mrpc_interface *interface)
 	ff_assert(methods_cnt <= MAX_METHODS_CNT);
 	for (i = 0; i < methods_cnt; i++)
 	{
-		struct mrpc_method *method;
+		const struct mrpc_method *method;
 
 		method = methods[i];
 		ff_assert(method != NULL);
 		mrpc_method_delete(method);
 	}
 
-	ff_free(methods);
-	ff_free(interface);
+	ff_free((void *) methods);
+	ff_free((void *) interface);
 }
 
-struct mrpc_method *mrpc_interface_get_method(struct mrpc_interface *interface, uint8_t method_id)
+const struct mrpc_method *mrpc_interface_get_method(const struct mrpc_interface *interface, uint8_t method_id)
 {
-	struct mrpc_method *method = NULL;
+	const struct mrpc_method *method = NULL;
 
 	/* there is no need to check if method_id >= 0 and method_id <= MAX_METHODS_CNT,
 	 * because uint8_t range is limited between 0 and MAX_METHODS_CNT (256)

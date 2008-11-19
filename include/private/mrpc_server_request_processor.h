@@ -50,7 +50,7 @@ void mrpc_server_request_processor_delete(struct mrpc_server_request_processor *
  * Starts processing request with the given request_id using the given request_processor.
  * service_interface and service_ctx are used for invoking corresponding server callback.
  */
-void mrpc_server_request_processor_start(struct mrpc_server_request_processor *request_processor, struct mrpc_interface *service_interface, void *service_ctx, uint8_t request_id);
+void mrpc_server_request_processor_start(struct mrpc_server_request_processor *request_processor, const struct mrpc_interface *service_interface, void *service_ctx, uint8_t request_id);
 
 /**
  * Notifies the given request_processor that it must stop processing the current request ASAP.

@@ -46,7 +46,7 @@ struct mrpc_server_stream_processor
 	struct ff_pool *packets_pool;
 	struct ff_blocking_queue *writer_queue;
 	struct mrpc_server_request_processor **active_request_processors;
-	struct mrpc_interface *service_interface;
+	const struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct ff_stream *stream;
 	int id;
@@ -309,7 +309,7 @@ static void stream_reader_func(void *ctx)
 	struct mrpc_server_stream_processor *stream_processor;
 	struct ff_stream *stream;
 	struct mrpc_server_request_processor **active_request_processors;
-	struct mrpc_interface *service_interface;
+	const struct mrpc_interface *service_interface;
 	void *service_ctx;
 
 	stream_processor = (struct mrpc_server_stream_processor *) ctx;
@@ -443,7 +443,7 @@ void mrpc_server_stream_processor_delete(struct mrpc_server_stream_processor *st
 }
 
 void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *stream_processor,
-	struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream *stream)
+	const struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream *stream)
 {
 	ff_assert(stream_processor->service_interface == NULL);
 	ff_assert(stream_processor->service_ctx == NULL);

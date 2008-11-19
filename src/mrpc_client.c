@@ -13,7 +13,7 @@ struct mrpc_client
 {
 	struct ff_event *stop_event;
 	struct mrpc_client_stream_processor *stream_processor;
-	struct mrpc_interface *client_interface;
+	const struct mrpc_interface *client_interface;
 	struct ff_stream_connector *stream_connector;
 };
 
@@ -67,7 +67,7 @@ void mrpc_client_delete(struct mrpc_client *client)
 	ff_free(client);
 }
 
-void mrpc_client_start(struct mrpc_client *client, struct mrpc_interface *client_interface, struct ff_stream_connector *stream_connector)
+void mrpc_client_start(struct mrpc_client *client, const struct mrpc_interface *client_interface, struct ff_stream_connector *stream_connector)
 {
 	ff_assert(client != NULL);
 	ff_assert(client_interface != NULL);

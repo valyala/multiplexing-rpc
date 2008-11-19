@@ -17,7 +17,7 @@ struct mrpc_server_request_processor
 	void *notify_error_func_ctx;
 	struct mrpc_packet_stream *packet_stream;
 	struct ff_stream *stream;
-	struct mrpc_interface *service_interface;
+	const struct mrpc_interface *service_interface;
 	void *service_ctx;
 	uint8_t request_id;
 };
@@ -26,7 +26,7 @@ static void process_request_func(void *ctx)
 {
 	struct mrpc_server_request_processor *request_processor;
 	struct mrpc_packet_stream *packet_stream;
-	struct mrpc_interface *service_interface;
+	const struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct ff_stream *stream;
 	uint8_t request_id;
@@ -95,7 +95,7 @@ void mrpc_server_request_processor_delete(struct mrpc_server_request_processor *
 	ff_free(request_processor);
 }
 
-void mrpc_server_request_processor_start(struct mrpc_server_request_processor *request_processor, struct mrpc_interface *service_interface, void *service_ctx, uint8_t request_id)
+void mrpc_server_request_processor_start(struct mrpc_server_request_processor *request_processor, const struct mrpc_interface *service_interface, void *service_ctx, uint8_t request_id)
 {
 	ff_assert(request_processor->service_interface == NULL);
 	ff_assert(request_processor->service_ctx == NULL);

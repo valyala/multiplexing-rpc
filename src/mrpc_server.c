@@ -16,7 +16,7 @@ struct mrpc_server
 	struct mrpc_bitmap *stream_processors_bitmap;
 	struct ff_pool *stream_processors_pool;
 	struct mrpc_server_stream_processor **active_stream_processors;
-	struct mrpc_interface *service_interface;
+	const struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	int max_stream_processors_cnt;
@@ -137,7 +137,7 @@ static void main_server_func(void *ctx)
 {
 	struct mrpc_server *server;
 	struct ff_stream_acceptor *stream_acceptor;
-	struct mrpc_interface *service_interface;
+	const struct mrpc_interface *service_interface;
 	void *service_ctx;
 
 	server = (struct mrpc_server *) ctx;
@@ -203,7 +203,7 @@ void mrpc_server_delete(struct mrpc_server *server)
 	ff_free(server);
 }
 
-void mrpc_server_start(struct mrpc_server *server, struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream_acceptor *stream_acceptor)
+void mrpc_server_start(struct mrpc_server *server, const struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream_acceptor *stream_acceptor)
 {
 	ff_assert(server->service_interface == NULL);
 	ff_assert(server->service_ctx == NULL);

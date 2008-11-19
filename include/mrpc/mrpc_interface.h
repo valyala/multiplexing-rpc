@@ -24,7 +24,7 @@ struct mrpc_interface;
  *   };
  * Always returns correct result.
  */
-MRPC_API struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_client_description **method_descriptions);
+MRPC_API const struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_method_client_description **method_descriptions);
 
 /**
  * Creates server mrpc_interface.
@@ -40,13 +40,13 @@ MRPC_API struct mrpc_interface *mrpc_interface_client_create(const struct mrpc_m
  *   };
  * Always returns correct result.
  */
-MRPC_API struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_server_description **method_descriptions);
+MRPC_API const struct mrpc_interface *mrpc_interface_server_create(const struct mrpc_method_server_description **method_descriptions);
 
 /**
  * Deletes the given interface, which was created by either mrpc_interface_client_create()
  * either mrpc_interface_server_create().
  */
-MRPC_API void mrpc_interface_delete(struct mrpc_interface *interface);
+MRPC_API void mrpc_interface_delete(const struct mrpc_interface *interface);
 
 #ifdef __cplusplus
 }

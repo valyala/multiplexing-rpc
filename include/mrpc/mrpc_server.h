@@ -27,7 +27,7 @@ MRPC_API void mrpc_server_delete(struct mrpc_server *server);
 /**
  * Starts the given server for serving the given service_interface, service_ctx and the given stream_acceptor
  */
-MRPC_API void mrpc_server_start(struct mrpc_server *server, struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream_acceptor *stream_acceptor);
+MRPC_API void mrpc_server_start(struct mrpc_server *server, const struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream_acceptor *stream_acceptor);
 
 /**
  * Stops the given server.

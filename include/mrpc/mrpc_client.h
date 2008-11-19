@@ -29,7 +29,7 @@ MRPC_API void mrpc_client_delete(struct mrpc_client *client);
  * The client is able to automatically reconnect to the mrpc server on errors.
  * This function returns immediately.
  */
-MRPC_API void mrpc_client_start(struct mrpc_client *client, struct mrpc_interface *client_interface, struct ff_stream_connector *stream_connector);
+MRPC_API void mrpc_client_start(struct mrpc_client *client, const struct mrpc_interface *client_interface, struct ff_stream_connector *stream_connector);
 
 /**
  * Stops the given client.

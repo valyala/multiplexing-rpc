@@ -8,14 +8,14 @@
 
 struct mrpc_data
 {
-	struct mrpc_method *method;
+	const struct mrpc_method *method;
 	struct mrpc_param **request_params;
 	struct mrpc_param **response_params;
 };
 
-static struct mrpc_data *try_create_mrpc_data(struct mrpc_interface *interface, uint8_t method_id)
+static struct mrpc_data *try_create_mrpc_data(const struct mrpc_interface *interface, uint8_t method_id)
 {
-	struct mrpc_method *method;
+	const struct mrpc_method *method;
 	struct mrpc_data *data = NULL;
 
 	method = mrpc_interface_get_method(interface, method_id);
@@ -34,7 +34,7 @@ static struct mrpc_data *try_create_mrpc_data(struct mrpc_interface *interface, 
 	return data;
 }
 
-static struct mrpc_data *read_request(struct mrpc_interface *interface, struct ff_stream *stream)
+static struct mrpc_data *read_request(const struct mrpc_interface *interface, struct ff_stream *stream)
 {
 	uint8_t method_id;
 	struct mrpc_data *data = NULL;
@@ -46,7 +46,7 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 		data = try_create_mrpc_data(interface, method_id);
 		if (data != NULL)
 		{
-			struct mrpc_method *method;
+			const struct mrpc_method *method;
 			int request_params_cnt;
 
 			method = data->method;
@@ -78,7 +78,7 @@ static struct mrpc_data *read_request(struct mrpc_interface *interface, struct f
 
 static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *stream)
 {
-	struct mrpc_method *method;
+	const struct mrpc_method *method;
 	int response_params_cnt;
 	enum ff_result result;
 
@@ -116,7 +116,7 @@ static enum ff_result read_response(struct mrpc_data *data, struct ff_stream *st
 
 static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *stream)
 {
-	struct mrpc_method *method;
+	const struct mrpc_method *method;
 	int response_params_cnt;
 	enum ff_result result;
 
@@ -149,7 +149,7 @@ static enum ff_result write_response(struct mrpc_data *data, struct ff_stream *s
 
 static enum ff_result write_request(struct mrpc_data *data, struct ff_stream *stream)
 {
-	struct mrpc_method *method;
+	const struct mrpc_method *method;
 	enum ff_result result;
 	uint8_t method_id;
 
@@ -177,7 +177,7 @@ static enum ff_result write_request(struct mrpc_data *data, struct ff_stream *st
 	return result;
 }
 
-struct mrpc_data *mrpc_data_create(struct mrpc_interface *interface, uint8_t method_id)
+struct mrpc_data *mrpc_data_create(const struct mrpc_interface *interface, uint8_t method_id)
 {
 	struct mrpc_data *data;
 
@@ -196,7 +196,7 @@ void mrpc_data_delete(struct mrpc_data *data)
 	ff_free(data);
 }
 
-enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, void *service_ctx, struct ff_stream *stream)
+enum ff_result mrpc_data_process_remote_call(const struct mrpc_interface *interface, void *service_ctx, struct ff_stream *stream)
 {
 	struct mrpc_data *data;
 	enum ff_result result = FF_FAILURE;
@@ -204,7 +204,7 @@ enum ff_result mrpc_data_process_remote_call(struct mrpc_interface *interface, v
 	data = read_request(interface, stream);
 	if (data != NULL)
 	{
-		struct mrpc_method *method;
+		const struct mrpc_method *method;
 
 		method = data->method;
 		mrpc_method_invoke_callback(method, data, service_ctx);

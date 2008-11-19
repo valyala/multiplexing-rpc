@@ -339,7 +339,7 @@ static void test_blob_all()
 
 static void test_interface_client_create_delete()
 {
-	struct mrpc_interface *interface;
+	const struct mrpc_interface *interface;
 
 	static const mrpc_param_constructor request_param_constructors1[] =
 	{
@@ -407,7 +407,7 @@ static void interface_server_create_delete_callback2(struct mrpc_data *data, voi
 
 static void test_interface_server_create_delete()
 {
-	struct mrpc_interface *interface;
+	const struct mrpc_interface *interface;
 
 	static const mrpc_param_constructor request_param_constructors1[] =
 	{
@@ -690,7 +690,7 @@ static const struct mrpc_method_client_description *client_method_descriptions[]
 
 static void test_client_start_stop()
 {
-	struct mrpc_interface *client_interface;
+	const struct mrpc_interface *client_interface;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
 	struct ff_arch_net_addr *addr;
@@ -711,7 +711,7 @@ static void test_client_start_stop()
 
 static void test_client_start_stop_multiple()
 {
-	struct mrpc_interface *client_interface;
+	const struct mrpc_interface *client_interface;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
 	struct ff_arch_net_addr *addr;
@@ -746,7 +746,7 @@ struct client_multiple_instances_data
 
 static void client_multiple_instances_fiberpool_func(void *ctx)
 {
-	struct mrpc_interface *client_interface;
+	const struct mrpc_interface *client_interface;
 	struct client_multiple_instances_data *data;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
@@ -798,8 +798,8 @@ static void test_client_multiple_instances()
 
 static void test_server_start_stop()
 {
+	const struct mrpc_interface *service_interface;
 	struct mrpc_server *server;
-	struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
@@ -821,8 +821,8 @@ static void test_server_start_stop()
 
 static void test_server_start_stop_multiple()
 {
+	const struct mrpc_interface *service_interface;
 	struct mrpc_server *server;
-	struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
@@ -858,8 +858,8 @@ struct server_multiple_instances_data
 
 static void server_multiple_instances_fiberpool_func(void *ctx)
 {
+	const struct mrpc_interface *service_interface;
 	struct server_multiple_instances_data *data;
-	struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct mrpc_server *server;
 	struct ff_stream_acceptor *stream_acceptor;
@@ -911,8 +911,8 @@ static void test_server_multiple_instances()
 
 static void test_server_accept()
 {
+	const struct mrpc_interface *service_interface;
 	struct mrpc_server *server;
-	struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
@@ -971,7 +971,7 @@ struct client_server_connect_data
 
 static void client_server_connect_fiberpool_func(void *ctx)
 {
-	struct mrpc_interface *client_interface;
+	const struct mrpc_interface *client_interface;
 	struct client_server_connect_data *data;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
@@ -1015,8 +1015,8 @@ static void client_server_connect_fiberpool_func(void *ctx)
 static void test_client_server_connect()
 {
 	struct client_server_connect_data data;
+	const struct mrpc_interface *service_interface;
 	struct mrpc_server *server;
-	struct mrpc_interface *service_interface;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
@@ -1049,7 +1049,7 @@ static void test_client_server_connect()
 
 static void client_server_rpc_client(int port, int iterations_cnt)
 {
-	struct mrpc_interface *client_interface;
+	const struct mrpc_interface *client_interface;
 	struct ff_arch_net_addr *addr;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
@@ -1147,8 +1147,8 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 
 static void test_client_server_rpc()
 {
+	const struct mrpc_interface *server_interface;
 	struct mrpc_server *server;
-	struct mrpc_interface *server_interface;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
@@ -1194,8 +1194,8 @@ static void client_server_rpc_multiple_clients_fiberpool_func(void *ctx)
 static void test_client_server_rpc_multiple_clients()
 {
 	struct client_server_rpc_multiple_clients_data data;
+	const struct mrpc_interface *server_interface;
 	struct mrpc_server *server;
-	struct mrpc_interface *server_interface;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
@@ -1562,7 +1562,7 @@ static void client_server_echo_client_rpc(struct mrpc_client *client)
 
 static void client_server_echo_client(int port, int iterations_cnt)
 {
-	struct mrpc_interface *client_interface;
+	const struct mrpc_interface *client_interface;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_connector *stream_connector;
 	struct mrpc_client *client;
@@ -1588,7 +1588,7 @@ static void client_server_echo_client(int port, int iterations_cnt)
 
 static void test_client_server_echo_rpc()
 {
-	struct mrpc_interface *server_interface;
+	const struct mrpc_interface *server_interface;
 	void *server_ctx = NULL;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_acceptor *stream_acceptor;
@@ -1636,7 +1636,7 @@ static void client_server_echo_rpc_multiple_clients_fiberpool_func(void *ctx)
 static void test_client_server_echo_rpc_multiple_clients()
 {
 	struct client_server_echo_rpc_multiple_clients_data data;
-	struct mrpc_interface *server_interface;
+	const struct mrpc_interface *server_interface;
 	void *server_ctx = NULL;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_acceptor *stream_acceptor;
@@ -1693,7 +1693,7 @@ static void client_server_echo_rpc_concurrent_fiberpool_func(void *ctx)
 static void client_server_echo_client_concurrent(int port, int workers_cnt)
 {
 	struct client_server_echo_rpc_concurrent_data data;
-	struct mrpc_interface *client_interface;
+	const struct mrpc_interface *client_interface;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_connector *stream_connector;
 	struct mrpc_client *client;
@@ -1726,7 +1726,7 @@ static void client_server_echo_client_concurrent(int port, int workers_cnt)
 
 static void test_client_server_echo_rpc_concurrent()
 {
-	struct mrpc_interface *server_interface;
+	const struct mrpc_interface *server_interface;
 	void *server_ctx = NULL;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_acceptor *stream_acceptor;
