@@ -47,7 +47,7 @@ static void dump_callback(const struct interface *interface, const struct method
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\t%s *request_%s;\n", get_param_code_type(param), param->name);
+		dump("\t%s *%s;\n", get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 
@@ -55,7 +55,7 @@ static void dump_callback(const struct interface *interface, const struct method
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\t%s *response_%s;\n", get_param_code_type(param), param->name);
+		dump("\t%s *%s;\n", get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 
@@ -67,7 +67,7 @@ static void dump_callback(const struct interface *interface, const struct method
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\tmrpc_data_get_request_param_value(data, %d, &request_%s);\n", i, param->name);
+		dump("\tmrpc_data_get_request_param_value(data, %d, &%s);\n", i, param->name);
 		param_list = param_list->next;
 		i++;
 	}
@@ -77,7 +77,7 @@ static void dump_callback(const struct interface *interface, const struct method
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump(",\n\t\trequest_%s", param->name);
+		dump(",\n\t\t%s", param->name);
 		param_list = param_list->next;
 	}
 
@@ -85,7 +85,7 @@ static void dump_callback(const struct interface *interface, const struct method
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump(",\n\t\t&response_%s", param->name);
+		dump(",\n\t\t&%s", param->name);
 		param_list = param_list->next;
 	}
 	dump(");\n");
@@ -95,7 +95,7 @@ static void dump_callback(const struct interface *interface, const struct method
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\tmrpc_data_set_response_param_value(data, %d, response_%s);\n", i, param->name);
+		dump("\tmrpc_data_set_response_param_value(data, %d, %s);\n", i, param->name);
 		param_list = param_list->next;
 		i++;
 	}
@@ -236,7 +236,7 @@ static void dump_service_method(const struct interface *interface, const struct 
 {
 	dump_service_method_declaration(interface, method);
 	dump("\n{\n\t/* insert code for the [%s] method instead of ff_assert(0)*/\n", method->name);
-	dump("\tff_assert(0);\n}\n\n");
+	dump("\tff_assert(0);\n}\n");
 }
 
 static void dump_service_constructor_declaration(const struct interface *interface)
@@ -283,12 +283,12 @@ static void dump_service_source(const struct interface *interface)
 		 "\tff_assert(0);\n\n"
 		 "\tff_free(service);\n}\n"
     );
-    dump("\n");
 
     method_list = interface->methods;
     while (method_list != NULL)
     {
     	method = method_list->method;
+		dump("\n");
     	dump_service_method(interface, method);
     	method_list = method_list->next;
     }

@@ -147,15 +147,14 @@ static void dump_service_method_declaration(const struct interface *interface, c
 	const struct param_list *param_list;
 	const struct param *param;
 
-	dump("/* implements the [%s] method of the client interface [%s].\n", method->name, interface->name);
-	dump(" * The interface must be created using client_interface_%s_create() function.\n", interface->name);
+	dump("/* invokes the rpc method [%s] of the client interface [%s] on the given client.\n", method->name, interface->name);
 	dump(" * The caller must be responsible for deleting returned response parameters.\n"
 		 " * Returns FF_SUCCESS on success, FF_FAILURE on error.\n"
 		 " * If the function returns FF_FAILURE, then there is no need to delete response paramters,\n"
 		 " * because they aren't set in this case.\n"
 		 " */\n"
 	);
-	dump("enum ff_result client_service_%s_%s(struct mrpc_interface *interface, struct mrpc_client *client", interface->name, method->name);
+	dump("enum ff_result client_service_%s_%s(struct mrpc_client *client", interface->name, method->name);
 	param_list = method->request_params;
 	while (param_list != NULL)
 	{
@@ -184,7 +183,7 @@ static void dump_service_method(const struct interface *interface, const struct 
 
 	dump("\tstruct mrpc_data *data;\n");
 	dump("\tenum ff_result result;\n\n");
-	dump("\tdata = mrpc_data_create(interface, %d);\n", id);
+	dump("\tdata = mrpc_client_create_data(client, %d);\n", id);
 	dump("\tff_assert(data != NULL);\n\n");
 
 	param_list = method->request_params;
@@ -192,7 +191,7 @@ static void dump_service_method(const struct interface *interface, const struct 
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\tmrpc_data_set_request_param_value(data, %d, request_%s);\n", i, param->name);
+		dump("\tmrpc_data_set_request_param_value(data, %d, %s);\n", i, param->name);
 		param_list = param_list->next;
 		i++;
 	}
@@ -207,7 +206,7 @@ static void dump_service_method(const struct interface *interface, const struct 
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\tmrpc_data_get_response_param_value(data, %d, response_%s);\n", i, param->name);
+		dump("\tmrpc_data_get_response_param_value(data, %d, %s);\n", i, param->name);
 		param_list = param_list->next;
 		i++;
 	}
@@ -222,38 +221,38 @@ static void dump_service_method(const struct interface *interface, const struct 
 		case PARAM_UINT32:
 			dump("\t{\n\t\tuint32_t *tmp;\n\n");
 			dump("\t\ttmp = (uint32_t *) ff_malloc(sizeof(*tmp));\n");
-			dump("\t\t*tmp = **response_%s;\n", param->name);
-			dump("\t\t*response = tmp;\n\t}\n");
+			dump("\t\t*tmp = **%s;\n", param->name);
+			dump("\t\t*%s = tmp;\n\t}\n", param->name);
 			break;
 		case PARAM_INT32:
 			dump("\t{\n\t\tint32_t *tmp;\n\n");
 			dump("\t\ttmp = (int32_t *) ff_malloc(sizeof(*tmp));\n");
-			dump("\t\t*tmp = **response_%s;\n", param->name);
-			dump("\t\t*response = tmp;\n\t}\n");
+			dump("\t\t*tmp = **%s;\n", param->name);
+			dump("\t\t*%s = tmp;\n\t}\n", param->name);
 			break;
 		case PARAM_UINT64:
 			dump("\t{\n\t\tuint64_t *tmp;\n\n");
 			dump("\t\ttmp = (uint64_t *) ff_malloc(sizeof(*tmp));\n");
-			dump("\t\t*tmp = **response_%s;\n", param->name);
-			dump("\t\t*response = tmp;\n\t}\n");
+			dump("\t\t*tmp = **%s;\n", param->name);
+			dump("\t\t*%s = tmp;\n\t}\n", param->name);
 			break;
 		case PARAM_INT64:
 			dump("\t{\n\t\tint64_t *tmp;\n\n");
 			dump("\t\ttmp = (int64_t *) ff_malloc(sizeof(*tmp));\n");
-			dump("\t\t*tmp = **response_%s;\n", param->name);
-			dump("\t\t*response = tmp;\n\t}\n");
+			dump("\t\t*tmp = **%s;\n", param->name);
+			dump("\t\t*%s = tmp;\n\t}\n", param->name);
 			break;
 		case PARAM_CHAR_ARRAY:
-			dump("\tmrpc_char_array_inc_ref(*response_%s);\n", param->name);
+			dump("\tmrpc_char_array_inc_ref(*%s);\n", param->name);
 			break;
 		case PARAM_WCHAR_ARRAY:
-			dump("\tmrpc_wchar_array_inc_ref(*response_%s);\n", param->name);
+			dump("\tmrpc_wchar_array_inc_ref(*%s);\n", param->name);
 			break;
 		case PARAM_BLOB:
-			dump("\tmrpc_blob_inc_ref(*response_%s);\n", param->name);
+			dump("\tmrpc_blob_inc_ref(*%s);\n", param->name);
 			break;
 		default:
-			die("parameter %s has unknown type", param->name);
+			die("parameter [%s] has unknown type", param->name);
 			break;
 		}
 		param_list = param_list->next;
@@ -261,7 +260,7 @@ static void dump_service_method(const struct interface *interface, const struct 
 
 	dump("end:\n"
 		 "\tmrpc_data_delete(data);\n"
-		 "\treturn result;\n}\n\n"
+		 "\treturn result;\n}\n"
 	);
 }
 
@@ -279,9 +278,8 @@ static void dump_service_source(const struct interface *interface)
 		 "#include \"mrpc/mrpc_char_array.h\"\n"
 		 "#include \"mrpc/mrpc_wchar_array.h\"\n\n"
 	);
-	dump("#include \"mrpc/mrpc_interface.h\"\n"
-		 "#include \"mrpc/mrpc_data.h\"\n"
-		 "#include \"mrpc/mrpc_client.h\"\n\n"
+	dump("#include \"mrpc/mrpc_data.h\"\n"
+		 "#include \"mrpc/mrpc_client.h\"\n"
 	);
 
     method_list = interface->methods;
@@ -289,6 +287,7 @@ static void dump_service_source(const struct interface *interface)
     while (method_list != NULL)
     {
     	method = method_list->method;
+		dump("\n");
     	dump_service_method(interface, method, i);
     	method_list = method_list->next;
     	i++;
@@ -305,7 +304,6 @@ static void dump_service_header(const struct interface *interface)
 		 "#include \"mrpc/mrpc_blob.h\"\n"
 		 "#include \"mrpc/mrpc_char_array.h\"\n"
 		 "#include \"mrpc/mrpc_wchar_array.h\"\n\n"
-		 "#include \"mrpc/mrpc_interface.h\"\n"
 		 "#include \"mrpc/mrpc_client.h\"\n\n"
 	);
 	dump("#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
