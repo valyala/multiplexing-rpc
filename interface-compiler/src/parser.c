@@ -84,11 +84,6 @@ static void unread_char(char ch)
 	assert(c == (int) ch);
 }
 
-static void clear_current_lexeme()
-{
-	memset(parser_ctx.lexeme, 0, MAX_LEXEME_SIZE);
-}
-
 static const char *copy_current_lexeme()
 {
 	const char *s;
@@ -99,7 +94,7 @@ static const char *copy_current_lexeme()
 
 static void init_lexer()
 {
-	clear_current_lexeme();
+	parser_ctx.lexeme[0] = '\0';
 	parser_ctx.lexeme_type = LEXEME_START;
 	parser_ctx.line = 1;
 }
@@ -133,7 +128,6 @@ static void read_next_lexeme()
 	int len;
 	enum lexer_state state;
 
-	clear_current_lexeme();
 	len = 0;
 	state = STATE_START;
 	for (;;)
@@ -148,13 +142,13 @@ static void read_next_lexeme()
 			{
 			case STATE_START:
 				parser_ctx.lexeme_type = LEXEME_STOP;
-				return;
+				goto end;
 			case STATE_IN_COMMENT:
 				parser_ctx.lexeme_type = LEXEME_STOP;
-				return;
+				goto end;
 			case STATE_IN_ID:
 				parser_ctx.lexeme_type = LEXEME_ID;
-				return;
+				goto end;
 			}
 		}
 
@@ -172,7 +166,7 @@ static void read_next_lexeme()
 			case STATE_IN_ID:
 				parser_ctx.lexeme_type = LEXEME_ID;
 				unread_char(ch);
-				return;
+				goto end;
 			}
 		case '\n':
 			parser_ctx.line++;
@@ -185,7 +179,7 @@ static void read_next_lexeme()
 				continue;
 			case STATE_IN_ID:
 				parser_ctx.lexeme_type = LEXEME_ID;
-				return;
+				goto end;
 			}
 		case '{':
 			switch (state)
@@ -193,14 +187,14 @@ static void read_next_lexeme()
 			case STATE_START:
 				parser_ctx.lexeme_type = LEXEME_OPEN_BRACE;
 				assert(len == 0);
-				parser_ctx.lexeme[len] = '{';
-				return;
+				parser_ctx.lexeme[len++] = '{';
+				goto end;
 			case STATE_IN_COMMENT:
 				continue;
 			case STATE_IN_ID:
 				parser_ctx.lexeme_type = LEXEME_ID;
 				unread_char(ch);
-				return;
+				goto end;
 			}
 		case '}':
 			switch (state)
@@ -208,14 +202,14 @@ static void read_next_lexeme()
 			case STATE_START:
 				parser_ctx.lexeme_type = LEXEME_CLOSE_BRACE;
 				assert(len == 0);
-				parser_ctx.lexeme[len] = '}';
-				return;
+				parser_ctx.lexeme[len++] = '}';
+				goto end;
 			case STATE_IN_COMMENT:
 				continue;
 			case STATE_IN_ID:
 				parser_ctx.lexeme_type = LEXEME_ID;
 				unread_char(ch);
-				return;
+				goto end;
 			}
 		default:
 			switch (state)
@@ -229,36 +223,39 @@ static void read_next_lexeme()
 				{
 					parser_ctx.lexeme_type = LEXEME_ID;
 					assert(len == 0);
-					parser_ctx.lexeme[len] = ch;
-					len++;
+					parser_ctx.lexeme[len++] = ch;
 					state = STATE_IN_ID;
 					continue;
 				}
-				die("unexpected character=[%c] found at line=%d\n", ch, parser_ctx.line);
+				die("unexpected character=[%c] found at the file [%s], line=%d. Expected: [{}\\na-z].",
+					ch, parser_ctx.filename, parser_ctx.line);
 			case STATE_IN_COMMENT:
 				continue;
 			case STATE_IN_ID:
 				if (is_whitespace(ch))
 				{
 					parser_ctx.lexeme_type = LEXEME_ID;
-					return;
+					goto end;
 				}
 				if (is_id_char(ch))
 				{
 					if (len + 1 == MAX_LEXEME_SIZE)
 					{
-						unread_char(ch);
-						parser_ctx.lexeme_type = LEXEME_ID;
-						return;
+						parser_ctx.lexeme[len] = '\0';
+						die("too long lexeme=[%s...] found at the file [%s], line=%d",
+							parser_ctx.lexeme, parser_ctx.filename, parser_ctx.line);
 					}
-					parser_ctx.lexeme[len] = ch;
-					len++;
+					parser_ctx.lexeme[len++] = ch;
 					continue;
 				}
-				die("unexpected character=[%c] found at line=%d\n", ch, parser_ctx.line);
+				die("unexpected character=[%c] found at the file [%s], line=%d. Expected: [{}\\na-z0-9_].",
+					ch, parser_ctx.filename, parser_ctx.line);
 			}
 		}
 	}
+
+end:
+	parser_ctx.lexeme[len] = '\0';
 }
 
 static int test(enum lexeme_type lexeme_type)
