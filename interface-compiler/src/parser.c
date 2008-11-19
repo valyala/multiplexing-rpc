@@ -374,7 +374,7 @@ static const struct param *match_param(enum params_type params_type)
 static const struct param_list *match_params(enum params_type params_type)
 {
 	struct param_list *first_entry = NULL;
-	struct param_list *last_entry;
+	struct param_list *last_entry = NULL;
 	struct param_list *entry;
 
 	if (params_type == REQUEST_PARAMS)
