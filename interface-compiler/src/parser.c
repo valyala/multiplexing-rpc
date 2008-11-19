@@ -36,6 +36,7 @@ struct parser_data
 	enum lexeme_type lexeme_type;
 	char lexeme[MAX_LEXEME_SIZE];
 	int line;
+	const char *filename;
 	FILE *file;
 };
 
@@ -63,7 +64,8 @@ static const char *lexeme_type_to_string(enum lexeme_type lexeme_type)
 
 static void fail(const char *expected_str)
 {
-	die("unexpected lexeme [%s] found at the line=%d. Expected: %s.", parser_ctx.lexeme, parser_ctx.line, expected_str);
+	die("unexpected lexeme [%s] found at the file [%s], line=%d. Expected: %s.",
+		parser_ctx.lexeme, parser_ctx.filename, parser_ctx.line, expected_str);
 }
 
 static int read_next_char()
@@ -448,6 +450,7 @@ const struct interface *parse_interface(const char *filename)
 	const struct interface *interface;
 	int rv;
 
+	parser_ctx.filename = filename;
 	parser_ctx.file = fopen(filename, "rt");
 	if (parser_ctx.file == NULL)
 	{
