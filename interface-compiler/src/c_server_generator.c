@@ -203,7 +203,7 @@ static void dump_server_stream_handler_header(const struct interface *interface)
 	dump("#ifndef SERVER_STREAM_HANDLER_%s_H\n#define SERVER_STREAM_HANDLER_%s_H\n\n", interface->name, interface->name);
 	dump("#include \"mrpc/mrpc_common.h\"\n"
 		 "#include \"mrpc/mrpc_server_stream_handler.h\"\n"
-		 "#include \"ff/ff_stream.m\"\n\n");
+		 "#include \"ff/ff_stream.h\"\n\n");
 
 	dump("#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
 
