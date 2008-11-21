@@ -1,207 +1,213 @@
 #include "common.h"
 #include "c_server_generator.h"
 
+#include "c_common.h"
 #include "types.h"
 
-static const char *get_param_code_type(const struct param *param)
-{
-	switch (param->type)
-	{
-		case PARAM_UINT32: return "uint32_t";
-		case PARAM_INT32: return "int32_t";
-		case PARAM_UINT64: return "uint64_t";
-		case PARAM_INT64: return "int64_t";
-		case PARAM_CHAR_ARRAY: return "struct mrpc_char_array";
-		case PARAM_WCHAR_ARRAY: return "struct mrpc_wchar_array";
-		case PARAM_BLOB: return "struct mrpc_blob";
-		default: die("unknown_type for the parameter [%s]", param->name);
-	}
-	return NULL;
-}
-
-static const char *get_param_code_constructor(const struct param *param)
-{
-	switch (param->type)
-	{
-		case PARAM_UINT32: return "mrpc_uint32_param_create";
-		case PARAM_INT32: return "mrpc_int32_param_create";
-		case PARAM_UINT64: return "mrpc_uint64_param_create";
-		case PARAM_INT64: return "mrpc_int64_param_create";
-		case PARAM_CHAR_ARRAY: return "mrpc_char_array_param_create";
-		case PARAM_WCHAR_ARRAY: return "mrpc_wchar_array_param_create";
-		case PARAM_BLOB: return "mrpc_blob_param_create";
-		default: die("unknown_constructor for the parameter [%s]", param->name);
-	}
-	return NULL;
-}
-
-static void dump_callback(const struct interface *interface, const struct method *method)
-{
-	const struct param_list *param_list;
-	const struct param *param;
-	int i;
-
-	dump("static void server_callback_%s_%s(struct mrpc_data *data, void *service_ctx)\n{\n", interface->name, method->name);
-
-	param_list = method->request_params;
-	while (param_list != NULL)
-	{
-		param = param_list->param;
-		dump("\t%s *%s;\n", get_param_code_type(param), param->name);
-		param_list = param_list->next;
-	}
-
-	param_list = method->response_params;
-	while (param_list != NULL)
-	{
-		param = param_list->param;
-		dump("\t%s *%s;\n", get_param_code_type(param), param->name);
-		param_list = param_list->next;
-	}
-
-	dump("\tstruct server_service_%s *service;\n\n", interface->name);
-	dump("\tservice = (struct server_service_%s *) service_ctx;\n\n", interface->name);
-
-	i = 0;
-	param_list = method->request_params;
-	while (param_list != NULL)
-	{
-		param = param_list->param;
-		dump("\tmrpc_data_get_request_param_value(data, %d, &%s);\n", i, param->name);
-		param_list = param_list->next;
-		i++;
-	}
-
-	dump("\tserver_service_%s_%s(service", interface->name, method->name);
-	param_list = method->request_params;
-	while (param_list != NULL)
-	{
-		param = param_list->param;
-		dump(",\n\t\t%s", param->name);
-		param_list = param_list->next;
-	}
-
-	param_list = method->response_params;
-	while (param_list != NULL)
-	{
-		param = param_list->param;
-		dump(",\n\t\t&%s", param->name);
-		param_list = param_list->next;
-	}
-	dump(");\n");
-
-	param_list = method->response_params;
-	i = 0;
-	while (param_list != NULL)
-	{
-		param = param_list->param;
-		dump("\tmrpc_data_set_response_param_value(data, %d, %s);\n", i, param->name);
-		param_list = param_list->next;
-		i++;
-	}
-
-	dump("}\n");
-}
-
-static void dump_method(const struct interface *interface, const struct method *method)
+static void dump_server_method_handler(const struct interface *interface, const struct method *method)
 {
 	const struct param_list *param_list;
 	const struct param *param;
 
-	dump("/* start of the server method [%s] */\n", method->name);
+	dump("static enum ff_result server_method_handler_%s_%s(struct ff_stream *stream, struct service_%s *service)\n{\n",
+		interface->name, method->name, interface->name);
 
-	dump("static const mrpc_param_constructor server_request_param_constructors_%s_%s[] = \n{\n", interface->name, method->name);
 	param_list = method->request_params;
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\t%s, /* %s */\n", get_param_code_constructor(param), param->name);
+		dump("\t%srequest_%s%s;\n", c_get_param_code_type(param), param->name, (c_is_param_ptr(param) ? " = NULL" : ""));
 		param_list = param_list->next;
 	}
-	dump("\tNULL\n};\n");
-
-	dump("static const mrpc_param_constructor server_response_param_constructors_%s_%s[] = \n{\n", interface->name, method->name);
 	param_list = method->response_params;
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump("\t%s, /* %s */\n", get_param_code_constructor(param), param->name);
+		dump("\t%sresponse_%s%s;\n", c_get_param_code_type(param), param->name, (c_is_param_ptr(param) ? " = NULL" : ""));
 		param_list = param_list->next;
 	}
-	dump("\tNULL\n};\n");
+	dump("\tenum ff_result result;\n\n");
 
-	dump_callback(interface, method);
+	param_list = method->request_params;
+	if (param_list == NULL)
+	{
+		dump("\t/* there is no request parameters */\n");
+	}
+	else
+	{
+		do
+		{
+			param = param_list->param;
+			dump("\tresult = mrpc_%s_unserialize(&request_%s, stream);\n", c_get_param_type(param), param->name);
+			dump("\tif (result != FF_SUCCESS)\n\t{\n");
+			dump("\t\tff_log_debug(L\"cannot unserialize parameter %s of type %s from the stream=%%p. See previous messages for more info\", stream);\n",
+				param->name, c_get_param_type(param));
+			dump("\t\tgoto end;\n\t}\n");
+			param_list = param_list->next;
+		}
+		while (param_list != NULL);
+	}
 
-	dump("static const struct mrpc_method_server_description server_method_description_%s_%s =\n{\n", interface->name, method->name);
-	dump("\tserver_request_param_constructors_%s_%s,\n", interface->name, method->name);
-	dump("\tserver_response_param_constructors_%s_%s,\n", interface->name, method->name);
-	dump("\tserver_callback_%s_%s\n};\n", interface->name, method->name);
+	dump("\n\tservice_%s_%s(service", interface->name, method->name);
+	param_list = method->request_params;
+	while (param_list != NULL)
+	{
+		param = param_list->param;
+		dump(", request_%s", param->name);
+		param_list = param_list->next;
+	}
 
-	dump("/* end of the server method [%s] */\n\n", method->name);
+	param_list = method->response_params;
+	while (param_list != NULL)
+	{
+		param = param_list->param;
+		dump(", &response_%s", param->name);
+		param_list = param_list->next;
+	}
+	dump(");\n\n");
+
+	param_list = method->response_params;
+	if (param_list == NULL)
+	{
+		dump("\t/* there is no response paramters */\n"
+			 "\t{\n\t\tuint8_t empty_byte = 0;\n\n"
+			 "\t\tresult = ff_stream_write(stream, &empty_byte, 1);\n"
+			 "\t\tif (result != FF_SUCCESS)\n\t\t{\n"
+			 "\t\t\tff_log_debug(L\"cannot write an empty byte to the stream=%%p. See previous messages for more info\", stream);\n"
+			 "\t\t\tgoto end;\n\t\t}\n\t}"
+		);
+	}
+	else
+	{
+		do
+		{
+			param = param_list->param;
+			dump("\tresult = mrpc_%s_serialize(response_%s, stream);\n", c_get_param_type(param), param->name);
+			dump("\tif (result != FF_SUCCESS)\n\t{\n");
+			dump("\t\tff_log_debug(L\"cannot serialize parameter %s of type %s to the stream=%%p. See previous messages for more info\", stream);\n",
+				param->name, c_get_param_type(param));
+			dump("\t\tgoto end;\n\t}\n");
+			param_list = param_list->next;
+		}
+		while (param_list != NULL);
+	}
+
+	dump("\nend:\n");
+	param_list = method->request_params;
+	while (param_list != NULL)
+	{
+		param = param_list->param;
+		if (c_is_param_ptr(param))
+		{
+			dump("\tif (request_%s != NULL)\n\t{\n\t\tmrpc_%s_dec_ref(request_%s);\n\t}\n",
+				param->name, c_get_param_type(param), param->name);
+		}
+		param_list = param_list->next;
+	}
+	param_list = method->response_params;
+	while (param_list != NULL)
+	{
+		param = param_list->param;
+		if (c_is_param_ptr(param))
+		{
+			dump("\tif (response_%s != NULL)\n\t{\n\t\tmrpc_%s_dec_ref(response_%s);\n\t}\n",
+				param->name, c_get_param_type(param), param->name);
+		}
+		param_list = param_list->next;
+	}
+
+	dump("\treturn result;\n}\n\n");
 }
 
-static void dump_interface_constructor_declaration(const struct interface *interface)
+static void dump_server_stream_handler_declaration(const struct interface *interface)
 {
-	dump("/* creates the server interface [%s].\n", interface->name);
-	dump(" * delete the interface instance using the mrpc_interface_delete() method\n */\n");
-	dump("const struct mrpc_interface *server_interface_%s_create()", interface->name);
+	dump("/* mrpc_server_stream_handler for the interface [%s] */\n", interface->name);
+	dump("enum ff_result server_stream_handler_%s(struct ff_stream *stream, void *service_ctx)",
+		interface->name);
 }
 
-static void dump_interface_source(const struct interface *interface)
+static void dump_server_stream_handler(const struct interface *interface, int methods_cnt)
+{
+	dump_server_stream_handler_declaration(interface);
+	dump("\n{\n\tstruct service_%s *service;\n", interface->name);
+	dump("\tuint8_t method_id;\n"
+		 "\tenum ff_result result;\n\n"
+	);
+	dump("\tservice = (struct service_%s *) service_ctx;\n", interface->name);
+	dump("\tresult = ff_stream_read(stream, &method_id, 1);\n"
+		 "\tif (result != FF_SUCCESS)\n\t{\n"
+		 "\t\tff_log_debug(L\"cannot read method_id from the stream=%%p. See previous messages for more info\", stream);\n"
+		 "\t\tgoto end;\n\t}\n"
+	);
+	dump("\tif (method_id >= %d)\n\t{\n", methods_cnt);
+	dump("\t\tff_log_debug(L\"unexpected method_id=%%d read from the stream=%%p. It must be less than %d\", (int) method_id, stream);\n", methods_cnt);
+	dump("\t\tgoto end;\n\t}\n\n");
+	dump("\tresult = server_method_handlers_%s[method_id](stream, service);\n", interface->name);
+	dump("\tif (result != FF_SUCCESS)\n\t{\n"
+		 "\t\tff_log_debug(L\"cannot handle the method with method_id=%%d using the stream=%%p. See previous messages for more info\", (int) method_id, stream);\n"
+		 "\t\tgoto end;\n\t}\n\n"
+	);
+	dump("\tresult = ff_stream_flush(stream);\n"
+		 "\tif (result != FF_SUCCESS)\n\t{\n"
+		 "\t\tff_log_debug(L\"cannot flush the stream=%%p. See previous messages for more info\", stream);\n"
+		 "\t\tgoto end;\n\t}\n\n"
+	     "end:\n\treturn result;\n}\n"
+	);
+}
+
+static void dump_server_stream_handler_source(const struct interface *interface)
 {
 	const struct method_list *method_list;
 	const struct method *method;
+	int methods_cnt;
 
-	dump("/* auto-generated code for the server interface [%s] */\n", interface->name);
+	dump("/* auto-generated code of the mrpc_server_stream_handler for the interface [%s] */\n", interface->name);
 
 	dump("#include \"mrpc/mrpc_common.h\"\n\n");
-	dump("#include \"server_interface_%s.h\"\n", interface->name);
-	dump("#include \"server_service_%s.h\"\n\n", interface->name);
-	dump("#include \"mrpc/mrpc_blob.h\"\n"
+	dump("#include \"server_stream_handler_%s.h\"\n", interface->name);
+	dump("#include \"service_%s.h\"\n\n", interface->name);
+	dump("#include \"mrpc/mrpc_int.h\"\n"
+		 "#include \"mrpc/mrpc_blob.h\"\n"
 		 "#include \"mrpc/mrpc_char_array.h\"\n"
-		 "#include \"mrpc/mrpc_wchar_array.h\"\n\n"
+		 "#include \"mrpc/mrpc_wchar_array.h\"\n"
+		 "#include \"mrpc/mrpc_server_stream_handler.h\"\n"
+		 "#include \"ff/ff_stream.h\"\n\n"
 	);
-	dump("#include \"mrpc/mrpc_interface.h\"\n"
-	     "#include \"mrpc/mrpc_method.h\"\n"
-		 "#include \"mrpc/mrpc_data.h\"\n"
-	     "#include \"mrpc/mrpc_param_constructors.h\"\n\n"
-	);
+	dump("typedef enum ff_result (*server_method_handler)(struct ff_stream *stream, struct service_%s *service);\n\n", interface->name);
 
-	dump("/* start of server methods' declarations */\n\n");
 	method_list = interface->methods;
 	while (method_list != NULL)
 	{
 		method = method_list->method;
-		dump_method(interface, method);
+		dump_server_method_handler(interface, method);
 		method_list = method_list->next;
 	}
-	dump("/* end of server methods' declarations */\n\n");
 
-	dump("static const struct mrpc_method_server_description *server_method_descriptions_%s[] =\n{\n", interface->name);
+	dump("static const server_method_handler server_method_handlers_%s[] =\n{\n", interface->name);
 	method_list = interface->methods;
+	methods_cnt = 0;
 	while (method_list != NULL)
 	{
 		method = method_list->method;
-		dump("\t&server_method_description_%s_%s,\n", interface->name, method->name);
+		dump("\tserver_method_handler_%s_%s,\n", interface->name, method->name);
 		method_list = method_list->next;
+		methods_cnt++;
 	}
-	dump("\tNULL\n};\n\n");
+	dump("};\n\n");
 
-	dump_interface_constructor_declaration(interface);
-	dump("\n{\n\tconst struct mrpc_interface *interface;\n\n"
-		 "\tinterface = mrpc_interface_server_create(server_method_descriptions_%s);\n"
-		 "\treturn interface;\n}\n",
-		 interface->name
-	);
+	dump_server_stream_handler(interface, methods_cnt);
 }
 
-static void dump_interface_header(const struct interface *interface)
+static void dump_server_stream_handler_header(const struct interface *interface)
 {
-	dump("#ifndef SERVER_INTERFACE_%s_H\n#define SERVER_INTERFACE_%s_H\n\n", interface->name, interface->name);
-	dump("#include \"mrpc/mrpc_interface.h\"\n\n");
+	dump("#ifndef SERVER_STREAM_HANDLER_%s_H\n#define SERVER_STREAM_HANDLER_%s_H\n\n", interface->name, interface->name);
+	dump("#include \"mrpc/mrpc_common.h\"\n"
+		 "#include \"mrpc/mrpc_server_stream_handler.h\"\n"
+		 "#include \"ff/ff_stream.m\"\n\n");
+
 	dump("#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
 
-	dump_interface_constructor_declaration(interface);
+	dump_server_stream_handler_declaration(interface);
 	dump(";\n\n");
 
 	dump("#ifdef __cplusplus\n}\n#endif\n\n");
@@ -214,19 +220,19 @@ static void dump_service_method_declaration(const struct interface *interface, c
 	const struct param *param;
 
 	dump("/* implements the server method [%s] of the interface [%s] */\n", method->name, interface->name);
-	dump("void server_service_%s_%s(struct server_service_%s *service", interface->name, method->name, interface->name);
+	dump("void service_%s_%s(struct service_%s *service", interface->name, method->name, interface->name);
 	param_list = method->request_params;
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump(",\n\t%s *%s", get_param_code_type(param), param->name);
+		dump(", %s%s", c_get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 	param_list = method->response_params;
 	while (param_list != NULL)
 	{
 		param = param_list->param;
-		dump(",\n\t%s **%s", get_param_code_type(param), param->name);
+		dump(", %s*%s", c_get_param_code_type(param), param->name);
 		param_list = param_list->next;
 	}
 	dump(")");
@@ -241,14 +247,14 @@ static void dump_service_method(const struct interface *interface, const struct 
 
 static void dump_service_constructor_declaration(const struct interface *interface)
 {
-	dump("/* creates the service instance for the server interface [%s] */\n", interface->name);
-	dump("struct server_service_%s *server_service_%s_create()", interface->name, interface->name);
+	dump("/* creates the service instance for the interface [%s] */\n", interface->name);
+	dump("struct service_%s *service_%s_create()", interface->name, interface->name);
 }
 
 static void dump_service_destructor_declaration(const struct interface *interface)
 {
-	dump("/* deletes the service instance, which was created by server_service_%s_create() */\n", interface->name);
-	dump("void server_service_%s_delete(struct server_service_%s *service)", interface->name, interface->name);
+	dump("/* deletes the service instance, which was created by service_%s_create() */\n", interface->name);
+	dump("void service_%s_delete(struct service_%s *service)", interface->name, interface->name);
 }
 
 static void dump_service_source(const struct interface *interface)
@@ -257,26 +263,23 @@ static void dump_service_source(const struct interface *interface)
 	const struct method *method;
 
 	dump("#include \"mrpc/mrpc_common.h\"\n\n");
-	dump("#include \"server_service_%s.h\"\n\n", interface->name);
-	dump("#include \"mrpc/mrpc_blob.h\"\n"
+	dump("#include \"service_%s.h\"\n\n", interface->name);
+	dump("#include \"mrpc/mrpc_int.h\"\n"
+		 "#include \"mrpc/mrpc_blob.h\"\n"
 		 "#include \"mrpc/mrpc_char_array.h\"\n"
 		 "#include \"mrpc/mrpc_wchar_array.h\"\n\n"
 	);
 
-	dump("struct server_service_%s\n{\n"
-		 "\t/* put service context here */\n};\n\n",
-		 interface->name
-	);
+	dump("struct service_%s\n{\n\t/* put service context here */\n};\n\n", interface->name);
 
 	dump_service_constructor_declaration(interface);
-	dump("\n{\n\tstruct server_service_%s *service;\n\n"
-		 "\tservice = (struct service *) ff_malloc(sizeof(*service));\n\n"
-		 "\t/* insert service initialization code instead of ff_assert(0) */\n"
+	dump("\n{\n\tstruct service_%s *service;\n\n", interface->name);
+	dump("\tservice = (struct service_%s *) ff_malloc(sizeof(*service));\n\n", interface->name);
+
+	dump("\t/* insert service initialization code instead of ff_assert(0) */\n"
 		 "\tff_assert(0);\n\n"
-		 "\treturn service;\n}\n",
-		 interface->name
+		 "\treturn service;\n}\n\n"
 	);
-	dump("\n");
 
 	dump_service_destructor_declaration(interface);
 	dump("\n{\n\t/* insert service shutdown code instead of ff_assert(0) */\n"
@@ -299,15 +302,16 @@ static void dump_service_header(const struct interface *interface)
 	const struct method_list *method_list;
 	const struct method *method;
 
-	dump("#ifndef SERVER_SERVICE_%s_H\n#define SERVER_SERVICE_%s_H\n\n", interface->name, interface->name);
+	dump("#ifndef SERVICE_%s_H\n#define SERVICE_%s_H\n\n", interface->name, interface->name);
 	dump("#include \"mrpc/mrpc_common.h\"\n\n"
+		 "#include \"mrpc/mrpc_int.h\"\n"
 		 "#include \"mrpc/mrpc_blob.h\"\n"
 		 "#include \"mrpc/mrpc_char_array.h\"\n"
 		 "#include \"mrpc/mrpc_wchar_array.h\"\n\n"
 	);
 	dump("#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
 
-	dump("struct server_service_%s;\n\n", interface->name);
+	dump("struct service_%s;\n\n", interface->name);
 
 	dump_service_constructor_declaration(interface);
 	dump(";\n\n");
@@ -334,23 +338,23 @@ void c_server_generator_generate(const struct interface *interface)
 
 	interface_name = interface->name;
 
-	open_file("server_interface_%s.c", interface_name);
-	dump_interface_source(interface);
+	open_file("server_stream_handler_%s.c", interface_name);
+	dump_server_stream_handler_source(interface);
 	close_file();
-	printf("server_interface_%s.c file has been generated\n", interface_name);
+	printf("server_stream_handler_%s.c file has been generated\n", interface_name);
 
-	open_file("server_interface_%s.h", interface_name);
-	dump_interface_header(interface);
+	open_file("server_stream_handler_%s.h", interface_name);
+	dump_server_stream_handler_header(interface);
 	close_file();
-	printf("server_interface_%s.h file has been generated\n", interface_name);
+	printf("server_stream_handler_%s.h file has been generated\n", interface_name);
 
-	open_file("server_service_%s.c", interface_name);
+	open_file("service_%s.c", interface_name);
 	dump_service_source(interface);
 	close_file();
-	printf("server_interface_%s.c file has been generated\n", interface_name);
+	printf("service_%s.c file has been generated\n", interface_name);
 
-	open_file("server_service_%s.h", interface_name);
+	open_file("service_%s.h", interface_name);
 	dump_service_header(interface);
 	close_file();
-	printf("server_interface_%s.h file has been generated\n", interface_name);
+	printf("service_%s.h file has been generated\n", interface_name);
 }

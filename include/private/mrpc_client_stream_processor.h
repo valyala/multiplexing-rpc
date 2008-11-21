@@ -2,7 +2,6 @@
 #define MRPC_CLIENT_STREAM_PROCESSOR_PRIVATE_H
 
 #include "private/mrpc_common.h"
-#include "private/mrpc_data.h"
 #include "ff/ff_stream.h"
 
 #ifdef __cplusplus
@@ -39,10 +38,11 @@ void mrpc_client_stream_processor_process_stream(struct mrpc_client_stream_proce
 void mrpc_client_stream_processor_stop_async(struct mrpc_client_stream_processor *stream_processor);
 
 /**
- * Invokes the given rpc data on the given stream_processor.
- * Returns FF_SUCCESS on success, FF_FAILURE on error.
+ * Creates stream for sending rpc requests.
+ * This stream must be deleted using ff_stream_delete().
+ * Returns request stream on success, NULL on error.
  */
-enum ff_result mrpc_client_stream_processor_invoke_rpc(struct mrpc_client_stream_processor *stream_processor, struct mrpc_data *data);
+struct ff_stream *mrpc_client_stream_processor_create_request_stream(struct mrpc_client_stream_processor *stream_processor);
 
 #ifdef __cplusplus
 }

@@ -2,7 +2,7 @@
 #define MRPC_SERVER_PUBLIC_H
 
 #include "mrpc/mrpc_common.h"
-#include "mrpc/mrpc_interface.h"
+#include "mrpc/mrpc_server_stream_handler.h"
 #include "ff/ff_stream_acceptor.h"
 
 #ifdef __cplusplus
@@ -25,9 +25,10 @@ MRPC_API struct mrpc_server *mrpc_server_create(int max_stream_processors);
 MRPC_API void mrpc_server_delete(struct mrpc_server *server);
 
 /**
- * Starts the given server for serving the given service_interface, service_ctx and the given stream_acceptor
+ * Starts the given server for serving the given service_ctx and the given stream_acceptor.
+ * stream_handler must be responsible for processing rpc calls accepted by the server.
  */
-MRPC_API void mrpc_server_start(struct mrpc_server *server, const struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream_acceptor *stream_acceptor);
+MRPC_API void mrpc_server_start(struct mrpc_server *server, mrpc_server_stream_handler stream_handler, void *service_ctx, struct ff_stream_acceptor *stream_acceptor);
 
 /**
  * Stops the given server.

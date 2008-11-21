@@ -1,6 +1,7 @@
 #include "private/mrpc_common.h"
 
 #include "private/mrpc_blob.h"
+#include "private/mrpc_int.h"
 #include "ff/ff_stream.h"
 #include "ff/ff_file.h"
 #include "ff/arch/ff_arch_misc.h"
@@ -29,7 +30,7 @@ enum blob_state
 struct mrpc_blob
 {
 	const wchar_t *file_path;
-	int size;
+	int len;
 	enum blob_state state;
 	int ref_cnt;
 };
@@ -66,8 +67,8 @@ static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf,
 	ff_assert(data->mode == MRPC_BLOB_READ);
 	ff_assert(data->blob->state == BLOB_COMPLETE);
 	ff_assert(data->curr_pos >= 0);
-	ff_assert(data->curr_pos <= data->blob->size);
-	bytes_left = data->blob->size - data->curr_pos;
+	ff_assert(data->curr_pos <= data->blob->len);
+	bytes_left = data->blob->len - data->curr_pos;
 	if (len <= bytes_left)
 	{
 		result = ff_file_read(data->file, buf, len);
@@ -100,8 +101,8 @@ static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void 
 	ff_assert(data->mode = MRPC_BLOB_WRITE);
 	ff_assert(data->blob->state != BLOB_EMPTY);
 	ff_assert(data->curr_pos >= 0);
-	ff_assert(data->curr_pos <= data->blob->size);
-	bytes_left = data->blob->size - data->curr_pos;
+	ff_assert(data->curr_pos <= data->blob->len);
+	bytes_left = data->blob->len - data->curr_pos;
 	if (len <= bytes_left)
 	{
 		result = ff_file_write(data->file, buf, len);
@@ -133,7 +134,7 @@ static enum ff_result flush_blob_stream(struct ff_stream *stream)
 	result = ff_file_flush(data->file);
 	if (result == FF_SUCCESS)
 	{
-		if (data->curr_pos == data->blob->size)
+		if (data->curr_pos == data->blob->len)
 		{
 			data->blob->state = BLOB_COMPLETE;
 		}
@@ -183,15 +184,15 @@ static const wchar_t *create_temporary_file_path()
 	return tmp_file_path;
 }
 
-static struct mrpc_blob *create_blob(int size)
+static struct mrpc_blob *create_blob(int len)
 {
 	struct mrpc_blob *blob;
 
-	ff_assert(size >= 0);
+	ff_assert(len >= 0);
 
 	blob = (struct mrpc_blob *) ff_malloc(sizeof(*blob));
 	blob->file_path = create_temporary_file_path();
-	blob->size = size;
+	blob->len = len;
 	blob->state = BLOB_EMPTY;
 	blob->ref_cnt = 1;
 	return blob;
@@ -216,13 +217,13 @@ static void delete_blob(struct mrpc_blob *blob)
 	ff_free(blob);
 }
 
-struct mrpc_blob *mrpc_blob_create(int size)
+struct mrpc_blob *mrpc_blob_create(int len)
 {
 	struct mrpc_blob *blob;
 
-	ff_assert(size >= 0);
+	ff_assert(len >= 0);
 
-	blob = create_blob(size);
+	blob = create_blob(len);
 	return blob;
 }
 
@@ -242,12 +243,12 @@ void mrpc_blob_dec_ref(struct mrpc_blob *blob)
 	}
 }
 
-int mrpc_blob_get_size(struct mrpc_blob *blob)
+int mrpc_blob_get_len(struct mrpc_blob *blob)
 {
 	ff_assert(blob->ref_cnt > 0);
-	ff_assert(blob->size >= 0);
+	ff_assert(blob->len >= 0);
 
-	return blob->size;
+	return blob->len;
 }
 
 struct ff_stream *mrpc_blob_open_stream(struct mrpc_blob *blob, enum mrpc_blob_open_stream_mode mode)
@@ -338,10 +339,13 @@ enum ff_result mrpc_blob_get_hash(struct mrpc_blob *blob, uint32_t start_value, 
 	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
 	if (stream != NULL)
 	{
-		result = ff_stream_get_hash(stream, blob->size, start_value, hash_value);
+		int len;
+
+		len = mrpc_blob_get_len(blob);
+		result = ff_stream_get_hash(stream, len, start_value, hash_value);
 		if (result != FF_SUCCESS)
 		{
-			ff_log_debug(L"cannot calculate hash value for stream=%p, size=%d, start_value=%lu. See previous messages for more info", stream, blob->size, start_value);
+			ff_log_debug(L"cannot calculate hash value for stream=%p, len=%d, start_value=%lu. See previous messages for more info", stream, len, start_value);
 		}
 		ff_stream_delete(stream);
 	}
@@ -349,5 +353,90 @@ enum ff_result mrpc_blob_get_hash(struct mrpc_blob *blob, uint32_t start_value, 
 	{
 		ff_log_debug(L"cannot open blob=%p stream for reading. See previous messages for more info", blob);
 	}
+	return result;
+}
+
+enum ff_result mrpc_blob_serialize(struct mrpc_blob *blob, struct ff_stream *stream)
+{
+	int len;
+	struct ff_stream *blob_stream;
+	enum ff_result result = FF_FAILURE;
+
+	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	if (blob_stream == NULL)
+	{
+		ff_log_debug(L"cannot open blob stream for reading for the blob=%p. See previous messages for more info", blob);
+		goto end;
+	}
+
+	len = mrpc_blob_get_len(blob);
+	ff_assert(len >= 0);
+	result = mrpc_uint32_serialize((uint32_t) len, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"error occured while serializing blob length=%d into the stream=%p. See previous messages for more info", len, stream);
+		ff_stream_delete(blob_stream);
+		goto end;
+	}
+
+	result = ff_stream_copy(blob_stream, stream, len);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"error occured while copying blob_stream=%p contents to the stream=%p, len=%d. See previous messages for more info", blob_stream, stream, len);
+	}
+	ff_stream_delete(blob_stream);
+
+end:
+	return result;
+}
+
+enum ff_result mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream)
+{
+	int len;
+	struct mrpc_blob *new_blob;
+	struct ff_stream *blob_stream;
+	enum ff_result result;
+
+	result = mrpc_uint32_unserialize((uint32_t *) &len, stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"error occured while unserializing blob length form the stream=%p. See previous messages for more info", stream);
+		goto end;
+	}
+	if (len < 0)
+	{
+		ff_log_debug(L"unexpected blob length=%d value read from the stream=%p. It must be posisitive", len, stream);
+		goto end;
+	}
+
+	new_blob = mrpc_blob_create(len);
+	blob_stream = mrpc_blob_open_stream(new_blob, MRPC_BLOB_WRITE);
+	if (blob_stream == NULL)
+	{
+		ff_log_debug(L"cannot open blob stream for writing to the new_blob=%p, len=%d. See previous messages for more info", new_blob, len);
+		mrpc_blob_dec_ref(new_blob);
+		result = FF_FAILURE;
+		goto end;
+	}
+	result = ff_stream_copy(stream, blob_stream, len);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot copy stream=%p to the blob_stream=%p, len=%d. See previous messages for more info", stream, blob_stream, len);
+		ff_stream_delete(blob_stream);
+		mrpc_blob_dec_ref(new_blob);
+		goto end;
+	}
+	result = ff_stream_flush(blob_stream);
+	if (result != FF_SUCCESS)
+	{
+		ff_log_debug(L"cannot flus the blob_stream=%p. See previous messages for more info", blob_stream);
+		ff_stream_delete(blob_stream);
+		mrpc_blob_dec_ref(new_blob);
+		goto end;
+	}
+	ff_stream_delete(blob_stream);
+	*blob = new_blob;
+
+end:
 	return result;
 }

@@ -175,6 +175,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\include\c_common.h"
+				>
+			</File>
+			<File
 				RelativePath=".\include\c_server_generator.h"
 				>
 			</File>
@@ -200,6 +204,10 @@
 			>
 			<File
 				RelativePath=".\src\c_client_generator.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\c_common.c"
 				>
 			</File>
 			<File

@@ -1,7 +1,7 @@
 #include "private/mrpc_common.h"
 
 #include "private/mrpc_packet.h"
-#include "private/mrpc_int_serialization.h"
+#include "private/mrpc_int.h"
 #include "ff/ff_stream.h"
 
 /* this size allows to pack packet header into maximum three bytes:

@@ -1,13 +1,11 @@
+#include "mrpc/mrpc_common.h"
+#include "mrpc/mrpc_int.h"
 #include "mrpc/mrpc_char_array.h"
 #include "mrpc/mrpc_wchar_array.h"
 #include "mrpc/mrpc_blob.h"
-#include "mrpc/mrpc_param_constructors.h"
-#include "mrpc/mrpc_param.h"
-#include "mrpc/mrpc_method.h"
-#include "mrpc/mrpc_interface.h"
-#include "mrpc/mrpc_data.h"
 #include "mrpc/mrpc_client.h"
 #include "mrpc/mrpc_server.h"
+#include "mrpc/mrpc_server_stream_handler.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
@@ -32,7 +30,135 @@
 
 #define ASSERT(expr, msg) assert((expr) && (msg))
 
-/* start of rpc_char_array tests */
+/* start of mrpc_int tests */
+
+static void test_int_hash()
+{
+	uint32_t u32;
+	int32_t s32;
+	uint64_t u64;
+	int64_t s64;
+	uint32_t hash_value;
+
+	u32 = 88928379ul;
+	hash_value = mrpc_uint32_get_hash(u32, 1234);
+	ASSERT(hash_value == 579656410ul, "unexpected hash value");
+	s32 = -88928379l;
+	hash_value = mrpc_int32_get_hash(s32, 1234);
+	ASSERT(hash_value == 2410314835ul, "unexpected hash value");
+	u64 = 887990908928379ull;
+	hash_value = mrpc_uint64_get_hash(u64, 1234);
+	ASSERT(hash_value == 3339974916ul, "unexpected hash value");
+	s64 = -434328892837989ll;
+	hash_value = mrpc_int64_get_hash(s64, 1234);
+	ASSERT(hash_value == 2931806538ul, "unexpected hash value");
+}
+
+struct int_serialization_data
+{
+	struct ff_event *event;
+};
+
+static void int_serialization_fiberpool_func(void *ctx)
+{
+	struct int_serialization_data *data;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_stream *stream;
+	uint32_t u32;
+	int32_t s32;
+	uint64_t u64;
+	int64_t s64;
+	enum ff_result result;
+
+	data = (struct int_serialization_data *) ctx;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 4000);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	ff_stream_acceptor_initialize(stream_acceptor);
+	stream = ff_stream_acceptor_accept(stream_acceptor);
+	ASSERT(stream != NULL, "cannot accept connection");
+
+	result = mrpc_uint32_unserialize(&u32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize u32");
+	ASSERT(u32 == 231898ul, "unexpected u32 value unserialized");
+	result = mrpc_int32_unserialize(&s32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize s32");
+	ASSERT(s32 == -3432l, "unexpected s32 value unserialized");
+	result = mrpc_uint64_unserialize(&u64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize u64");
+	ASSERT(u64 == 3289088989923ull, "unexpected u64 value unserialized");
+	result = mrpc_int64_unserialize(&s64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize s64");
+	ASSERT(s64 == -2328943437878732ll, "unexpected s64 value unserialized");
+
+	ff_stream_delete(stream);
+	ff_stream_acceptor_shutdown(stream_acceptor);
+	ff_stream_acceptor_delete(stream_acceptor);
+
+	ff_event_set(data->event);
+}
+
+static void test_int_serialization()
+{
+	struct int_serialization_data data;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *stream_connector;
+	struct ff_stream *stream;
+	uint32_t u32;
+	int32_t s32;
+	uint64_t u64;
+	int64_t s64;
+	enum ff_result result;
+
+	data.event = ff_event_create(FF_EVENT_MANUAL);
+	ff_core_fiberpool_execute_async(int_serialization_fiberpool_func, &data);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 4000);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(stream_connector);
+	stream = ff_stream_connector_connect(stream_connector);
+	ASSERT(stream != NULL, "cannot connect to server");
+
+	u32 = 231898ul;
+	result = mrpc_uint32_serialize(u32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize u32");
+	s32 = -3432l;
+	result = mrpc_int32_serialize(s32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize s32");
+	u64 = 3289088989923ull;
+	result = mrpc_uint64_serialize(u64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize u64");
+	s64 = -2328943437878732ll;
+	result = mrpc_int64_serialize(s64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize s64");
+
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	ff_stream_delete(stream);
+	ff_stream_connector_shutdown(stream_connector);
+	ff_stream_connector_delete(stream_connector);
+
+	ff_event_wait(data.event);
+	ff_event_delete(data.event);
+}
+
+static void test_int_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_int_hash();
+	test_int_serialization();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_int tests */
+
+/* start of mrpc_char_array tests */
 
 static void test_char_array_create_delete()
 {
@@ -81,18 +207,98 @@ static void test_char_array_basic()
 	mrpc_char_array_dec_ref(char_array);
 }
 
+struct char_array_serialization_data
+{
+	struct ff_event *event;
+};
+
+static void char_array_serialization_fiberpool_func(void *ctx)
+{
+	struct char_array_serialization_data *data;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_stream *stream;
+	struct mrpc_char_array *char_array;
+	const char *s;
+	int len;
+	int is_equal;
+	enum ff_result result;
+
+	data = (struct char_array_serialization_data *) ctx;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 4001);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	ff_stream_acceptor_initialize(stream_acceptor);
+	stream = ff_stream_acceptor_accept(stream_acceptor);
+	ASSERT(stream != NULL, "cannot accept connection");
+
+	result = mrpc_char_array_unserialize(&char_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize char_array");
+	len = mrpc_char_array_get_len(char_array);
+	ASSERT(len == 10, "unexpected length of the char array");
+	s = mrpc_char_array_get_value(char_array);
+	is_equal = (memcmp(s, "0123456789", 10 * sizeof(s[0])) == 0);
+	ASSERT(is_equal, "unexpected value received");
+	mrpc_char_array_dec_ref(char_array);
+
+	ff_stream_delete(stream);
+	ff_stream_acceptor_shutdown(stream_acceptor);
+	ff_stream_acceptor_delete(stream_acceptor);
+
+	ff_event_set(data->event);
+}
+
+static void test_char_array_serialization()
+{
+	struct char_array_serialization_data data;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *stream_connector;
+	struct ff_stream *stream;
+	struct mrpc_char_array *char_array;
+	char *s;
+	enum ff_result result;
+
+	data.event = ff_event_create(FF_EVENT_MANUAL);
+	ff_core_fiberpool_execute_async(char_array_serialization_fiberpool_func, &data);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 4001);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(stream_connector);
+	stream = ff_stream_connector_connect(stream_connector);
+	ASSERT(stream != NULL, "cannot connect to server");
+
+	s = (char *) ff_calloc(10, sizeof(s[0]));
+	memcpy(s, "0123456789", 10 * sizeof(s[0]));
+	char_array = mrpc_char_array_create(s, 10);
+	result = mrpc_char_array_serialize(char_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize char array");
+	mrpc_char_array_dec_ref(char_array);
+
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	ff_stream_delete(stream);
+	ff_stream_connector_shutdown(stream_connector);
+	ff_stream_connector_delete(stream_connector);
+
+	ff_event_wait(data.event);
+	ff_event_delete(data.event);
+}
+
 static void test_char_array_all()
 {
 	ff_core_initialize(LOG_FILENAME);
-
 	test_char_array_create_delete();
 	test_char_array_basic();
-
+	test_char_array_serialization();
 	ff_core_shutdown();
 }
 
 /* end of mrpc_char_array tests */
-
 
 /* start of mrpc_wchar_array tests */
 
@@ -143,11 +349,94 @@ static void test_wchar_array_basic()
 	mrpc_wchar_array_dec_ref(wchar_array);
 }
 
+struct wchar_array_serialization_data
+{
+	struct ff_event *event;
+};
+
+static void wchar_array_serialization_fiberpool_func(void *ctx)
+{
+	struct wchar_array_serialization_data *data;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_stream *stream;
+	struct mrpc_wchar_array *wchar_array;
+	const wchar_t *s;
+	int len;
+	int is_equal;
+	enum ff_result result;
+
+	data = (struct wchar_array_serialization_data *) ctx;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 4001);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	ff_stream_acceptor_initialize(stream_acceptor);
+	stream = ff_stream_acceptor_accept(stream_acceptor);
+	ASSERT(stream != NULL, "cannot accept connection");
+
+	result = mrpc_wchar_array_unserialize(&wchar_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize wchar_array");
+	len = mrpc_wchar_array_get_len(wchar_array);
+	ASSERT(len == 10, "unexpected length of the wchar array");
+	s = mrpc_wchar_array_get_value(wchar_array);
+	is_equal = (memcmp(s, L"0123456789", 10 * sizeof(s[0])) == 0);
+	ASSERT(is_equal, "unexpected value received");
+	mrpc_wchar_array_dec_ref(wchar_array);
+
+	ff_stream_delete(stream);
+	ff_stream_acceptor_shutdown(stream_acceptor);
+	ff_stream_acceptor_delete(stream_acceptor);
+
+	ff_event_set(data->event);
+}
+
+static void test_wchar_array_serialization()
+{
+	struct wchar_array_serialization_data data;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *stream_connector;
+	struct ff_stream *stream;
+	struct mrpc_wchar_array *wchar_array;
+	wchar_t *s;
+	enum ff_result result;
+
+	data.event = ff_event_create(FF_EVENT_MANUAL);
+	ff_core_fiberpool_execute_async(wchar_array_serialization_fiberpool_func, &data);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 4001);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(stream_connector);
+	stream = ff_stream_connector_connect(stream_connector);
+	ASSERT(stream != NULL, "cannot connect to server");
+
+	s = (wchar_t *) ff_calloc(10, sizeof(s[0]));
+	memcpy(s, L"0123456789", 10 * sizeof(s[0]));
+	wchar_array = mrpc_wchar_array_create(s, 10);
+	result = mrpc_wchar_array_serialize(wchar_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize wchar array");
+	mrpc_wchar_array_dec_ref(wchar_array);
+
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	ff_stream_delete(stream);
+	ff_stream_connector_shutdown(stream_connector);
+	ff_stream_connector_delete(stream_connector);
+
+	ff_event_wait(data.event);
+	ff_event_delete(data.event);
+}
+
 static void test_wchar_array_all()
 {
 	ff_core_initialize(LOG_FILENAME);
 	test_wchar_array_create_delete();
 	test_wchar_array_basic();
+	test_wchar_array_serialization();
 	ff_core_shutdown();
 }
 
@@ -159,12 +448,12 @@ static void test_wchar_array_all()
 static void test_blob_create_delete()
 {
 	struct mrpc_blob *blob;
-	int size;
+	int len;
 
 	blob = mrpc_blob_create(10);
 	ASSERT(blob != NULL, "blob cannot be null");
-	size = mrpc_blob_get_size(blob);
-	ASSERT(size == 10, "unexpected size for the blob");
+	len = mrpc_blob_get_len(blob);
+	ASSERT(len == 10, "unexpected size for the blob");
 	mrpc_blob_dec_ref(blob);
 }
 
@@ -319,6 +608,99 @@ static void test_blob_ref_cnt()
 	ff_stream_delete(stream);
 }
 
+struct blob_serialization_data
+{
+	struct ff_event *event;
+};
+
+static void blob_serialization_fiberpool_func(void *ctx)
+{
+	struct blob_serialization_data *data;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_acceptor *stream_acceptor;
+	struct ff_stream *stream;
+	struct mrpc_blob *blob;
+	struct ff_stream *blob_stream;
+	char buf[10];
+	int len;
+	int is_equal;
+	enum ff_result result;
+
+	data = (struct blob_serialization_data *) ctx;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 4002);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
+	ff_stream_acceptor_initialize(stream_acceptor);
+	stream = ff_stream_acceptor_accept(stream_acceptor);
+	ASSERT(stream != NULL, "cannot accept connection");
+
+	result = mrpc_blob_unserialize(&blob, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize blob");
+	len = mrpc_blob_get_len(blob);
+	ASSERT(len == 10, "unexpected blob length");
+	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	ASSERT(blob_stream != NULL, "cannot open blob stream");
+	result = ff_stream_read(blob_stream, buf, 10);
+	ASSERT(result == FF_SUCCESS, "cannot read data from blob stream");
+	is_equal = (memcmp(buf, "0123456789", 10) == 0);
+	ASSERT(is_equal, "unexpected value of the blob");
+	ff_stream_delete(blob_stream);
+	mrpc_blob_dec_ref(blob);
+
+	ff_stream_delete(stream);
+	ff_stream_acceptor_shutdown(stream_acceptor);
+	ff_stream_acceptor_delete(stream_acceptor);
+
+	ff_event_set(data->event);
+}
+
+static void test_blob_serialization()
+{
+	struct blob_serialization_data data;
+	struct ff_arch_net_addr *addr;
+	struct ff_stream_connector *stream_connector;
+	struct ff_stream *stream;
+	struct mrpc_blob *blob;
+	struct ff_stream *blob_stream;
+	enum ff_result result;
+
+	data.event = ff_event_create(FF_EVENT_MANUAL);
+	ff_core_fiberpool_execute_async(blob_serialization_fiberpool_func, &data);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 4002);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_connector = ff_stream_connector_tcp_create(addr);
+	ff_stream_connector_initialize(stream_connector);
+	stream = ff_stream_connector_connect(stream_connector);
+	ASSERT(stream != NULL, "cannot connect to server");
+
+	blob = mrpc_blob_create(10);
+	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
+	ASSERT(blob_stream != NULL, "cannot open blob stream for writing");
+	result = ff_stream_write(blob_stream, "0123456789", 10);
+	ASSERT(result == FF_SUCCESS, "cannot write data to blob stream");
+	result = ff_stream_flush(blob_stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush data to blob stream");
+	ff_stream_delete(blob_stream);
+
+	result = mrpc_blob_serialize(blob, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize blob");
+	mrpc_blob_dec_ref(blob);
+
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+
+	ff_stream_delete(stream);
+	ff_stream_connector_shutdown(stream_connector);
+	ff_stream_connector_delete(stream_connector);
+
+	ff_event_wait(data.event);
+	ff_event_delete(data.event);
+}
+
 static void test_blob_all()
 {
 	ff_core_initialize(LOG_FILENAME);
@@ -326,141 +708,12 @@ static void test_blob_all()
 	test_blob_basic();
 	test_blob_multiple_read();
 	test_blob_ref_cnt();
+	test_blob_serialization();
 	ff_core_shutdown();
 }
 
 /* end of mrpc_blob tests */
 
-
-/* start of mrpc_interface tests */
-
-static void test_interface_client_create_delete()
-{
-	const struct mrpc_interface *interface;
-
-	static const mrpc_param_constructor request_param_constructors1[] =
-	{
-		mrpc_uint32_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors1[] =
-	{
-		NULL,
-	};
-	static const int is_key1[] =
-	{
-		0,
-	};
-	static const struct mrpc_method_client_description method_description1 =
-	{
-		request_param_constructors1,
-		response_param_constructors1,
-		is_key1
-	};
-
-	static const mrpc_param_constructor request_param_constructors2[] =
-	{
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors2[] =
-	{
-		mrpc_wchar_array_param_create,
-		mrpc_uint32_param_create,
-		mrpc_uint64_param_create,
-		NULL,
-	};
-	static const int is_key2[] =
-	{
-		0, /* fake value */
-	};
-	static const struct mrpc_method_client_description method_description2 =
-	{
-		request_param_constructors2,
-		response_param_constructors2,
-		is_key2
-	};
-
-	static const struct mrpc_method_client_description *method_descriptions[] =
-	{
-		&method_description1,
-		&method_description2,
-		NULL,
-	};
-
-	interface = mrpc_interface_client_create(method_descriptions);
-	ASSERT(interface != NULL, "mrpc_interface_client_create() must return valid result");
-	mrpc_interface_delete(interface);
-}
-
-static void interface_server_create_delete_callback1(struct mrpc_data *data, void *service_ctx)
-{
-	ASSERT(0, "this callback mustn't be called");
-}
-
-static void interface_server_create_delete_callback2(struct mrpc_data *data, void *service_ctx)
-{
-	ASSERT(0, "this callback mustn't be called");
-}
-
-static void test_interface_server_create_delete()
-{
-	const struct mrpc_interface *interface;
-
-	static const mrpc_param_constructor request_param_constructors1[] =
-	{
-		mrpc_uint32_param_create,
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors1[] =
-	{
-		NULL,
-	};
-	static const struct mrpc_method_server_description method_description1 =
-	{
-		request_param_constructors1,
-		response_param_constructors1,
-		interface_server_create_delete_callback1
-	};
-
-	static const mrpc_param_constructor request_param_constructors2[] =
-	{
-		NULL,
-	};
-	static const mrpc_param_constructor response_param_constructors2[] =
-	{
-		mrpc_wchar_array_param_create,
-		mrpc_uint32_param_create,
-		mrpc_uint64_param_create,
-		NULL,
-	};
-	static const struct mrpc_method_server_description method_description2 =
-	{
-		request_param_constructors2,
-		response_param_constructors2,
-		interface_server_create_delete_callback2
-	};
-
-	static const struct mrpc_method_server_description *method_descriptions[] =
-	{
-		&method_description1,
-		&method_description2,
-		NULL,
-	};
-
-	interface = mrpc_interface_server_create(method_descriptions);
-	ASSERT(interface != NULL, "mrpc_interface_server_create() must return valid result");
-	mrpc_interface_delete(interface);
-}
-
-static void test_interface_all()
-{
-	ff_core_initialize(LOG_FILENAME);
-	test_interface_client_create_delete();
-	test_interface_server_create_delete();
-	ff_core_shutdown();
-}
-
-/* end of mrpc_interface tests */
 
 /* start of mrpc_client and mrpc_server tests */
 
@@ -482,251 +735,163 @@ static void test_server_create_delete()
 	mrpc_server_delete(server);
 }
 
-static void server_method_callback1(struct mrpc_data *data, void *service_ctx)
+static enum ff_result server_method_callback1(struct ff_stream *stream, void *service_ctx)
 {
-	int32_t *s32_ptr;
+	int32_t s32;
 	struct mrpc_blob *blob;
 	struct mrpc_wchar_array *wchar_array;
 	struct mrpc_char_array *char_array;
-	struct ff_stream *stream;
+	struct ff_stream *blob_stream;
 	const wchar_t *ws;
 	char *s;
 	char buf[5];
-	uint64_t *u64_ptr;
+	uint64_t u64;
 	int len;
 	int is_equal;
 	enum ff_result result;
 
 	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
 
-	mrpc_data_get_request_param_value(data, 0, (void **) &s32_ptr);
-	ASSERT(*s32_ptr == -5433734l, "unexpected value");
+	result = mrpc_int32_unserialize(&s32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read s32");
+	ASSERT(s32 == - 5433734l, "unexpected value");
 
-	mrpc_data_get_request_param_value(data, 1, (void **) &blob);
-	len = mrpc_blob_get_size(blob);
+	result = mrpc_blob_unserialize(&blob, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read blob");
+	len = mrpc_blob_get_len(blob);
 	ASSERT(len == 5, "wrong blob size");
-	stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
-	ASSERT(stream != NULL, "cannot open blob for reading");
-	result = ff_stream_read(stream, buf, 5);
+	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_READ);
+	ASSERT(blob_stream != NULL, "cannot open blob for reading");
+	result = ff_stream_read(blob_stream, buf, 5);
 	ASSERT(result == FF_SUCCESS, "cannot read from stream");
 	is_equal = (memcmp(buf, "12345", 5) == 0);
 	ASSERT(is_equal, "unexpected value received from the stream");
-	ff_stream_delete(stream);
+	ff_stream_delete(blob_stream);
+	mrpc_blob_dec_ref(blob);
 
-	mrpc_data_get_request_param_value(data, 2, (void **) &wchar_array);
+	result = mrpc_wchar_array_unserialize(&wchar_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot read wchar array");
 	len = mrpc_wchar_array_get_len(wchar_array);
 	ASSERT(len == 6, "unexpected value received from the stream");
 	ws = mrpc_wchar_array_get_value(wchar_array);
 	is_equal = (memcmp(ws, L"987654", 6 * sizeof(ws[0])) == 0);
 	ASSERT(is_equal, "unexpected value received from the stream");
+	mrpc_wchar_array_dec_ref(wchar_array);
 
 	s = (char *) ff_calloc(3, sizeof(s[0]));
 	memcpy(s, "foo", 3 * sizeof(s[0]));
 	char_array = mrpc_char_array_create(s, 3);
-	mrpc_data_set_response_param_value(data, 0, char_array);
+	result = mrpc_char_array_serialize(char_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize char array to the stream");
+	mrpc_char_array_dec_ref(char_array);
 
-	u64_ptr = (uint64_t *) ff_malloc(sizeof(*u64_ptr));
-	*u64_ptr = 7367289343278ull;
-	mrpc_data_set_response_param_value(data, 1, u64_ptr);
+	u64 = 7367289343278ull;
+	result = mrpc_uint64_serialize(u64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize u64");
+
+	return result;
 }
 
-static void server_method_callback2(struct mrpc_data *data, void *service_ctx)
+static enum ff_result server_method_callback2(struct ff_stream *stream, void *service_ctx)
 {
-	uint32_t *u32_ptr;
+	uint32_t u32;
+	enum ff_result result;
 
 	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
 
-	u32_ptr = (uint32_t *) ff_malloc(sizeof(*u32_ptr));
-	*u32_ptr = 5728933ul;
-	mrpc_data_set_response_param_value(data, 0, u32_ptr);
+	u32 = 5728933ul;
+	result = mrpc_uint32_serialize(u32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize u32");
+
+	return result;
 }
 
-static void server_method_callback3(struct mrpc_data *data, void *service_ctx)
+static enum ff_result server_method_callback3(struct ff_stream *stream, void *service_ctx)
 {
+	uint8_t empty_byte = 0;
+	enum ff_result result;
+
 	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
 
-	/* nothing to do */
+	/* send an empty response */
+	result = ff_stream_write(stream, &empty_byte, 1);
+	ASSERT(result == FF_SUCCESS, "cannot send an empty character to stream");
+
+	return result;
 }
 
-static const mrpc_param_constructor server_request_param_constructors1[] =
+static enum ff_result server_stream_handler(struct ff_stream *stream, void *service_ctx)
 {
-	mrpc_int32_param_create,
-	mrpc_blob_param_create,
-	mrpc_wchar_array_param_create,
-	NULL,
-};
-static const mrpc_param_constructor server_response_param_constructors1[] =
-{
-	mrpc_char_array_param_create,
-	mrpc_uint64_param_create,
-	NULL,
-};
-static const struct mrpc_method_server_description server_method_description1 =
-{
-	server_request_param_constructors1,
-	server_response_param_constructors1,
-	server_method_callback1
-};
+	uint8_t method_id;
+	enum ff_result result;
 
-static const mrpc_param_constructor server_request_param_constructors2[] =
-{
-	NULL,
-};
-static const mrpc_param_constructor server_response_param_constructors2[] =
-{
-	mrpc_uint32_param_create,
-	NULL,
-};
-static const struct mrpc_method_server_description server_method_description2 =
-{
-	server_request_param_constructors2,
-	server_response_param_constructors2,
-	server_method_callback2
-};
+	ASSERT(service_ctx == (void *) 1234ul, "unexpected service_ctx value");
 
-static const mrpc_param_constructor server_request_param_constructors3[] =
-{
-	NULL,
-};
-static const mrpc_param_constructor server_response_param_constructors3[] =
-{
-	NULL,
-};
-static const struct mrpc_method_server_description server_method_description3 =
-{
-	server_request_param_constructors3,
-	server_response_param_constructors3,
-	server_method_callback3
-};
-
-static const struct mrpc_method_server_description *server_method_descriptions[] =
-{
-	&server_method_description1,
-	&server_method_description2,
-	&server_method_description3,
-	NULL,
-};
-
-static const mrpc_param_constructor client_request_param_constructors1[] =
-{
-	mrpc_int32_param_create,
-	mrpc_blob_param_create,
-	mrpc_wchar_array_param_create,
-	NULL,
-};
-static const mrpc_param_constructor client_response_param_constructors1[] =
-{
-	mrpc_char_array_param_create,
-	mrpc_uint64_param_create,
-	NULL,
-};
-static const int client_is_key1[] =
-{
-	1,
-	1,
-	0,
-};
-static const struct mrpc_method_client_description client_method_description1 =
-{
-	client_request_param_constructors1,
-	client_response_param_constructors1,
-	client_is_key1
-};
-
-static const mrpc_param_constructor client_request_param_constructors2[] =
-{
-	NULL,
-};
-static const mrpc_param_constructor client_response_param_constructors2[] =
-{
-	mrpc_uint32_param_create,
-	NULL,
-};
-static const int client_is_key2[] =
-{
-	0, /* fake parameter */
-};
-static const struct mrpc_method_client_description client_method_description2 =
-{
-	client_request_param_constructors2,
-	client_response_param_constructors2,
-	client_is_key2
-};
-
-static const mrpc_param_constructor client_request_param_constructors3[] =
-{
-	NULL,
-};
-static const mrpc_param_constructor client_response_param_constructors3[] =
-{
-	NULL,
-};
-static const int client_is_key3[] =
-{
-	0, /* fake parameter */
-};
-static const struct mrpc_method_client_description client_method_description3 =
-{
-	client_request_param_constructors3,
-	client_response_param_constructors3,
-	client_is_key3
-};
-
-static const struct mrpc_method_client_description *client_method_descriptions[] =
-{
-	&client_method_description1,
-	&client_method_description2,
-	&client_method_description3,
-	NULL,
-};
+	/* read the method id */
+	result = ff_stream_read(stream, &method_id, 1);
+	ASSERT(result == FF_SUCCESS, "cannot read method_id");
+	ASSERT(method_id <= 2, "unexpected method_id read");
+	if (method_id == 0)
+	{
+		result = server_method_callback1(stream, service_ctx);
+		ASSERT(result == FF_SUCCESS, "unexpected result");
+	}
+	else if (method_id == 1)
+	{
+		result = server_method_callback2(stream, service_ctx);
+		ASSERT(result == FF_SUCCESS, "unexpected result");
+	}
+	else if (method_id == 2)
+	{
+		result = server_method_callback3(stream, service_ctx);
+		ASSERT(result == FF_SUCCESS, "unexpected result");
+	}
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+	return result;
+}
 
 static void test_client_start_stop()
 {
-	const struct mrpc_interface *client_interface;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
 	struct ff_arch_net_addr *addr;
 	enum ff_result result;
 
-	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8593);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, client_interface, stream_connector);
+	mrpc_client_start(client, stream_connector);
 	mrpc_client_stop(client);
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
-	mrpc_interface_delete(client_interface);
 }
 
 static void test_client_start_stop_multiple()
 {
-	const struct mrpc_interface *client_interface;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
 	struct ff_arch_net_addr *addr;
 	int i;
 	enum ff_result result;
 
-	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8594);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, client_interface, stream_connector);
+	mrpc_client_start(client, stream_connector);
 	ff_core_sleep(100);
 	mrpc_client_stop(client);
 	for (i = 0; i < 10; i++)
 	{
-		mrpc_client_start(client, client_interface, stream_connector);
+		mrpc_client_start(client, stream_connector);
 		mrpc_client_stop(client);
 	}
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
-	mrpc_interface_delete(client_interface);
 }
 
 struct client_multiple_instances_data
@@ -738,7 +903,6 @@ struct client_multiple_instances_data
 
 static void client_multiple_instances_fiberpool_func(void *ctx)
 {
-	const struct mrpc_interface *client_interface;
 	struct client_multiple_instances_data *data;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
@@ -750,20 +914,18 @@ static void client_multiple_instances_fiberpool_func(void *ctx)
 	port = data->port;
 	data->port++;
 
-	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
 
-	mrpc_client_start(client, client_interface, stream_connector);
+	mrpc_client_start(client, stream_connector);
 	ff_core_sleep(100);
 	mrpc_client_stop(client);
 
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
-	mrpc_interface_delete(client_interface);
 
 	data->workers_cnt--;
 	if (data->workers_cnt == 0)
@@ -790,30 +952,26 @@ static void test_client_multiple_instances()
 
 static void test_server_start_stop()
 {
-	const struct mrpc_interface *service_interface;
 	struct mrpc_server *server;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
 	enum ff_result result;
 
-	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8595);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(10);
 	service_ctx = (void *) 1234ul;
-	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+	mrpc_server_start(server, server_stream_handler, service_ctx, stream_acceptor);
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(service_interface);
 }
 
 static void test_server_start_stop_multiple()
 {
-	const struct mrpc_interface *service_interface;
 	struct mrpc_server *server;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
@@ -821,24 +979,22 @@ static void test_server_start_stop_multiple()
 	int i;
 	enum ff_result result;
 
-	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8596);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
-	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+	mrpc_server_start(server, server_stream_handler, service_ctx, stream_acceptor);
 	ff_core_sleep(100);
 	mrpc_server_stop(server);
 	for (i = 0; i < 10; i++)
 	{
-		mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+		mrpc_server_start(server, server_stream_handler, service_ctx, stream_acceptor);
 		mrpc_server_stop(server);
 	}
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(service_interface);
 }
 
 struct server_multiple_instances_data
@@ -850,7 +1006,6 @@ struct server_multiple_instances_data
 
 static void server_multiple_instances_fiberpool_func(void *ctx)
 {
-	const struct mrpc_interface *service_interface;
 	struct server_multiple_instances_data *data;
 	void *service_ctx;
 	struct mrpc_server *server;
@@ -862,7 +1017,6 @@ static void server_multiple_instances_fiberpool_func(void *ctx)
 	data = (struct server_multiple_instances_data *) ctx;
 	port = data->port;
 	data->port++;
-	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
@@ -870,13 +1024,12 @@ static void server_multiple_instances_fiberpool_func(void *ctx)
 	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
 
-	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+	mrpc_server_start(server, server_stream_handler, service_ctx, stream_acceptor);
 	ff_core_sleep(100);
 	mrpc_server_stop(server);
 
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(service_interface);
 
 	data->workers_cnt--;
 	if (data->workers_cnt == 0)
@@ -903,21 +1056,19 @@ static void test_server_multiple_instances()
 
 static void test_server_accept()
 {
-	const struct mrpc_interface *service_interface;
 	struct mrpc_server *server;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
 	enum ff_result result;
 
-	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8597);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
-	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+	mrpc_server_start(server, server_stream_handler, service_ctx, stream_acceptor);
 
 	{
 		struct ff_stream_connector *stream_connector;
@@ -952,7 +1103,6 @@ static void test_server_accept()
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(service_interface);
 }
 
 struct client_server_connect_data
@@ -963,7 +1113,6 @@ struct client_server_connect_data
 
 static void client_server_connect_fiberpool_func(void *ctx)
 {
-	const struct mrpc_interface *client_interface;
 	struct client_server_connect_data *data;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
@@ -972,30 +1121,28 @@ static void client_server_connect_fiberpool_func(void *ctx)
 	enum ff_result result;
 
 	data = (struct client_server_connect_data *) ctx;
-	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8598);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
 
-	mrpc_client_start(client, client_interface, stream_connector);
+	mrpc_client_start(client, stream_connector);
 	mrpc_client_stop(client);
 
-	mrpc_client_start(client, client_interface, stream_connector);
+	mrpc_client_start(client, stream_connector);
 	ff_core_sleep(100);
 	mrpc_client_stop(client);
 
 	for (i = 0; i < 5; i++)
 	{
-		mrpc_client_start(client, client_interface, stream_connector);
+		mrpc_client_start(client, stream_connector);
 		ff_core_sleep(10);
 		mrpc_client_stop(client);
 	}
 
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
-	mrpc_interface_delete(client_interface);
 
 	data->workers_cnt--;
 	if (data->workers_cnt == 0)
@@ -1007,7 +1154,6 @@ static void client_server_connect_fiberpool_func(void *ctx)
 static void test_client_server_connect()
 {
 	struct client_server_connect_data data;
-	const struct mrpc_interface *service_interface;
 	struct mrpc_server *server;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
@@ -1015,14 +1161,13 @@ static void test_client_server_connect()
 	int i;
 	enum ff_result result;
 
-	service_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8598);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
-	mrpc_server_start(server, service_interface, service_ctx, stream_acceptor);
+	mrpc_server_start(server, server_stream_handler, service_ctx, stream_acceptor);
 
 	data.event = ff_event_create(FF_EVENT_MANUAL);
 	data.workers_cnt = 5;
@@ -1036,131 +1181,145 @@ static void test_client_server_connect()
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(service_interface);
 }
 
 static void client_server_rpc_client(int port, int iterations_cnt)
 {
-	const struct mrpc_interface *client_interface;
 	struct ff_arch_net_addr *addr;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector;
 	int i;
 	enum ff_result result;
 
-	client_interface = mrpc_interface_client_create(client_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, client_interface, stream_connector);
+	mrpc_client_start(client, stream_connector);
 
 	for (i = 0; i < iterations_cnt; i++)
 	{
-		struct mrpc_data *data;
-		struct mrpc_blob *blob;
 		struct ff_stream *stream;
+		struct mrpc_blob *blob;
+		struct ff_stream *blob_stream;
 		struct mrpc_wchar_array *wchar_array;
 		struct mrpc_char_array *char_array;
 		wchar_t *ws;
 		const char *s;
 		int len;
 		int is_equal;
-		int32_t *s32_ptr;
-		uint64_t *u64_ptr;
-		uint32_t *u32_ptr;
+		int32_t s32;
+		uint64_t u64;
+		uint32_t u32;
 		uint32_t hash_value;
+		uint8_t method_id;
+		uint8_t empty_byte;
 
-		data = mrpc_client_create_data(client, 0);
-		ASSERT(data != NULL, "data cannot be NULL");
+		stream = mrpc_client_create_request_stream(client, 2);
+		ASSERT(stream != NULL, "client must be already connected");
 
-		s32_ptr = (int32_t *) ff_malloc(sizeof(*s32_ptr));
-		*s32_ptr = -5433734l;
-		mrpc_data_set_request_param_value(data, 0, s32_ptr);
+		method_id = 0;
+		result = ff_stream_write(stream, &method_id, 1);
+		ASSERT(result == FF_SUCCESS, "Cannot write method_id to the client");
+
+		s32 = -5433734l;
+		result = mrpc_int32_serialize(s32, stream);
+		ASSERT(result == FF_SUCCESS, "cannot serialize s32");
 
 		blob = mrpc_blob_create(5);
-		stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
-		ASSERT(stream != NULL, "cannot open blob for writing");
-		result = ff_stream_write(stream, "12345", 5);
+		blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
+		ASSERT(blob_stream != NULL, "cannot open blob for writing");
+		result = ff_stream_write(blob_stream, "12345", 5);
 		ASSERT(result == FF_SUCCESS, "cannot write to blob stream");
-		result = ff_stream_flush(stream);
+		result = ff_stream_flush(blob_stream);
 		ASSERT(result == FF_SUCCESS, "cannot flush the blob stream");
-		ff_stream_delete(stream);
-		mrpc_data_set_request_param_value(data, 1, blob);
+		ff_stream_delete(blob_stream);
+		result = mrpc_blob_serialize(blob, stream);
+		ASSERT(result == FF_SUCCESS, "cannot serialize blob to stream");
 
 		ws = (wchar_t *) ff_calloc(6, sizeof(ws[0]));
 		memcpy(ws, L"987654", 6 * sizeof(ws[0]));
 		wchar_array = mrpc_wchar_array_create(ws, 6);
-		mrpc_data_set_request_param_value(data, 2, wchar_array);
+		result = mrpc_wchar_array_serialize(wchar_array, stream);
+		ASSERT(result == FF_SUCCESS, "cannot serialize wchar array to stream");
+		mrpc_wchar_array_dec_ref(wchar_array);
 
-		hash_value = mrpc_data_get_request_hash(data, 12345);
+		hash_value = mrpc_int32_get_hash(s32, 12345);
+		result = mrpc_blob_get_hash(blob, hash_value, &hash_value);
+		ASSERT(result == FF_SUCCESS, "cannot calculate hash for blob");
 		ASSERT(hash_value == 295991475ul, "unexpected hash value");
+		mrpc_blob_dec_ref(blob);
 
-		result = mrpc_client_invoke_rpc(client, data);
-		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
+		result = ff_stream_flush(stream);
+		ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 
-		mrpc_data_get_response_param_value(data, 0, (void **) &char_array);
+		result = mrpc_char_array_unserialize(&char_array, stream);
+		ASSERT(result == FF_SUCCESS, "cannot unserialize char array");
 		len = mrpc_char_array_get_len(char_array);
 		ASSERT(len == 3, "unexpected length returned");
 		s = mrpc_char_array_get_value(char_array);
 		is_equal = (memcmp(s, "foo", 3) == 0);
 		ASSERT(is_equal, "unexpected value received");
+		mrpc_char_array_dec_ref(char_array);
 
-		mrpc_data_get_response_param_value(data, 1, (void **) &u64_ptr);
-		ASSERT(*u64_ptr == 7367289343278ull, "unexpected value received");
+		result = mrpc_uint64_unserialize(&u64, stream);
+		ASSERT(result == FF_SUCCESS, "cannot unserialize u64");
+		ASSERT(u64 == 7367289343278ull, "unexpected value received");
 
-		mrpc_data_delete(data);
+		ff_stream_delete(stream);
 
-		data = mrpc_client_create_data(client, 1);
-		ASSERT(data != NULL, "data cannot be NULL");
-		hash_value = mrpc_data_get_request_hash(data, 12345);
-		ASSERT(hash_value == 12345, "unexpected hash value");
-		result = mrpc_client_invoke_rpc(client, data);
-		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
-		mrpc_data_get_response_param_value(data, 0, (void **) &u32_ptr);
-		ASSERT(*u32_ptr == 5728933ul, "unexpected value received");
-		mrpc_data_delete(data);
+		stream = mrpc_client_create_request_stream(client, 2);
+		ASSERT(stream != NULL, "client must return valid stream");
+		method_id = 1;
+		result = ff_stream_write(stream, &method_id, 1);
+		ASSERT(result == FF_SUCCESS, "cannot write method_id to the stream");
+		result = ff_stream_flush(stream);
+		ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+		result = mrpc_uint32_unserialize(&u32, stream);
+		ASSERT(result == FF_SUCCESS, "cannot unserialize u32");
+		ASSERT(u32 == 5728933ul, "unexpected value received");
+		ff_stream_delete(stream);
 
-		data = mrpc_client_create_data(client, 2);
-		ASSERT(data != NULL, "data cannot be NULL");
-		hash_value = mrpc_data_get_request_hash(data, 3242);
-		ASSERT(hash_value == 3242, "unexpected hash value");
-		result = mrpc_client_invoke_rpc(client, data);
-		ASSERT(result == FF_SUCCESS, "cannot invoke rpc");
-		mrpc_data_delete(data);
+		stream = mrpc_client_create_request_stream(client, 2);
+		ASSERT(stream != NULL, "client must return valid stream");
+		method_id = 2;
+		result = ff_stream_write(stream, &method_id, 1);
+		ASSERT(result == FF_SUCCESS, "cannot write method_id to the stream");
+		result = ff_stream_flush(stream);
+		ASSERT(result == FF_SUCCESS, "cannot flush the stream");
+		result = ff_stream_read(stream, &empty_byte, 1);
+		ASSERT(result == FF_SUCCESS, "cannot read an empty byte");
+		ASSERT(empty_byte == 0, "unexpected value of empty byte");
+		ff_stream_delete(stream);
 	}
 
 	mrpc_client_stop(client);
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
-	mrpc_interface_delete(client_interface);
 }
 
 static void test_client_server_rpc()
 {
-	const struct mrpc_interface *server_interface;
 	struct mrpc_server *server;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_arch_net_addr *addr;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8599);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
-	mrpc_server_start(server, server_interface, service_ctx, stream_acceptor);
+	mrpc_server_start(server, server_stream_handler, service_ctx, stream_acceptor);
 
 	client_server_rpc_client(8599, 10);
 
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(server_interface);
 }
 
 struct client_server_rpc_multiple_clients_data
@@ -1186,7 +1345,6 @@ static void client_server_rpc_multiple_clients_fiberpool_func(void *ctx)
 static void test_client_server_rpc_multiple_clients()
 {
 	struct client_server_rpc_multiple_clients_data data;
-	const struct mrpc_interface *server_interface;
 	struct mrpc_server *server;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
@@ -1194,14 +1352,13 @@ static void test_client_server_rpc_multiple_clients()
 	int i;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_server_create(server_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 8601);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(100);
 	service_ctx = (void *) 1234ul;
-	mrpc_server_start(server, server_interface, service_ctx, stream_acceptor);
+	mrpc_server_start(server, server_stream_handler, service_ctx, stream_acceptor);
 	data.event = ff_event_create(FF_EVENT_MANUAL);
 	data.port = 8601;
 	data.workers_cnt = 20;
@@ -1215,127 +1372,71 @@ static void test_client_server_rpc_multiple_clients()
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(server_interface);
 }
 
-static void server_echo_callback(struct mrpc_data *data, void *service_ctx)
+static enum ff_result server_echo_callback(struct ff_stream *stream, void *service_ctx)
 {
-	uint32_t *u32_ptr1, *u32_ptr2;
-	int32_t *s32_ptr1, *s32_ptr2;
-	uint64_t *u64_ptr1, *u64_ptr2;
-	int64_t *s64_ptr1, *s64_ptr2;
+	uint32_t u32;
+	int32_t s32;
+	uint64_t u64;
+	int64_t s64;
 	struct mrpc_char_array *char_array;
 	struct mrpc_wchar_array *wchar_array;
 	struct mrpc_blob *blob;
+	enum ff_result result;
 
-	mrpc_data_get_request_param_value(data, 0, (void **) &u32_ptr1);
-	mrpc_data_get_request_param_value(data, 1, (void **) &s32_ptr1);
-	mrpc_data_get_request_param_value(data, 2, (void **) &u64_ptr1);
-	mrpc_data_get_request_param_value(data, 3, (void **) &s64_ptr1);
-	mrpc_data_get_request_param_value(data, 4, (void **) &char_array);
-	mrpc_data_get_request_param_value(data, 5, (void **) &wchar_array);
-	mrpc_data_get_request_param_value(data, 6, (void **) &blob);
+	result = mrpc_uint32_unserialize(&u32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize u32");
+	result = mrpc_int32_unserialize(&s32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserializes s32");
+	result = mrpc_uint64_unserialize(&u64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize u64");
+	result = mrpc_int64_unserialize(&s64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize s64");
+	result = mrpc_char_array_unserialize(&char_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize char array");
+	result = mrpc_wchar_array_unserialize(&wchar_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize wchar array");
+	result = mrpc_blob_unserialize(&blob, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize blob");
 
-	u32_ptr2 = (uint32_t *) ff_malloc(sizeof(*u32_ptr2));
-	*u32_ptr2 = *u32_ptr1;
-	s32_ptr2 = (int32_t *) ff_malloc(sizeof(*s32_ptr2));
-	*s32_ptr2 = *s32_ptr1;
-	u64_ptr2 = (uint64_t *) ff_malloc(sizeof(*u64_ptr2));
-	*u64_ptr2 = *u64_ptr1;
-	s64_ptr2 = (int64_t *) ff_malloc(sizeof(*s64_ptr2));
-	*s64_ptr2 = *s64_ptr1;
-	mrpc_char_array_inc_ref(char_array);
-	mrpc_wchar_array_inc_ref(wchar_array);
-	mrpc_blob_inc_ref(blob);
+	result = mrpc_uint32_serialize(u32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize u32");
+	result = mrpc_int32_serialize(s32, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize s32");
+	result = mrpc_uint64_serialize(u64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize u64");
+	result = mrpc_int64_serialize(s64, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize s64");
+	result = mrpc_char_array_serialize(char_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize char array");
+	result = mrpc_wchar_array_serialize(wchar_array, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize wchar array");
+	result = mrpc_blob_serialize(blob, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize blob");
 
-	mrpc_data_set_response_param_value(data, 0, u32_ptr2);
-	mrpc_data_set_response_param_value(data, 1, s32_ptr2);
-	mrpc_data_set_response_param_value(data, 2, u64_ptr2);
-	mrpc_data_set_response_param_value(data, 3, s64_ptr2);
-	mrpc_data_set_response_param_value(data, 4, char_array);
-	mrpc_data_set_response_param_value(data, 5, wchar_array);
-	mrpc_data_set_response_param_value(data, 6, blob);
+	mrpc_char_array_dec_ref(char_array);
+	mrpc_wchar_array_dec_ref(wchar_array);
+	mrpc_blob_dec_ref(blob);
+
+	return result;
 }
 
-static const mrpc_param_constructor server_echo_request_param_constructors[] =
+static enum ff_result server_echo_stream_handler(struct ff_stream *stream, void *service_ctx)
 {
-	mrpc_uint32_param_create,
-	mrpc_int32_param_create,
-	mrpc_uint64_param_create,
-	mrpc_int64_param_create,
-	mrpc_char_array_param_create,
-	mrpc_wchar_array_param_create,
-	mrpc_blob_param_create,
-	NULL,
-};
-static const mrpc_param_constructor server_echo_response_param_constructors[] =
-{
-	mrpc_uint32_param_create,
-	mrpc_int32_param_create,
-	mrpc_uint64_param_create,
-	mrpc_int64_param_create,
-	mrpc_char_array_param_create,
-	mrpc_wchar_array_param_create,
-	mrpc_blob_param_create,
-	NULL,
-};
-static const struct mrpc_method_server_description server_echo_method_description =
-{
-	server_echo_request_param_constructors,
-	server_echo_response_param_constructors,
-	server_echo_callback
-};
+	uint8_t method_id;
+	enum ff_result result;
 
-static const struct mrpc_method_server_description *server_echo_method_descriptions[] =
-{
-	&server_echo_method_description,
-	NULL,
-};
+	result = ff_stream_read(stream, &method_id, 1);
+	ASSERT(result == FF_SUCCESS, "cannot read method_id");
+	ASSERT(method_id == 0, "unexpected method_id");
+	result = server_echo_callback(stream, service_ctx);
+	ASSERT(result == FF_SUCCESS, "error in echo callback");
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 
-static const mrpc_param_constructor client_echo_request_param_constructors[] =
-{
-	mrpc_uint32_param_create,
-	mrpc_int32_param_create,
-	mrpc_uint64_param_create,
-	mrpc_int64_param_create,
-	mrpc_char_array_param_create,
-	mrpc_wchar_array_param_create,
-	mrpc_blob_param_create,
-	NULL,
-};
-static const mrpc_param_constructor client_echo_response_param_constructors[] =
-{
-	mrpc_uint32_param_create,
-	mrpc_int32_param_create,
-	mrpc_uint64_param_create,
-	mrpc_int64_param_create,
-	mrpc_char_array_param_create,
-	mrpc_wchar_array_param_create,
-	mrpc_blob_param_create,
-	NULL,
-};
-static const int client_echo_is_key[] =
-{
-	1,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-};
-static const struct mrpc_method_client_description client_echo_method_description =
-{
-	client_echo_request_param_constructors,
-	client_echo_response_param_constructors,
-	client_echo_is_key
-};
-
-static const struct mrpc_method_client_description *client_echo_method_descriptions[] =
-{
-	&client_echo_method_description,
-	NULL,
-};
+	return result;
+}
 
 static int client_server_echo_get_random_uint(int max_value)
 {
@@ -1448,11 +1549,11 @@ static void client_server_echo_compare_blobs(struct mrpc_blob *blob1, struct mrp
 {
 	struct ff_stream *stream1, *stream2;
 	uint8_t *buf1, *buf2;
-	int size1, size2;
+	int len1, len2;
 
-	size1 = mrpc_blob_get_size(blob1);
-	size2 = mrpc_blob_get_size(blob2);
-	ASSERT(size1 == size2, "wrong lengths");
+	len1 = mrpc_blob_get_len(blob1);
+	len2 = mrpc_blob_get_len(blob2);
+	ASSERT(len1 == len2, "wrong lengths");
 
 	stream1 = mrpc_blob_open_stream(blob1, MRPC_BLOB_READ);
 	ASSERT(stream1 != NULL, "cannot open blob stream");
@@ -1461,13 +1562,13 @@ static void client_server_echo_compare_blobs(struct mrpc_blob *blob1, struct mrp
 
 	buf1 = (uint8_t *) ff_calloc(0x10000, sizeof(buf1[0]));
 	buf2 = (uint8_t *) ff_calloc(0x10000, sizeof(buf2[0]));
-	while (size1 > 0)
+	while (len1 > 0)
 	{
 		int len;
 		int is_equal;
 		enum ff_result result;
 
-		len = size1 > 0x10000 ? 0x10000 : size1;
+		len = len1 > 0x10000 ? 0x10000 : len1;
 		result = ff_stream_read(stream1, buf1, len);
 		ASSERT(result == FF_SUCCESS, "cannot read from blob stream");
 		result = ff_stream_read(stream2, buf2, len);
@@ -1475,7 +1576,7 @@ static void client_server_echo_compare_blobs(struct mrpc_blob *blob1, struct mrp
 		is_equal = (memcmp(buf1, buf2, len) == 0);
 		ASSERT(is_equal, "blob values cannot be different");
 
-		size1 -= len;
+		len1 -= len;
 	}
 	ff_free(buf1);
 	ff_free(buf2);
@@ -1486,88 +1587,96 @@ static void client_server_echo_compare_blobs(struct mrpc_blob *blob1, struct mrp
 
 static void client_server_echo_client_rpc(struct mrpc_client *client)
 {
-	struct mrpc_data *data;
+	struct ff_stream *stream;
 	struct mrpc_char_array *char_array1, *char_array2;
 	struct mrpc_wchar_array *wchar_array1, *wchar_array2;
 	struct mrpc_blob *blob1, *blob2;
-	uint32_t *u32_ptr1, *u32_ptr2;
-	int32_t *s32_ptr1, *s32_ptr2;
-	uint64_t *u64_ptr1, *u64_ptr2;
-	int64_t *s64_ptr1, *s64_ptr2;
-	uint32_t u32_value;
-	int32_t s32_value;
-	uint64_t u64_value;
-	int64_t s64_value;
+	uint32_t u32_1, u32_2;
+	int32_t s32_1, s32_2;
+	uint64_t u64_1, u64_2;
+	int64_t s64_1, s64_2;
+	uint8_t method_id;
 	enum ff_result result;
 
-	data = mrpc_client_create_data(client, 0);
-	ASSERT(data != NULL, "data cannot be NULL");
+	stream = mrpc_client_create_request_stream(client, 2);
+	ASSERT(stream != NULL, "stream must be created");
+	method_id = 0;
+	result = ff_stream_write(stream, &method_id, 1);
+	ASSERT(result == FF_SUCCESS, "cannot write method_id");
 
-	u32_ptr1 = (uint32_t *) ff_malloc(sizeof(*u32_ptr1));
-	u32_value = *u32_ptr1 = 2 * client_server_echo_get_random_uint((1ul << 31) - 1);
-	s32_ptr1 = (int32_t *) ff_malloc(sizeof(*s32_ptr1));
-	s32_value = *s32_ptr1 = 5 - u32_value;
-	u64_ptr1 = (uint64_t *) ff_malloc(sizeof(*u64_ptr1));
-	u64_value = *u64_ptr1 = 23 * (uint64_t) u32_value;
-	s64_ptr1 = (int64_t *) ff_malloc(sizeof(*s64_ptr1));
-	s64_value = *s64_ptr1 = 43543 - 4534 * (uint64_t) u32_value;
+	u32_1 = 2 * client_server_echo_get_random_uint((1ul << 31) - 1);
+	s32_1 = 5 - u32_1;
+	u64_1 = 23 * (uint64_t) u32_1;
+	s64_1 = 43543 - 4534 * (uint64_t) u32_1;
 	char_array1 = client_server_echo_create_char_array();
 	wchar_array1 = client_server_echo_create_wchar_array();
 	blob1 = client_server_echo_create_blob();
 
-	mrpc_char_array_inc_ref(char_array1);
-	mrpc_wchar_array_inc_ref(wchar_array1);
-	mrpc_blob_inc_ref(blob1);
+	result = mrpc_uint32_serialize(u32_1, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize u32");
+	result = mrpc_int32_serialize(s32_1, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize s32");
+	result = mrpc_uint64_serialize(u64_1, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize u64");
+	result = mrpc_int64_serialize(s64_1, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize s64");
+	result = mrpc_char_array_serialize(char_array1, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize char array");
+	result = mrpc_wchar_array_serialize(wchar_array1, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize wchar array");
+	result = mrpc_blob_serialize(blob1, stream);
+	ASSERT(result == FF_SUCCESS, "cannot serialize blob");
 
-	mrpc_data_set_request_param_value(data, 0, u32_ptr1);
-	mrpc_data_set_request_param_value(data, 1, s32_ptr1);
-	mrpc_data_set_request_param_value(data, 2, u64_ptr1);
-	mrpc_data_set_request_param_value(data, 3, s64_ptr1);
-	mrpc_data_set_request_param_value(data, 4, char_array1);
-	mrpc_data_set_request_param_value(data, 5, wchar_array1);
-	mrpc_data_set_request_param_value(data, 6, blob1);
+	result = ff_stream_flush(stream);
+	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 
-	result = mrpc_client_invoke_rpc(client, data);
-	ASSERT(result == FF_SUCCESS, "cannot invoke echo rpc");
-
-	mrpc_data_get_response_param_value(data, 0, (void **) &u32_ptr2);
-	ASSERT(*u32_ptr2 == u32_value, "unexpected value");
-	mrpc_data_get_response_param_value(data, 1, (void **) &s32_ptr2);
-	ASSERT(*s32_ptr2 == s32_value, "unexpected value");
-	mrpc_data_get_response_param_value(data, 2, (void **) &u64_ptr2);
-	ASSERT(*u64_ptr2 == u64_value, "unexpected value");
-	mrpc_data_get_response_param_value(data, 3, (void **) &s64_ptr2);
-	ASSERT(*s64_ptr2 == s64_value, "unexpected value");
-	mrpc_data_get_response_param_value(data, 4, (void **) &char_array2);
+	result = mrpc_uint32_unserialize(&u32_2, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize u32");
+	ASSERT(u32_1 == u32_2, "unexpected value");
+	result = mrpc_int32_unserialize(&s32_2, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize s32");
+	ASSERT(s32_1 == s32_2, "unexpected value");
+	result = mrpc_uint64_unserialize(&u64_2, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize u64");
+	ASSERT(u64_1 == u64_2, "unexpected value");
+	result = mrpc_int64_unserialize(&s64_2, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize s64");
+	ASSERT(s64_1 == s64_2, "unexpected value");
+	result = mrpc_char_array_unserialize(&char_array2, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize char array");
 	client_server_echo_compare_char_arrays(char_array1, char_array2);
-	mrpc_data_get_response_param_value(data, 5, (void **) &wchar_array2);
+	result = mrpc_wchar_array_unserialize(&wchar_array2, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize wchar array");
 	client_server_echo_compare_wchar_arrays(wchar_array1, wchar_array2);
-	mrpc_data_get_response_param_value(data, 6, (void **) &blob2);
+	result = mrpc_blob_unserialize(&blob2, stream);
+	ASSERT(result == FF_SUCCESS, "cannot unserialize blob");
 	client_server_echo_compare_blobs(blob1, blob2);
 
 	mrpc_char_array_dec_ref(char_array1);
 	mrpc_wchar_array_dec_ref(wchar_array1);
 	mrpc_blob_dec_ref(blob1);
 
-	mrpc_data_delete(data);
+	mrpc_char_array_dec_ref(char_array2);
+	mrpc_wchar_array_dec_ref(wchar_array2);
+	mrpc_blob_dec_ref(blob2);
+
+	ff_stream_delete(stream);
 }
 
 static void client_server_echo_client(int port, int iterations_cnt)
 {
-	const struct mrpc_interface *client_interface;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_connector *stream_connector;
 	struct mrpc_client *client;
 	int i;
 	enum ff_result result;
 
-	client_interface = mrpc_interface_client_create(client_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, client_interface, stream_connector);
+	mrpc_client_start(client, stream_connector);
 	for (i = 0; i < iterations_cnt; i++)
 	{
 		client_server_echo_client_rpc(client);
@@ -1575,32 +1684,28 @@ static void client_server_echo_client(int port, int iterations_cnt)
 	mrpc_client_stop(client);
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
-	mrpc_interface_delete(client_interface);
 }
 
 static void test_client_server_echo_rpc()
 {
-	const struct mrpc_interface *server_interface;
 	void *server_ctx = NULL;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct mrpc_server *server;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_server_create(server_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10101);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(100);
-	mrpc_server_start(server, server_interface, server_ctx, stream_acceptor);
+	mrpc_server_start(server, server_echo_stream_handler, server_ctx, stream_acceptor);
 
 	client_server_echo_client(10101, 5);
 
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(server_interface);
 }
 
 struct client_server_echo_rpc_multiple_clients_data
@@ -1628,7 +1733,6 @@ static void client_server_echo_rpc_multiple_clients_fiberpool_func(void *ctx)
 static void test_client_server_echo_rpc_multiple_clients()
 {
 	struct client_server_echo_rpc_multiple_clients_data data;
-	const struct mrpc_interface *server_interface;
 	void *server_ctx = NULL;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_acceptor *stream_acceptor;
@@ -1636,13 +1740,12 @@ static void test_client_server_echo_rpc_multiple_clients()
 	int i;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_server_create(server_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10997);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(100);
-	mrpc_server_start(server, server_interface, server_ctx, stream_acceptor);
+	mrpc_server_start(server, server_echo_stream_handler, server_ctx, stream_acceptor);
 
 	data.event = ff_event_create(FF_EVENT_MANUAL);
 	data.port = 10997;
@@ -1657,7 +1760,6 @@ static void test_client_server_echo_rpc_multiple_clients()
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(server_interface);
 }
 
 struct client_server_echo_rpc_concurrent_data
@@ -1685,20 +1787,18 @@ static void client_server_echo_rpc_concurrent_fiberpool_func(void *ctx)
 static void client_server_echo_client_concurrent(int port, int workers_cnt)
 {
 	struct client_server_echo_rpc_concurrent_data data;
-	const struct mrpc_interface *client_interface;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_connector *stream_connector;
 	struct mrpc_client *client;
 	int i;
 	enum ff_result result;
 
-	client_interface = mrpc_interface_client_create(client_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", port);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_connector = ff_stream_connector_tcp_create(addr);
 	client = mrpc_client_create();
-	mrpc_client_start(client, client_interface, stream_connector);
+	mrpc_client_start(client, stream_connector);
 
 	data.event = ff_event_create(FF_EVENT_MANUAL);
 	data.client = client;
@@ -1713,32 +1813,28 @@ static void client_server_echo_client_concurrent(int port, int workers_cnt)
 	mrpc_client_stop(client);
 	mrpc_client_delete(client);
 	ff_stream_connector_delete(stream_connector);
-	mrpc_interface_delete(client_interface);
 }
 
 static void test_client_server_echo_rpc_concurrent()
 {
-	const struct mrpc_interface *server_interface;
 	void *server_ctx = NULL;
 	struct ff_arch_net_addr *addr;
 	struct ff_stream_acceptor *stream_acceptor;
 	struct mrpc_server *server;
 	enum ff_result result;
 
-	server_interface = mrpc_interface_server_create(server_echo_method_descriptions);
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 10102);
 	ASSERT(result == FF_SUCCESS, "cannot resolve local address");
 	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
 	server = mrpc_server_create(100);
-	mrpc_server_start(server, server_interface, server_ctx, stream_acceptor);
+	mrpc_server_start(server, server_echo_stream_handler, server_ctx, stream_acceptor);
 
 	client_server_echo_client_concurrent(10102, 10);
 
 	mrpc_server_stop(server);
 	mrpc_server_delete(server);
 	ff_stream_acceptor_delete(stream_acceptor);
-	mrpc_interface_delete(server_interface);
 }
 
 static void test_client_server_all()
@@ -1766,10 +1862,10 @@ static void test_client_server_all()
 
 static void test_all()
 {
+	test_int_all();
 	test_char_array_all();
 	test_wchar_array_all();
 	test_blob_all();
-	test_interface_all();
 	test_client_server_all();
 }
 

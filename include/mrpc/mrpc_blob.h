@@ -17,14 +17,14 @@ enum mrpc_blob_open_stream_mode
 struct mrpc_blob;
 
 /**
- * Creates an empty blob with the given size.
- * The returned blob is 'empty' and must be filled with contents with the given size before becoming useful.
+ * Creates an empty blob with the given length.
+ * The returned blob is 'empty' and must be filled with contents with the given length before becoming useful.
  * Use the following template code before the blob will be useful:
- *   blob = mrpc_blob_create(blob_size);
+ *   blob = mrpc_blob_create(blob_len);
  *   blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
  *   if (blob_stream != NULL)
  *   {
- *     write_blob_contents_into_stream(blob_stream, blob_size);
+ *     write_blob_contents_into_stream(blob_stream, blob_len);
  *     ff_stream_flush(blob_stream);
  *     ff_stream_delete(blob_stream);
  *     // now the blob is filled with contents and can be opened for contents reading
@@ -33,7 +33,7 @@ struct mrpc_blob;
  *   }
  * This function always returns correct result.
  */
-MRPC_API struct mrpc_blob *mrpc_blob_create(int size);
+MRPC_API struct mrpc_blob *mrpc_blob_create(int len);
 
 /**
  * Increments reference counter of the blob.
@@ -49,9 +49,9 @@ MRPC_API void mrpc_blob_inc_ref(struct mrpc_blob *blob);
 MRPC_API void mrpc_blob_dec_ref(struct mrpc_blob *blob);
 
 /**
- * Returns the size of the blob in bytes, which was passed to the mrpc_blob_create().
+ * Returns the length of the blob in bytes, which was passed to the mrpc_blob_create().
  */
-MRPC_API int mrpc_blob_get_size(struct mrpc_blob *blob);
+MRPC_API int mrpc_blob_get_len(struct mrpc_blob *blob);
 
 /**
  * Opens a stream for reading or writing data from / to the blob depending on the given mode.
@@ -81,6 +81,20 @@ MRPC_API enum ff_result mrpc_blob_move(struct mrpc_blob *blob, const wchar_t *ne
  * Returns FF_SUCCESS on successful hash calculation, otherwise returns FF_FAILURE
  */
 MRPC_API enum ff_result mrpc_blob_get_hash(struct mrpc_blob *blob, uint32_t start_value, uint32_t *hash_value);
+
+/**
+ * Serializes the blob into the stream.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
+ */
+MRPC_API enum ff_result mrpc_blob_serialize(struct mrpc_blob *blob, struct ff_stream *stream);
+
+/**
+ * Unserializes blob from the stream.
+ * Sets the blob to newly created blob, which contains unserialized data from the stream.
+ * The caller is responsible for calling the mrpc_blob_dec_ref() for the returned blob.
+ * Returns FF_SUCCESS on success, FF_FAILURE on error.
+ */
+MRPC_API enum ff_result mrpc_blob_unserialize(struct mrpc_blob **blob, struct ff_stream *stream);
 
 #ifdef __cplusplus
 }

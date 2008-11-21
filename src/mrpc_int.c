@@ -1,7 +1,8 @@
 #include "private/mrpc_common.h"
 
-#include "private/mrpc_int_serialization.h"
+#include "private/mrpc_int.h"
 #include "ff/ff_stream.h"
+#include "ff/ff_hash.h"
 
 #define BITS_PER_OCTET 7
 #define MAX_UINT_N_OCTETS(n) (((n) + BITS_PER_OCTET - 1) / BITS_PER_OCTET)
@@ -72,6 +73,18 @@ end:
 	return result;
 }
 
+uint32_t mrpc_uint64_get_hash(uint64_t data, uint32_t start_value)
+{
+	uint32_t hash_value;
+	uint32_t tmp[2];
+
+	tmp[0] = (uint32_t) data;
+	tmp[1] = (uint32_t) (data >> 32);
+	hash_value = ff_hash_uint32(start_value, tmp, 2);
+	return hash_value;
+}
+
+
 enum ff_result mrpc_int64_serialize(int64_t data, struct ff_stream *stream)
 {
 	uint64_t u_data;
@@ -110,6 +123,18 @@ enum ff_result mrpc_int64_unserialize(int64_t *data, struct ff_stream *stream)
 	return result;
 }
 
+uint32_t mrpc_int64_get_hash(int64_t data, uint32_t start_value)
+{
+	uint32_t hash_value;
+	uint32_t tmp[2];
+
+	tmp[0] = (uint32_t) data;
+	tmp[1] = (uint32_t) (data >> 32);
+	hash_value = ff_hash_uint32(start_value, tmp, 2);
+	return hash_value;
+}
+
+
 enum ff_result mrpc_uint32_serialize(uint32_t data, struct ff_stream *stream)
 {
 	enum ff_result result;
@@ -147,6 +172,15 @@ enum ff_result mrpc_uint32_unserialize(uint32_t *data, struct ff_stream *stream)
 	return result;
 }
 
+uint32_t mrpc_uint32_get_hash(uint32_t data, uint32_t start_value)
+{
+	uint32_t hash_value;
+
+	hash_value = ff_hash_uint32(start_value, &data, 1);
+	return hash_value;
+}
+
+
 enum ff_result mrpc_int32_serialize(int32_t data, struct ff_stream *stream)
 {
 	uint32_t u_data;
@@ -183,4 +217,12 @@ enum ff_result mrpc_int32_unserialize(int32_t *data, struct ff_stream *stream)
 		ff_log_debug(L"cannot unserialize uint32 data from the stream=%p. See previous messages for more info", stream);
 	}
 	return result;
+}
+
+uint32_t mrpc_int32_get_hash(int32_t data, uint32_t start_value)
+{
+	uint32_t hash_value;
+
+	hash_value = ff_hash_uint32(start_value, (uint32_t *) &data, 1);
+	return hash_value;
 }

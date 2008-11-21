@@ -186,15 +186,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\mrpc\mrpc_blob_param.h"
-					>
-				</File>
-				<File
 					RelativePath=".\include\mrpc\mrpc_char_array.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\mrpc\mrpc_char_array_param.h"
 					>
 				</File>
 				<File
@@ -206,27 +198,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\mrpc\mrpc_data.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\mrpc\mrpc_int_param.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\mrpc\mrpc_interface.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\mrpc\mrpc_method.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\mrpc\mrpc_param.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\mrpc\mrpc_param_constructors.h"
+					RelativePath=".\include\mrpc\mrpc_int.h"
 					>
 				</File>
 				<File
@@ -234,11 +206,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\mrpc\mrpc_wchar_array.h"
+					RelativePath=".\include\mrpc\mrpc_server_stream_handler.h"
 					>
 				</File>
 				<File
-					RelativePath=".\include\mrpc\mrpc_wchar_array_param.h"
+					RelativePath=".\include\mrpc\mrpc_wchar_array.h"
 					>
 				</File>
 			</Filter>
@@ -258,31 +230,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\private\mrpc_blob_param.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_blob_serialization.h"
-					>
-				</File>
-				<File
 					RelativePath=".\include\private\mrpc_char_array.h"
 					>
 				</File>
 				<File
-					RelativePath=".\include\private\mrpc_char_array_param.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_char_array_serialization.h"
-					>
-				</File>
-				<File
 					RelativePath=".\include\private\mrpc_client.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_client_request_processor.h"
 					>
 				</File>
 				<File
@@ -294,23 +246,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\private\mrpc_data.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_int_param.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_int_serialization.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_interface.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_method.h"
+					RelativePath=".\include\private\mrpc_int.h"
 					>
 				</File>
 				<File
@@ -322,19 +258,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\private\mrpc_packet_stream_factory.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_param.h"
-					>
-				</File>
-				<File
 					RelativePath=".\include\private\mrpc_server.h"
 					>
 				</File>
 				<File
-					RelativePath=".\include\private\mrpc_server_request_processor.h"
+					RelativePath=".\include\private\mrpc_server_stream_handler.h"
 					>
 				</File>
 				<File
@@ -343,14 +271,6 @@
 				</File>
 				<File
 					RelativePath=".\include\private\mrpc_wchar_array.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_wchar_array_param.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\private\mrpc_wchar_array_serialization.h"
 					>
 				</File>
 			</Filter>
@@ -367,23 +287,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\mrpc_blob_param.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_blob_serialization.c"
-				>
-			</File>
-			<File
 				RelativePath=".\src\mrpc_char_array.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_char_array_param.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_char_array_serialization.c"
 				>
 			</File>
 			<File
@@ -391,31 +295,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\mrpc_client_request_processor.c"
-				>
-			</File>
-			<File
 				RelativePath=".\src\mrpc_client_stream_processor.c"
 				>
 			</File>
 			<File
-				RelativePath=".\src\mrpc_data.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_int_param.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_int_serialization.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_interface.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_method.c"
+				RelativePath=".\src\mrpc_int.c"
 				>
 			</File>
 			<File
@@ -427,19 +311,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\mrpc_packet_stream_factory.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_param.c"
-				>
-			</File>
-			<File
 				RelativePath=".\src\mrpc_server.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_server_request_processor.c"
 				>
 			</File>
 			<File
@@ -448,14 +320,6 @@
 			</File>
 			<File
 				RelativePath=".\src\mrpc_wchar_array.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_wchar_array_param.c"
-				>
-			</File>
-			<File
-				RelativePath=".\src\mrpc_wchar_array_serialization.c"
 				>
 			</File>
 		</Filter>

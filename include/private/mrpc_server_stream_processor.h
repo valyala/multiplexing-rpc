@@ -2,7 +2,7 @@
 #define MRPC_SERVER_STREAM_PROCESSOR_PRIVATE_H
 
 #include "private/mrpc_common.h"
-#include "private/mrpc_interface.h"
+#include "private/mrpc_server_stream_handler.h"
 #include "ff/ff_stream.h"
 
 #ifdef __cplusplus
@@ -39,11 +39,10 @@ struct mrpc_server_stream_processor *mrpc_server_stream_processor_create(mrpc_se
 void mrpc_server_stream_processor_delete(struct mrpc_server_stream_processor *stream_processor);
 
 /**
- * Starts processing the given stream using the given stream_processor.
- * service_interface and service_ctx are used for invoking corresponding server callbacks.
+ * Starts processing the given stream using the given stream_processor, stream_handler and service_ctx.
+ * stream_handler and service_ctx are used for handling rpc at server side.
  */
-void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *stream_processor,
-	const struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream *stream);
+void mrpc_server_stream_processor_start(struct mrpc_server_stream_processor *stream_processor, mrpc_server_stream_handler stream_handler, void *service_ctx, struct ff_stream *stream);
 
 /**
  * Notifies the stream_processor to stop ASAP.

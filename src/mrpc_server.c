@@ -1,10 +1,11 @@
 #include "private/mrpc_common.h"
 
 #include "private/mrpc_server.h"
+#include "private/mrpc_server_stream_handler.h"
 #include "private/mrpc_server_stream_processor.h"
-#include "private/mrpc_interface.h"
 #include "private/mrpc_bitmap.h"
 #include "ff/ff_stream_acceptor.h"
+#include "ff/ff_stream.h"
 #include "ff/ff_event.h"
 #include "ff/ff_pool.h"
 #include "ff/ff_core.h"
@@ -16,7 +17,7 @@ struct mrpc_server
 	struct mrpc_bitmap *stream_processors_bitmap;
 	struct ff_pool *stream_processors_pool;
 	struct mrpc_server_stream_processor **active_stream_processors;
-	const struct mrpc_interface *service_interface;
+	mrpc_server_stream_handler stream_handler;
 	void *service_ctx;
 	struct ff_stream_acceptor *stream_acceptor;
 	int max_stream_processors_cnt;
@@ -28,7 +29,7 @@ static void stop_all_stream_processors(struct mrpc_server *server)
 	struct mrpc_server_stream_processor **active_stream_processors;
 	int max_stream_processors_cnt;
 	int i;
-	
+
 	ff_assert(server->max_stream_processors_cnt > 0);
 	active_stream_processors = server->active_stream_processors;
 	max_stream_processors_cnt = server->max_stream_processors_cnt;
@@ -137,15 +138,18 @@ static void main_server_func(void *ctx)
 {
 	struct mrpc_server *server;
 	struct ff_stream_acceptor *stream_acceptor;
-	const struct mrpc_interface *service_interface;
+	mrpc_server_stream_handler stream_handler;
 	void *service_ctx;
 
 	server = (struct mrpc_server *) ctx;
 
 	ff_assert(server->active_stream_processors_cnt == 0);
+	ff_assert(server->stream_handler != NULL);
+	ff_assert(server->stream_acceptor != NULL);
+
 	ff_event_set(server->stream_processors_stop_event);
 	stream_acceptor = server->stream_acceptor;
-	service_interface = server->service_interface;
+	stream_handler = server->stream_handler;
 	service_ctx = server->service_ctx;
 	for (;;)
 	{
@@ -159,7 +163,7 @@ static void main_server_func(void *ctx)
 			break;
 		}
 		stream_processor = acquire_stream_processor(server);
-		mrpc_server_stream_processor_start(stream_processor, service_interface, service_ctx, client_stream);
+		mrpc_server_stream_processor_start(stream_processor, stream_handler, service_ctx, client_stream);
 	}
 	stop_all_stream_processors(server);
 
@@ -181,7 +185,7 @@ struct mrpc_server *mrpc_server_create(int max_stream_processors_cnt)
 	server->max_stream_processors_cnt = max_stream_processors_cnt;
 	server->active_stream_processors_cnt = 0;
 
-	server->service_interface = NULL;
+	server->stream_handler = NULL;
 	server->service_ctx = NULL;
 	server->stream_acceptor = NULL;
 
@@ -190,7 +194,9 @@ struct mrpc_server *mrpc_server_create(int max_stream_processors_cnt)
 
 void mrpc_server_delete(struct mrpc_server *server)
 {
-	ff_assert(server->service_interface == NULL);
+	ff_assert(server != NULL);
+
+	ff_assert(server->stream_handler == NULL);
 	ff_assert(server->service_ctx == NULL);
 	ff_assert(server->stream_acceptor == NULL);
 	ff_assert(server->active_stream_processors_cnt == 0);
@@ -203,17 +209,18 @@ void mrpc_server_delete(struct mrpc_server *server)
 	ff_free(server);
 }
 
-void mrpc_server_start(struct mrpc_server *server, const struct mrpc_interface *service_interface, void *service_ctx, struct ff_stream_acceptor *stream_acceptor)
+void mrpc_server_start(struct mrpc_server *server, mrpc_server_stream_handler stream_handler, void *service_ctx, struct ff_stream_acceptor *stream_acceptor)
 {
-	ff_assert(server->service_interface == NULL);
+	ff_assert(server != NULL);
+	ff_assert(stream_handler != NULL);
+	ff_assert(stream_acceptor != NULL);
+
+	ff_assert(server->stream_handler == NULL);
 	ff_assert(server->service_ctx == NULL);
 	ff_assert(server->stream_acceptor == NULL);
 	ff_assert(server->active_stream_processors_cnt == 0);
 
-	ff_assert(service_interface != NULL);
-	ff_assert(stream_acceptor != NULL);
-
-	server->service_interface = service_interface;
+	server->stream_handler = stream_handler;
 	server->service_ctx = service_ctx;
 	server->stream_acceptor = stream_acceptor;
 	ff_stream_acceptor_initialize(server->stream_acceptor);
@@ -222,15 +229,16 @@ void mrpc_server_start(struct mrpc_server *server, const struct mrpc_interface *
 
 void mrpc_server_stop(struct mrpc_server *server)
 {
-	ff_assert(server->service_interface != NULL);
+	ff_assert(server != NULL);
+
+	ff_assert(server->stream_handler != NULL);
 	ff_assert(server->stream_acceptor != NULL);
 
 	ff_stream_acceptor_shutdown(server->stream_acceptor);
 	ff_event_wait(server->stop_event);
 	ff_assert(server->active_stream_processors_cnt == 0);
 
-	server->service_interface = NULL;
+	server->stream_handler = NULL;
 	server->service_ctx = NULL;
 	server->stream_acceptor = NULL;
 }
-
