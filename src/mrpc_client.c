@@ -8,9 +8,14 @@
 #include "ff/ff_core.h"
 
 /**
- * the number of milliseconds between tries on the mrpc_client_create_request_stream()
+ * the number of milliseconds between tries to create request stream in the mrpc_client_create_request_stream()
  */
 #define CREATE_REQUEST_STREAM_TRY_INTERVAL 100
+
+/**
+ * maximum number of tries to create request stream in the mrpc_client_create_request_stream()
+ */
+#define MAX_CREATE_REQUEST_STREAM_TRIES_CNT 3
 
 struct mrpc_client
 {
@@ -90,13 +95,12 @@ void mrpc_client_stop(struct mrpc_client *client)
 	client->stream_connector = NULL;
 }
 
-struct ff_stream *mrpc_client_create_request_stream(struct mrpc_client *client, int tries_cnt)
+struct ff_stream *mrpc_client_create_request_stream(struct mrpc_client *client)
 {
 	struct ff_stream *stream;
+	int tries_cnt = MAX_CREATE_REQUEST_STREAM_TRIES_CNT;
 
 	ff_assert(client != NULL);
-	ff_assert(tries_cnt > 0);
-
 	for (;;)
 	{
 		stream = mrpc_client_stream_processor_create_request_stream(client->stream_processor);

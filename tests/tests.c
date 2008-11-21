@@ -1216,7 +1216,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		uint8_t method_id;
 		uint8_t empty_byte;
 
-		stream = mrpc_client_create_request_stream(client, 2);
+		stream = mrpc_client_create_request_stream(client);
 		ASSERT(stream != NULL, "client must be already connected");
 
 		method_id = 0;
@@ -1269,7 +1269,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 
 		ff_stream_delete(stream);
 
-		stream = mrpc_client_create_request_stream(client, 2);
+		stream = mrpc_client_create_request_stream(client);
 		ASSERT(stream != NULL, "client must return valid stream");
 		method_id = 1;
 		result = ff_stream_write(stream, &method_id, 1);
@@ -1281,7 +1281,7 @@ static void client_server_rpc_client(int port, int iterations_cnt)
 		ASSERT(u32 == 5728933ul, "unexpected value received");
 		ff_stream_delete(stream);
 
-		stream = mrpc_client_create_request_stream(client, 2);
+		stream = mrpc_client_create_request_stream(client);
 		ASSERT(stream != NULL, "client must return valid stream");
 		method_id = 2;
 		result = ff_stream_write(stream, &method_id, 1);
@@ -1598,7 +1598,7 @@ static void client_server_echo_client_rpc(struct mrpc_client *client)
 	uint8_t method_id;
 	enum ff_result result;
 
-	stream = mrpc_client_create_request_stream(client, 2);
+	stream = mrpc_client_create_request_stream(client);
 	ASSERT(stream != NULL, "stream must be created");
 	method_id = 0;
 	result = ff_stream_write(stream, &method_id, 1);

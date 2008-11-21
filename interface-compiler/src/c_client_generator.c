@@ -53,7 +53,7 @@ static void dump_client_method(const struct interface *interface, const struct m
 	dump("\tuint8_t method_id = %d;\n", id);
 	dump("\tenum ff_result result;\n\n");
 
-	dump("\tstream = mrpc_client_create_request_stream(client, REQUEST_STREAM_TRIES_CNT);\n"
+	dump("\tstream = mrpc_client_create_request_stream(client);\n"
 		 "\tif (stream == NULL)\n\t{\n"
 		 "\t\tff_log_debug(L\"cannot create request stream using the client=%%p and tries_cnt=%%d. See previous messages for more info\", client, REQUEST_STREAM_TRIES_CNT);\n"
 		 "\t\tgoto end;\n\t}\n\n"
@@ -162,13 +162,7 @@ static void dump_client_source(const struct interface *interface)
 		 "#include \"mrpc/mrpc_wchar_array.h\"\n\n"
 	);
 	dump("#include \"mrpc/mrpc_client.h\"\n"
-		 "#include \"ff/ff_stream.h\"\n\n"
-	);
-
-	dump("/* the maximum number of tries when creating request stream\n"
-		 " * using the mrpc_client_create_request_stream() function\n"
-		 " */\n"
-	     "#define REQUEST_STREAM_TRIES_CNT 3\n"
+		 "#include \"ff/ff_stream.h\"\n"
 	);
 
     method_list = interface->methods;

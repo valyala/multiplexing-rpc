@@ -40,9 +40,9 @@ MRPC_API void mrpc_client_stop(struct mrpc_client *client);
 /**
  * creates request stream for sending rpc request.
  * This request stream must be deleted using the ff_stream_delete().
- * Returns request stream on success, NULL if the request stream cannot be created during the tries_cnt tries.
+ * Returns request stream on success, NULL if the request stream cannot be created.
  */
-MRPC_API struct ff_stream *mrpc_client_create_request_stream(struct mrpc_client *client, int tries_cnt);
+MRPC_API struct ff_stream *mrpc_client_create_request_stream(struct mrpc_client *client);
 
 /**
  * closes the underlying connection to the server and opens new one.
