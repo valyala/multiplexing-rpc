@@ -6,6 +6,7 @@ SRC_DIR=src
 
 INTERFACE_COMPILER_SRCS= \
 	$(SRC_DIR)/c_client_generator.c \
+	$(SRC_DIR)/c_common.c \
 	$(SRC_DIR)/common.c \
 	$(SRC_DIR)/c_server_generator.c \
 	$(SRC_DIR)/interface.c \
