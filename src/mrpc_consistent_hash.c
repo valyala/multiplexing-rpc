@@ -5,7 +5,7 @@
 struct consistent_hash_entry
 {
 	uint32_t key;
-	void *value;
+	const void *value;
 	struct consistent_hash_entry *next;
 };
 
@@ -25,7 +25,7 @@ static uint32_t get_bucket_num(struct mrpc_consistent_hash *consistent_hash, uin
 	return bucket_num;
 }
 
-static void add_entry_with_key(struct mrpc_consistent_hash *consistent_hash, uint32_t key, void *value)
+static void add_entry_with_key(struct mrpc_consistent_hash *consistent_hash, uint32_t key, const void *value)
 {
 	struct consistent_hash_entry *entry;
 	struct consistent_hash_entry **entry_ptr;
@@ -129,7 +129,7 @@ void mrpc_consistent_hash_remove_all_entries(struct mrpc_consistent_hash *consis
 	consistent_hash->entries_cnt = 0;
 }
 
-void mrpc_consistent_hash_add_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, void *value)
+void mrpc_consistent_hash_add_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, const void *value)
 {
 	int i;
 	int uniform_factor;
@@ -157,7 +157,7 @@ void mrpc_consistent_hash_remove_entry(struct mrpc_consistent_hash *consistent_h
 	}
 }
 
-void mrpc_consistent_hash_get_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, void **value)
+void mrpc_consistent_hash_get_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, const void **value)
 {
 	struct consistent_hash_entry **buckets;
 	uint32_t bucket_num;

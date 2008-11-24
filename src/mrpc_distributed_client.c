@@ -119,7 +119,7 @@ void mrpc_distributed_client_add_client(struct mrpc_distributed_client *distribu
 	struct mrpc_distributed_client_wrapper *client_wrapper;
 	enum ff_result result;
 
-	result = ff_dictionary_get_entry(distributed_client->clients_map, &key, &client_wrapper);
+	result = ff_dictionary_get_entry(distributed_client->clients_map, &key, (const void **) &client_wrapper);
 	if (result != FF_SUCCESS)
 	{
 		uint64_t *entry_key;
@@ -178,7 +178,7 @@ struct mrpc_distributed_client_wrapper *mrpc_distributed_client_acquire_client(s
 		is_empty = mrpc_consistent_hash_is_empty(consistent_hash);
 		if (!is_empty)
 		{
-			mrpc_consistent_hash_get_entry(distributed_client->consistent_hash, request_hash_value, &client_wrapper);
+			mrpc_consistent_hash_get_entry(distributed_client->consistent_hash, request_hash_value, (const void **) &client_wrapper);
 			ff_assert(client_wrapper != NULL);
 			mrpc_distributed_client_wrapper_inc_ref(client_wrapper);
 			break;

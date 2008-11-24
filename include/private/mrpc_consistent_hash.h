@@ -30,7 +30,7 @@ void mrpc_consistent_hash_remove_all_entries(struct mrpc_consistent_hash *consis
 /**
  * Adds the given entry with the given key and value to the consistent hash.
  */
-void mrpc_consistent_hash_add_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, void *value);
+void mrpc_consistent_hash_add_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, const void *value);
 
 /**
  * Removes the entry with the given key from the consistent hash.
@@ -42,7 +42,7 @@ void mrpc_consistent_hash_remove_entry(struct mrpc_consistent_hash *consistent_h
  * Returns value for the entry with the given key.
  * It is assumed that the consistent_hash contains at least one entry.
  */
-void mrpc_consistent_hash_get_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, void **value);
+void mrpc_consistent_hash_get_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, const void **value);
 
 /**
  * Returns 1 if the consistent has is empty, otherwise returns 0.
