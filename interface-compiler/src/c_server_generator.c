@@ -141,7 +141,9 @@ static void dump_server_stream_handler(const struct interface *interface, int me
 	);
 	dump("\tif (method_id >= %d)\n\t{\n", methods_cnt);
 	dump("\t\tff_log_debug(L\"unexpected method_id=%%d read from the stream=%%p. It must be less than %d\", (int) method_id, stream);\n", methods_cnt);
-	dump("\t\tgoto end;\n\t}\n\n");
+	dump("\t\tresult = FF_FAILURE;\n"
+		 "\t\tgoto end;\n\t}\n\n"
+	);
 	dump("\tresult = server_method_handlers_%s[method_id](stream, service);\n", interface->name);
 	dump("\tif (result != FF_SUCCESS)\n\t{\n"
 		 "\t\tff_log_debug(L\"cannot handle the method with method_id=%%d using the stream=%%p. See previous messages for more info\", (int) method_id, stream);\n"
