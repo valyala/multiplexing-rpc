@@ -198,6 +198,14 @@
 					>
 				</File>
 				<File
+					RelativePath=".\include\mrpc\mrpc_distributed_client.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\mrpc\mrpc_distributed_client_wrapper.h"
+					>
+				</File>
+				<File
 					RelativePath=".\include\mrpc\mrpc_int.h"
 					>
 				</File>
@@ -243,6 +251,18 @@
 				</File>
 				<File
 					RelativePath=".\include\private\mrpc_common.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\private\mrpc_consistent_hash.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\private\mrpc_distributed_client.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\private\mrpc_distributed_client_wrapper.h"
 					>
 				</File>
 				<File
@@ -296,6 +316,18 @@
 			</File>
 			<File
 				RelativePath=".\src\mrpc_client_stream_processor.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\mrpc_consistent_hash.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\mrpc_distributed_client.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\mrpc_distributed_client_wrapper.c"
 				>
 			</File>
 			<File

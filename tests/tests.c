@@ -6,6 +6,8 @@
 #include "mrpc/mrpc_client.h"
 #include "mrpc/mrpc_server.h"
 #include "mrpc/mrpc_server_stream_handler.h"
+#include "mrpc/mrpc_distributed_client.h"
+#include "mrpc/mrpc_distributed_client_wrapper.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
@@ -1860,6 +1862,91 @@ static void test_client_server_all()
 
 /* end of mrpc_client and mrpc_server tests */
 
+/* start of mrpc_distributed_client tests */
+
+static void test_distributed_client_create_delete()
+{
+	struct mrpc_distributed_client *distributed_client;
+	int i;
+
+	for (i = 0; i < 10; i++)
+	{
+		distributed_client = mrpc_distributed_client_create();
+		ASSERT(distributed_client != NULL, "distributed_client cannot be NULL");
+		mrpc_distributed_client_delete(distributed_client);
+	}
+}
+
+static void test_distributed_client_basic()
+{
+	struct mrpc_distributed_client *distributed_client;
+	struct mrpc_distributed_client_wrapper *client_wrapper;
+	struct mrpc_client *client;
+	struct ff_stream_connector *stream_connector1, *stream_connector2;
+	struct ff_arch_net_addr *addr;
+	int i;
+	enum ff_result result;
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 6000);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_connector1 = ff_stream_connector_tcp_create(addr);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 6001);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_connector2 = ff_stream_connector_tcp_create(addr);
+
+	distributed_client = mrpc_distributed_client_create();
+
+	client_wrapper = mrpc_distributed_client_acquire_client(distributed_client, 232);
+	ASSERT(client_wrapper == NULL, "client_wrapper mus be NULL");
+
+	mrpc_distributed_client_add_client(distributed_client, stream_connector1, 1);
+	mrpc_distributed_client_add_client(distributed_client, stream_connector2, 2);
+	mrpc_distributed_client_remove_all_clients(distributed_client);
+
+	client_wrapper = mrpc_distributed_client_acquire_client(distributed_client, 2312);
+	ASSERT(client_wrapper == NULL, "client_wrapper mus be NULL");
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 6002);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_connector1 = ff_stream_connector_tcp_create(addr);
+
+	addr = ff_arch_net_addr_create();
+	result = ff_arch_net_addr_resolve(addr, L"localhost", 6003);
+	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+	stream_connector2 = ff_stream_connector_tcp_create(addr);
+
+	mrpc_distributed_client_add_client(distributed_client, stream_connector1, 1);
+	mrpc_distributed_client_add_client(distributed_client, stream_connector2, 2);
+
+	for (i = 0; i < 10; i++)
+	{
+		client_wrapper = mrpc_distributed_client_acquire_client(distributed_client, i * 10000000);
+		ASSERT(client_wrapper != NULL, "client_wrapper mustn't be NULL");
+		client = mrpc_distributed_client_wrapper_get_client(client_wrapper);
+		ASSERT(client != NULL, "client cannot be NULL");
+		mrpc_distributed_client_release_client(distributed_client, client_wrapper);
+	}
+
+	mrpc_distributed_client_remove_client(distributed_client, 1);
+	mrpc_distributed_client_remove_client(distributed_client, 2);
+
+	mrpc_distributed_client_delete(distributed_client);
+}
+
+static void test_distributed_client_all()
+{
+	ff_core_initialize(LOG_FILENAME);
+	test_distributed_client_create_delete();
+	test_distributed_client_basic();
+	ff_core_shutdown();
+}
+
+/* end of mrpc_distributed_client tests */
+
 static void test_all()
 {
 	test_int_all();
@@ -1867,6 +1954,7 @@ static void test_all()
 	test_wchar_array_all();
 	test_blob_all();
 	test_client_server_all();
+	test_distributed_client_all();
 }
 
 int main(int argc, char* argv[])
