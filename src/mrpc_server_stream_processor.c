@@ -184,7 +184,7 @@ static void stream_writer_func(void *ctx)
 	ff_event_set(stream_processor->writer_stop_event);
 }
 
-static void delete_request_stream_wrapper(struct ff_stream *stream)
+static void delete_request_stream_wrapper(void *ctx)
 {
 	/* nothing to do */
 }
