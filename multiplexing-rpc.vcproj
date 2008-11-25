@@ -198,7 +198,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\mrpc\mrpc_distributed_client_wrapper.h"
+					RelativePath=".\include\mrpc\mrpc_distributed_client.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\mrpc\mrpc_distributed_client_controller.h"
 					>
 				</File>
 				<File
@@ -255,6 +259,10 @@
 				</File>
 				<File
 					RelativePath=".\include\private\mrpc_distributed_client.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\private\mrpc_distributed_client_controller.h"
 					>
 				</File>
 				<File
@@ -320,6 +328,10 @@
 			</File>
 			<File
 				RelativePath=".\src\mrpc_distributed_client.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\mrpc_distributed_client_controller.c"
 				>
 			</File>
 			<File

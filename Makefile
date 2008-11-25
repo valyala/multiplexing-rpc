@@ -12,6 +12,7 @@ MRPC_LIB_SRCS= \
 	$(SRC_DIR)/mrpc_client_stream_processor.c \
 	$(SRC_DIR)/mrpc_consistent_hash.c \
 	$(SRC_DIR)/mrpc_distributed_client.c \
+	$(SRC_DIR)/mrpc_distributed_client_controller.c \
 	$(SRC_DIR)/mrpc_distributed_client_wrapper.c \
 	$(SRC_DIR)/mrpc_int.c \
 	$(SRC_DIR)/mrpc_packet.c \

@@ -7,6 +7,7 @@
 #include "mrpc/mrpc_server.h"
 #include "mrpc/mrpc_server_stream_handler.h"
 #include "mrpc/mrpc_distributed_client.h"
+#include "mrpc/mrpc_distributed_client_controller.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
@@ -1876,62 +1877,123 @@ static void test_distributed_client_create_delete()
 	}
 }
 
-static void test_distributed_client_basic()
+struct distributed_client_basic_controller
 {
-	struct mrpc_distributed_client *distributed_client;
-	struct mrpc_client *client;
-	struct ff_stream_connector *stream_connector1, *stream_connector2;
-	struct ff_arch_net_addr *addr;
-	const void *cookie;
-	int i;
-	enum ff_result result;
+	struct ff_event *stop_event;
+	int clients_cnt;
+	int is_initialized;
+};
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 6000);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_connector1 = ff_stream_connector_tcp_create(addr);
+static void distributed_client_basic_controller_delete(void *ctx)
+{
+	struct distributed_client_basic_controller *controller;
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 6001);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_connector2 = ff_stream_connector_tcp_create(addr);
+	controller = (struct distributed_client_basic_controller *) ctx;
+	ASSERT(!controller->is_initialized, "controller must be shutdowned");
+	ff_event_delete(controller->stop_event);
+	ff_free(controller);
+}
 
-	distributed_client = mrpc_distributed_client_create();
+static void distributed_client_basic_controller_initialize(void *ctx)
+{
+	struct distributed_client_basic_controller *controller;
 
-	client = mrpc_distributed_client_acquire_client(distributed_client, 232, &cookie);
-	ASSERT(client == NULL, "client must be NULL");
+	controller = (struct distributed_client_basic_controller *) ctx;
+	ASSERT(!controller->is_initialized, "controller must be shutdowned");
+	controller->is_initialized = 1;
+	controller->clients_cnt = 10;
+}
 
-	mrpc_distributed_client_add_client(distributed_client, stream_connector1, 1);
-	mrpc_distributed_client_add_client(distributed_client, stream_connector2, 2);
-	mrpc_distributed_client_remove_all_clients(distributed_client);
+static void distributed_client_basic_controller_shutdown(void *ctx)
+{
+	struct distributed_client_basic_controller *controller;
 
-	client = mrpc_distributed_client_acquire_client(distributed_client, 2312, &cookie);
-	ASSERT(client == NULL, "client must be NULL");
+	controller = (struct distributed_client_basic_controller *) ctx;
+	ASSERT(controller->is_initialized, "controller must be initialized");
+	controller->is_initialized = 0;
+	ff_event_set(controller->stop_event);
+}
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 6002);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_connector1 = ff_stream_connector_tcp_create(addr);
+static enum mrpc_distributed_client_controller_message_type distributed_client_basic_controller_get_next_message(void *ctx,
+	struct ff_stream_connector **stream_connector, uint64_t *key)
+{
+	struct distributed_client_basic_controller *controller;
+	enum mrpc_distributed_client_controller_message_type message_type = MRPC_DISTRIBUTED_CLIENT_STOP;
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 6003);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_connector2 = ff_stream_connector_tcp_create(addr);
-
-	mrpc_distributed_client_add_client(distributed_client, stream_connector1, 1);
-	mrpc_distributed_client_add_client(distributed_client, stream_connector2, 2);
-
-	for (i = 0; i < 10; i++)
+	controller = (struct distributed_client_basic_controller *) ctx;
+	if (controller->is_initialized)
 	{
-		client = mrpc_distributed_client_acquire_client(distributed_client, i * 10000000, &cookie);
-		ASSERT(client != NULL, "client mustn't be NULL");
-		mrpc_distributed_client_release_client(distributed_client, client, cookie);
+		if (controller->clients_cnt > 0)
+		{
+			struct ff_arch_net_addr *addr;
+			enum ff_result result;
+
+			addr = ff_arch_net_addr_create();
+			result = ff_arch_net_addr_resolve(addr, L"localhost", 9000 + controller->clients_cnt);
+			ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
+			controller->clients_cnt--;
+			*stream_connector = ff_stream_connector_tcp_create(addr);
+			*key = controller->clients_cnt;
+			message_type = MRPC_DISTRIBUTED_CLIENT_ADD_CLIENT;
+		}
+		else
+		{
+			ff_event_wait(controller->stop_event);
+		}
 	}
 
-	mrpc_distributed_client_remove_client(distributed_client, 1);
-	mrpc_distributed_client_remove_client(distributed_client, 2);
+	return message_type;
+}
 
+static const struct mrpc_distributed_client_controller_vtable distributed_client_basic_controller_vtable =
+{
+	distributed_client_basic_controller_delete,
+	distributed_client_basic_controller_initialize,
+	distributed_client_basic_controller_shutdown,
+	distributed_client_basic_controller_get_next_message
+};
+
+static struct mrpc_distributed_client_controller *distributed_client_basic_controller_create()
+{
+	struct mrpc_distributed_client_controller *controller;
+	struct distributed_client_basic_controller *data;
+
+	data = (struct distributed_client_basic_controller *) ff_malloc(sizeof(*data));
+	data->stop_event = ff_event_create(FF_EVENT_AUTO);
+	data->clients_cnt = 0;
+	data->is_initialized = 0;
+
+	controller = mrpc_distributed_client_controller_create(&distributed_client_basic_controller_vtable, data);
+	return controller;
+}
+
+static void test_distributed_client_basic()
+{
+	struct mrpc_distributed_client_controller *controller;
+	struct mrpc_distributed_client *distributed_client;
+	int i;
+
+	controller = distributed_client_basic_controller_create();
+	distributed_client = mrpc_distributed_client_create();
+	for (i = 0; i < 2; i++)
+	{
+		int j;
+
+		mrpc_distributed_client_start(distributed_client, controller);
+		ff_core_sleep(10);
+		for (j = 0; j < 100; j++)
+		{
+			const void *cookie;
+			struct mrpc_client *client;
+
+			client = mrpc_distributed_client_acquire_client(distributed_client, j * 10000000, &cookie);
+			ASSERT(client != NULL, "client mustn't be NULL");
+			mrpc_distributed_client_release_client(distributed_client, client, cookie);
+		}
+		mrpc_distributed_client_stop(distributed_client);
+	}
 	mrpc_distributed_client_delete(distributed_client);
+	mrpc_distributed_client_controller_delete(controller);
 }
 
 static void test_distributed_client_all()
