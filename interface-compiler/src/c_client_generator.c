@@ -220,8 +220,8 @@ static void dump_distributed_client_method(const struct interface *interface, co
 	dump_distributed_client_method_declaration(interface, method);
 	dump("\n{\n");
 
-	dump("\tstruct mrpc_client_wrapper *client_wrapper;\n"
-		 "\tstruct mrpc_client *client;\n"
+	dump("\tstruct mrpc_client *client;\n"
+		 "\tconst void *cookie;\n"
 		 "\tuint32_t hash_value = 0;\n"
 		 "\tenum ff_result result;\n\n"
 	);
@@ -247,14 +247,11 @@ static void dump_distributed_client_method(const struct interface *interface, co
 		param_list = param_list->next;
 	}
 
-	dump("\tclient_wrapper = mrpc_distributed_client_acquire_client(distributed_client, hash_value);\n"
-		"\tif (client_wrapper == NULL)\n\t{\n"
+	dump("\tclient = mrpc_distributed_client_acquire_client(distributed_client, hash_value, &cookie);\n"
+		"\tif (client == NULL)\n\t{\n"
 		"\t\tff_log_debug(L\"cannot acquire client from distributed_client=%%p. See previous messages for more info\", distributed_client);\n"
 		"\t\tresult = FF_FAILURE;\n"
 		"\t\tgoto end;\n\t}\n"
-	);
-	dump("\tclient = mrpc_distributed_client_wrapper_get_client(client_wrapper);\n"
-		 "\tff_assert(client != NULL);\n\n"
 	);
 
 	dump("\tresult = client_%s_%s(client", interface->name, method->name);
@@ -274,9 +271,9 @@ static void dump_distributed_client_method(const struct interface *interface, co
 	}
 	dump(");\n");
 	dump("\tif (result != FF_SUCCESS)\n\t{\n");
-	dump("\t\tff_log_debug(L\"error when calling rpc method [%s]. See previous messages for more info\");\n\t}\n\n", method->name);
+	dump("\t\tff_log_debug(L\"error when calling rpc method [%s]. See previous messages for more info\");\n\t}\n", method->name);
 
-	dump("\tmrpc_distributed_client_release_client(distributed_client, client_wrapper);\n\n");
+	dump("\tmrpc_distributed_client_release_client(distributed_client, client, cookie);\n\n");
 
 	dump("end:\n");
 	dump("\treturn result;\n}\n");

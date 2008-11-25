@@ -59,15 +59,6 @@ static int is_client_wrapper_equal_keys(const void *key1, const void *key2)
 	return is_equal;
 }
 
-static void stop_client_wrapper(void *ctx)
-{
-	struct mrpc_distributed_client_wrapper *client_wrapper;
-
-	client_wrapper = (struct mrpc_distributed_client_wrapper *) ctx;
-	mrpc_distributed_client_wrapper_stop(client_wrapper);
-	mrpc_distributed_client_wrapper_dec_ref(client_wrapper);
-}
-
 static void remove_client_wrapper_entry(const void *key, const void *value, void *ctx)
 {
 	uint64_t *entry_key;
@@ -79,7 +70,8 @@ static void remove_client_wrapper_entry(const void *key, const void *value, void
 	distributed_client = (struct mrpc_distributed_client *) ctx;
 
 	ff_free(entry_key);
-	ff_core_fiberpool_execute_async(stop_client_wrapper, client_wrapper);
+	mrpc_distributed_client_wrapper_stop(client_wrapper);
+	mrpc_distributed_client_wrapper_delete(client_wrapper);
 	distributed_client->clients_cnt--;
 }
 
@@ -155,7 +147,8 @@ void mrpc_distributed_client_remove_client(struct mrpc_distributed_client *distr
 		ff_free(entry_key);
 		consistent_hash_key = get_u64_hash(key);
 		mrpc_consistent_hash_remove_entry(distributed_client->consistent_hash, consistent_hash_key);
-		ff_core_fiberpool_execute_async(stop_client_wrapper, client_wrapper);
+		mrpc_distributed_client_wrapper_stop(client_wrapper);
+		mrpc_distributed_client_wrapper_delete(client_wrapper);
 		distributed_client->clients_cnt--;
 	}
 	else
@@ -164,9 +157,9 @@ void mrpc_distributed_client_remove_client(struct mrpc_distributed_client *distr
 	}
 }
 
-struct mrpc_distributed_client_wrapper *mrpc_distributed_client_acquire_client(struct mrpc_distributed_client *distributed_client, uint32_t request_hash_value)
+struct mrpc_client *mrpc_distributed_client_acquire_client(struct mrpc_distributed_client *distributed_client, uint32_t request_hash_value, const void **cookie)
 {
-	struct mrpc_distributed_client_wrapper *client_wrapper = NULL;
+	struct mrpc_client *client = NULL;
 	struct mrpc_consistent_hash *consistent_hash;
 	int tries_cnt = ACQUIRE_CLIENT_MAX_TRIES_CNT;
 
@@ -178,9 +171,12 @@ struct mrpc_distributed_client_wrapper *mrpc_distributed_client_acquire_client(s
 		is_empty = mrpc_consistent_hash_is_empty(consistent_hash);
 		if (!is_empty)
 		{
+			struct mrpc_distributed_client_wrapper *client_wrapper = NULL;
+
 			mrpc_consistent_hash_get_entry(distributed_client->consistent_hash, request_hash_value, (const void **) &client_wrapper);
 			ff_assert(client_wrapper != NULL);
-			mrpc_distributed_client_wrapper_inc_ref(client_wrapper);
+			client = mrpc_distributed_client_wrapper_acquire_client(client_wrapper);
+			*cookie = client_wrapper;
 			break;
 		}
 		ff_log_warning(L"there are no clients registered in the distributed_client=%p", distributed_client);
@@ -192,10 +188,13 @@ struct mrpc_distributed_client_wrapper *mrpc_distributed_client_acquire_client(s
 		ff_core_sleep(ACQUIRE_CLIENT_TRY_SLEEP_TIMEOUT);
 	}
 
-	return client_wrapper;
+	return client;
 }
 
-void mrpc_distributed_client_release_client(struct mrpc_distributed_client *distributed_client, struct mrpc_distributed_client_wrapper *client_wrapper)
+void mrpc_distributed_client_release_client(struct mrpc_distributed_client *distributed_client, struct mrpc_client *client, const void *cookie)
 {
-	mrpc_distributed_client_wrapper_dec_ref(client_wrapper);
+	struct mrpc_distributed_client_wrapper *client_wrapper;
+
+	client_wrapper = (struct mrpc_distributed_client_wrapper *) cookie;
+	mrpc_distributed_client_wrapper_release_client(client_wrapper, client);
 }

@@ -2,7 +2,7 @@
 #define MRPC_DISTRIBUTED_CLIENT_PUBLIC_H
 
 #include "mrpc/mrpc_common.h"
-#include "mrpc/mrpc_distributed_client_wrapper.h"
+#include "mrpc/mrpc_client.h"
 #include "ff/ff_stream_connector.h"
 
 #ifdef __cplusplus
@@ -29,6 +29,7 @@ MRPC_API void mrpc_distributed_client_remove_all_clients(struct mrpc_distributed
 
 /**
  * Starts new client using the given stream_connector. The client is associated with the given key.
+ * The distributed_client acquires ownership of the stream_connector, so there is no need to delete it.
  */
 MRPC_API void mrpc_distributed_client_add_client(struct mrpc_distributed_client *distributed_client, struct ff_stream_connector *stream_connector, uint64_t key);
 
@@ -40,14 +41,16 @@ MRPC_API void mrpc_distributed_client_remove_client(struct mrpc_distributed_clie
 /**
  * Acquires a client for the given request_hash_value from the distributed_client.
  * this client must be released by the mrpc_distributed_client_release_client().
+ * cookie is an opaque value, which must be passed to the mrpc_distributed_client_release_client().
  * Returns NULL if the client cannot be acquired, because the controller didn't added any clients to the distributed_client.
  */
-MRPC_API struct mrpc_distributed_client_wrapper *mrpc_distributed_client_acquire_client(struct mrpc_distributed_client *distributed_client, uint32_t request_hash_value);
+MRPC_API struct mrpc_client *mrpc_distributed_client_acquire_client(struct mrpc_distributed_client *distributed_client, uint32_t request_hash_value, const void **cookie);
 
 /**
  * Releases the client, which has been acquire using mrpc_distributed_client_acquire_client().
+ * cookie is returned by the mrpc_distributed_client_acquire_client().
  */
-MRPC_API void mrpc_distributed_client_release_client(struct mrpc_distributed_client *distributed_client, struct mrpc_distributed_client_wrapper *client_wrapper);
+MRPC_API void mrpc_distributed_client_release_client(struct mrpc_distributed_client *distributed_client, struct mrpc_client *client, const void *cookie);
 
 #ifdef __cplusplus
 }

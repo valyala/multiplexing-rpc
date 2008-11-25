@@ -198,10 +198,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\mrpc\mrpc_distributed_client.h"
-					>
-				</File>
-				<File
 					RelativePath=".\include\mrpc\mrpc_distributed_client_wrapper.h"
 					>
 				</File>

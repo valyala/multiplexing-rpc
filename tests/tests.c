@@ -7,7 +7,6 @@
 #include "mrpc/mrpc_server.h"
 #include "mrpc/mrpc_server_stream_handler.h"
 #include "mrpc/mrpc_distributed_client.h"
-#include "mrpc/mrpc_distributed_client_wrapper.h"
 
 #include "ff/ff_core.h"
 #include "ff/ff_stream.h"
@@ -1880,10 +1879,10 @@ static void test_distributed_client_create_delete()
 static void test_distributed_client_basic()
 {
 	struct mrpc_distributed_client *distributed_client;
-	struct mrpc_distributed_client_wrapper *client_wrapper;
 	struct mrpc_client *client;
 	struct ff_stream_connector *stream_connector1, *stream_connector2;
 	struct ff_arch_net_addr *addr;
+	const void *cookie;
 	int i;
 	enum ff_result result;
 
@@ -1899,15 +1898,15 @@ static void test_distributed_client_basic()
 
 	distributed_client = mrpc_distributed_client_create();
 
-	client_wrapper = mrpc_distributed_client_acquire_client(distributed_client, 232);
-	ASSERT(client_wrapper == NULL, "client_wrapper mus be NULL");
+	client = mrpc_distributed_client_acquire_client(distributed_client, 232, &cookie);
+	ASSERT(client == NULL, "client must be NULL");
 
 	mrpc_distributed_client_add_client(distributed_client, stream_connector1, 1);
 	mrpc_distributed_client_add_client(distributed_client, stream_connector2, 2);
 	mrpc_distributed_client_remove_all_clients(distributed_client);
 
-	client_wrapper = mrpc_distributed_client_acquire_client(distributed_client, 2312);
-	ASSERT(client_wrapper == NULL, "client_wrapper mus be NULL");
+	client = mrpc_distributed_client_acquire_client(distributed_client, 2312, &cookie);
+	ASSERT(client == NULL, "client must be NULL");
 
 	addr = ff_arch_net_addr_create();
 	result = ff_arch_net_addr_resolve(addr, L"localhost", 6002);
@@ -1924,11 +1923,9 @@ static void test_distributed_client_basic()
 
 	for (i = 0; i < 10; i++)
 	{
-		client_wrapper = mrpc_distributed_client_acquire_client(distributed_client, i * 10000000);
-		ASSERT(client_wrapper != NULL, "client_wrapper mustn't be NULL");
-		client = mrpc_distributed_client_wrapper_get_client(client_wrapper);
-		ASSERT(client != NULL, "client cannot be NULL");
-		mrpc_distributed_client_release_client(distributed_client, client_wrapper);
+		client = mrpc_distributed_client_acquire_client(distributed_client, i * 10000000, &cookie);
+		ASSERT(client != NULL, "client mustn't be NULL");
+		mrpc_distributed_client_release_client(distributed_client, client, cookie);
 	}
 
 	mrpc_distributed_client_remove_client(distributed_client, 1);
