@@ -189,56 +189,56 @@ static void delete_request_stream_wrapper(struct ff_stream *stream)
 	/* nothing to do */
 }
 
-static enum ff_result read_from_request_stream_wrapper(struct ff_stream *stream, void *buf, int len)
+static enum ff_result read_from_request_stream_wrapper(void *ctx, void *buf, int len)
 {
 	struct request_stream *request_stream;
 	enum ff_result result;
 
-	request_stream = (struct request_stream *) ff_stream_get_ctx(stream);
+	request_stream = (struct request_stream *) ctx;
 	ff_assert(request_stream->packet_stream != NULL);
 	result = mrpc_packet_stream_read(request_stream->packet_stream, buf, len);
 	if (result != FF_SUCCESS)
 	{
-		ff_log_debug(L"cannot read data from the stream=%p to the buf=%p, len=%d. See previous messages for more info", stream, buf, len);
+		ff_log_debug(L"cannot read data from the request_stream=%p to the buf=%p, len=%d. See previous messages for more info", request_stream, buf, len);
 	}
 	return result;
 }
 
-static enum ff_result write_to_request_stream_wrapper(struct ff_stream *stream, const void *buf, int len)
+static enum ff_result write_to_request_stream_wrapper(void *ctx, const void *buf, int len)
 {
 	struct request_stream *request_stream;
 	enum ff_result result;
 
-	request_stream = (struct request_stream *) ff_stream_get_ctx(stream);
+	request_stream = (struct request_stream *) ctx;
 	ff_assert(request_stream->packet_stream != NULL);
 	result = mrpc_packet_stream_write(request_stream->packet_stream, buf, len);
 	if (result != FF_SUCCESS)
 	{
-		ff_log_debug(L"cannot write data to the stream=%p from the buf=%p, len=%d. See previous messages for more info", stream, buf, len);
+		ff_log_debug(L"cannot write data to the request_stream=%p from the buf=%p, len=%d. See previous messages for more info", request_stream, buf, len);
 	}
 	return result;
 }
 
-static enum ff_result flush_request_stream_wrapper(struct ff_stream *stream)
+static enum ff_result flush_request_stream_wrapper(void *ctx)
 {
 	struct request_stream *request_stream;
 	enum ff_result result;
 
-	request_stream = (struct request_stream *) ff_stream_get_ctx(stream);
+	request_stream = (struct request_stream *) ctx;
 	ff_assert(request_stream->packet_stream != NULL);
 	result = mrpc_packet_stream_flush(request_stream->packet_stream);
 	if (result != FF_SUCCESS)
 	{
-		ff_log_debug(L"cannot flush the stream=%p. See previous messages for more info", stream);
+		ff_log_debug(L"cannot flush the request_stream=%p. See previous messages for more info", request_stream);
 	}
 	return result;
 }
 
-static void disconnect_request_stream_wrapper(struct ff_stream *stream)
+static void disconnect_request_stream_wrapper(void *ctx)
 {
 	struct request_stream *request_stream;
 
-	request_stream = (struct request_stream *) ff_stream_get_ctx(stream);
+	request_stream = (struct request_stream *) ctx;
 	ff_assert(request_stream->packet_stream != NULL);
 	mrpc_packet_stream_disconnect(request_stream->packet_stream);
 }

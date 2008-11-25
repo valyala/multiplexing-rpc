@@ -43,18 +43,18 @@ struct blob_stream_data
 	int curr_pos;
 };
 
-static void delete_blob_stream(struct ff_stream *stream)
+static void delete_blob_stream(void *ctx)
 {
 	struct blob_stream_data *data;
 
-	data = (struct blob_stream_data *) ff_stream_get_ctx(stream);
+	data = (struct blob_stream_data *) ctx;
 
 	ff_file_close(data->file);
 	mrpc_blob_dec_ref(data->blob);
 	ff_free(data);
 }
 
-static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf, int len)
+static enum ff_result read_from_blob_stream(void *ctx, void *buf, int len)
 {
 	struct blob_stream_data *data;
 	int bytes_left;
@@ -62,7 +62,7 @@ static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf,
 
 	ff_assert(len >= 0);
 
-	data = (struct blob_stream_data *) ff_stream_get_ctx(stream);
+	data = (struct blob_stream_data *) ctx;
 
 	ff_assert(data->mode == MRPC_BLOB_READ);
 	ff_assert(data->blob->state == BLOB_COMPLETE);
@@ -78,17 +78,17 @@ static enum ff_result read_from_blob_stream(struct ff_stream *stream, void *buf,
 		}
 		else
 		{
-			ff_log_debug(L"error while reading from the blob stream=%p to the buf=%p, len=%d. See previous messages for more info", stream, buf, len);
+			ff_log_debug(L"error while reading from the blob stream data=%p to the buf=%p, len=%d. See previous messages for more info", data, buf, len);
 		}
 	}
 	else
 	{
-		ff_log_debug(L"cannot read len=%d bytes from the blob stream=%p, because only %d bytes left", len, stream, bytes_left);
+		ff_log_debug(L"cannot read len=%d bytes from the blob stream data=%p, because only %d bytes left", len, data, bytes_left);
 	}
 	return result;
 }
 
-static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void *buf, int len)
+static enum ff_result write_to_blob_stream(void *ctx, const void *buf, int len)
 {
 	struct blob_stream_data *data;
 	int bytes_left;
@@ -96,7 +96,7 @@ static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void 
 
 	ff_assert(len >= 0);
 
-	data = (struct blob_stream_data *) ff_stream_get_ctx(stream);
+	data = (struct blob_stream_data *) ctx;
 
 	ff_assert(data->mode = MRPC_BLOB_WRITE);
 	ff_assert(data->blob->state != BLOB_EMPTY);
@@ -112,22 +112,22 @@ static enum ff_result write_to_blob_stream(struct ff_stream *stream, const void 
 		}
 		else
 		{
-			ff_log_debug(L"error while writing to the blob stream=%p from the buf=%p, len=%d. See previous messages for more info", stream, buf, len);
+			ff_log_debug(L"error while writing to the blob stream data=%p from the buf=%p, len=%d. See previous messages for more info", data, buf, len);
 		}
 	}
 	else
 	{
-		ff_log_debug(L"cannot write len=%d bytes to the stream=%p, because only %d bytes can be written", len, stream, bytes_left);
+		ff_log_debug(L"cannot write len=%d bytes to the stream data=%p, because only %d bytes can be written", len, data, bytes_left);
 	}
 	return result;
 }
 
-static enum ff_result flush_blob_stream(struct ff_stream *stream)
+static enum ff_result flush_blob_stream(void *ctx)
 {
 	struct blob_stream_data *data;
 	enum ff_result result;
 
-	data = (struct blob_stream_data *) ff_stream_get_ctx(stream);
+	data = (struct blob_stream_data *) ctx;
 
 	ff_assert(data->mode == MRPC_BLOB_WRITE);
 	ff_assert(data->blob->state != BLOB_EMPTY);
@@ -141,12 +141,12 @@ static enum ff_result flush_blob_stream(struct ff_stream *stream)
 	}
 	else
 	{
-		ff_log_debug(L"error while flushing the blob stream=%p. See previous messages for more info", stream);
+		ff_log_debug(L"error while flushing the blob stream data=%p. See previous messages for more info", data);
 	}
 	return result;
 }
 
-static void disconnect_blob_stream(struct ff_stream *stream)
+static void disconnect_blob_stream(void *ctx)
 {
 	/* this operation doesn't supported by the blob_stream */
 	ff_assert(0);
