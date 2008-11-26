@@ -14,6 +14,7 @@
 #include "ff/ff_event.h"
 #include "ff/ff_stream_connector_tcp.h"
 #include "ff/ff_stream_acceptor_tcp.h"
+#include "ff/ff_hash.h"
 #include "ff/arch/ff_arch_net_addr.h"
 #include "ff/arch/ff_arch_misc.h"
 
@@ -1985,8 +1986,10 @@ static void test_distributed_client_basic()
 		{
 			const void *cookie;
 			struct mrpc_client *client;
+			uint32_t request_hash;
 
-			client = mrpc_distributed_client_acquire_client(distributed_client, j * 10000000, &cookie);
+			request_hash = ff_hash_uint32(0, (uint32_t *) &j, 1);
+			client = mrpc_distributed_client_acquire_client(distributed_client, request_hash, &cookie);
 			ASSERT(client != NULL, "client mustn't be NULL");
 			mrpc_distributed_client_release_client(distributed_client, client, cookie);
 		}
