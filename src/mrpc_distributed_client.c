@@ -173,8 +173,10 @@ static void distributed_client_main_func(void *ctx)
 			break;
 		case MRPC_DISTRIBUTED_CLIENT_REMOVE_CLIENT:
 			remove_client(distributed_client, key);
+			break;
 		case MRPC_DISTRIBUTED_CLIENT_REMOVE_ALL_CLIENTS:
 			remove_all_clients(distributed_client);
+			break;
 		case MRPC_DISTRIBUTED_CLIENT_STOP:
 			goto end;
 		}
