@@ -131,19 +131,21 @@ void mrpc_consistent_hash_remove_all_entries(struct mrpc_consistent_hash *consis
 
 void mrpc_consistent_hash_add_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key, const void *value)
 {
+	uint32_t hash_value;
 	int i;
 	int uniform_factor;
 
 	uniform_factor = consistent_hash->uniform_factor;
 	for (i = 0; i < uniform_factor; i++)
 	{
-		add_entry_with_key(consistent_hash, key, value);
-		key = ff_hash_uint32(key, &key, 1);
+		hash_value = ff_hash_uint32(i, &key, 1);
+		add_entry_with_key(consistent_hash, hash_value, value);
 	}
 }
 
 void mrpc_consistent_hash_remove_entry(struct mrpc_consistent_hash *consistent_hash, uint32_t key)
 {
+	uint32_t hash_value;
 	int i;
 	int uniform_factor;
 
@@ -152,8 +154,8 @@ void mrpc_consistent_hash_remove_entry(struct mrpc_consistent_hash *consistent_h
 	uniform_factor = consistent_hash->uniform_factor;
 	for (i = 0; i < uniform_factor; i++)
 	{
-		remove_entry_with_key(consistent_hash, key);
-		key = ff_hash_uint32(key, &key, 1);
+		hash_value = ff_hash_uint32(i, &key, 1);
+		remove_entry_with_key(consistent_hash, hash_value);
 	}
 }
 
@@ -166,6 +168,7 @@ void mrpc_consistent_hash_get_entry(struct mrpc_consistent_hash *consistent_hash
 
 	ff_assert(consistent_hash->entries_cnt > 0);
 
+	key = ff_hash_uint32(0, &key, 1);
 	buckets_cnt = 1l << consistent_hash->order;
 	bucket_num = get_bucket_num(consistent_hash, key);
 	buckets = consistent_hash->buckets;
