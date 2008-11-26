@@ -15,6 +15,7 @@
 #include "ff/ff_stream_connector_tcp.h"
 #include "ff/ff_stream_acceptor_tcp.h"
 #include "ff/ff_hash.h"
+#include "ff/ff_stream_pipe.h"
 #include "ff/arch/ff_arch_net_addr.h"
 #include "ff/arch/ff_arch_misc.h"
 
@@ -60,13 +61,12 @@ static void test_int_hash()
 struct int_serialization_data
 {
 	struct ff_event *event;
+	struct ff_stream *stream;
 };
 
 static void int_serialization_fiberpool_func(void *ctx)
 {
 	struct int_serialization_data *data;
-	struct ff_arch_net_addr *addr;
-	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_stream *stream;
 	uint32_t u32;
 	int32_t s32;
@@ -76,13 +76,7 @@ static void int_serialization_fiberpool_func(void *ctx)
 
 	data = (struct int_serialization_data *) ctx;
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 4000);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	ff_stream_acceptor_initialize(stream_acceptor);
-	stream = ff_stream_acceptor_accept(stream_acceptor);
-	ASSERT(stream != NULL, "cannot accept connection");
+	stream = data->stream;
 
 	result = mrpc_uint32_unserialize(&u32, stream);
 	ASSERT(result == FF_SUCCESS, "cannot unserialize u32");
@@ -97,58 +91,45 @@ static void int_serialization_fiberpool_func(void *ctx)
 	ASSERT(result == FF_SUCCESS, "cannot unserialize s64");
 	ASSERT(s64 == -2328943437878732ll, "unexpected s64 value unserialized");
 
-	ff_stream_delete(stream);
-	ff_stream_acceptor_shutdown(stream_acceptor);
-	ff_stream_acceptor_delete(stream_acceptor);
-
 	ff_event_set(data->event);
 }
 
 static void test_int_serialization()
 {
 	struct int_serialization_data data;
-	struct ff_arch_net_addr *addr;
-	struct ff_stream_connector *stream_connector;
-	struct ff_stream *stream;
+	struct ff_stream *stream1, *stream2;
 	uint32_t u32;
 	int32_t s32;
 	uint64_t u64;
 	int64_t s64;
 	enum ff_result result;
 
+	ff_stream_pipe_create_pair(0x10000, &stream1, &stream2);
 	data.event = ff_event_create(FF_EVENT_MANUAL);
+	data.stream = stream2;
 	ff_core_fiberpool_execute_async(int_serialization_fiberpool_func, &data);
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 4000);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_connector = ff_stream_connector_tcp_create(addr);
-	ff_stream_connector_initialize(stream_connector);
-	stream = ff_stream_connector_connect(stream_connector);
-	ASSERT(stream != NULL, "cannot connect to server");
-
 	u32 = 231898ul;
-	result = mrpc_uint32_serialize(u32, stream);
+	result = mrpc_uint32_serialize(u32, stream1);
 	ASSERT(result == FF_SUCCESS, "cannot serialize u32");
 	s32 = -3432l;
-	result = mrpc_int32_serialize(s32, stream);
+	result = mrpc_int32_serialize(s32, stream1);
 	ASSERT(result == FF_SUCCESS, "cannot serialize s32");
 	u64 = 3289088989923ull;
-	result = mrpc_uint64_serialize(u64, stream);
+	result = mrpc_uint64_serialize(u64, stream1);
 	ASSERT(result == FF_SUCCESS, "cannot serialize u64");
 	s64 = -2328943437878732ll;
-	result = mrpc_int64_serialize(s64, stream);
+	result = mrpc_int64_serialize(s64, stream1);
 	ASSERT(result == FF_SUCCESS, "cannot serialize s64");
 
-	result = ff_stream_flush(stream);
+	result = ff_stream_flush(stream1);
 	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 
-	ff_stream_delete(stream);
-	ff_stream_connector_shutdown(stream_connector);
-	ff_stream_connector_delete(stream_connector);
+	ff_stream_delete(stream1);
 
 	ff_event_wait(data.event);
 	ff_event_delete(data.event);
+	ff_stream_delete(stream2);
 }
 
 static void test_int_all()
@@ -213,13 +194,12 @@ static void test_char_array_basic()
 struct char_array_serialization_data
 {
 	struct ff_event *event;
+	struct ff_stream *stream;
 };
 
 static void char_array_serialization_fiberpool_func(void *ctx)
 {
 	struct char_array_serialization_data *data;
-	struct ff_arch_net_addr *addr;
-	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_stream *stream;
 	struct mrpc_char_array *char_array;
 	const char *s;
@@ -229,13 +209,7 @@ static void char_array_serialization_fiberpool_func(void *ctx)
 
 	data = (struct char_array_serialization_data *) ctx;
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 4001);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	ff_stream_acceptor_initialize(stream_acceptor);
-	stream = ff_stream_acceptor_accept(stream_acceptor);
-	ASSERT(stream != NULL, "cannot accept connection");
+	stream = data->stream;
 
 	result = mrpc_char_array_unserialize(&char_array, stream);
 	ASSERT(result == FF_SUCCESS, "cannot unserialize char_array");
@@ -246,50 +220,37 @@ static void char_array_serialization_fiberpool_func(void *ctx)
 	ASSERT(is_equal, "unexpected value received");
 	mrpc_char_array_dec_ref(char_array);
 
-	ff_stream_delete(stream);
-	ff_stream_acceptor_shutdown(stream_acceptor);
-	ff_stream_acceptor_delete(stream_acceptor);
-
 	ff_event_set(data->event);
 }
 
 static void test_char_array_serialization()
 {
 	struct char_array_serialization_data data;
-	struct ff_arch_net_addr *addr;
-	struct ff_stream_connector *stream_connector;
-	struct ff_stream *stream;
+	struct ff_stream *stream1, *stream2;
 	struct mrpc_char_array *char_array;
 	char *s;
 	enum ff_result result;
 
+	ff_stream_pipe_create_pair(0x10000, &stream1, &stream2);
 	data.event = ff_event_create(FF_EVENT_MANUAL);
+	data.stream = stream2;
 	ff_core_fiberpool_execute_async(char_array_serialization_fiberpool_func, &data);
-
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 4001);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_connector = ff_stream_connector_tcp_create(addr);
-	ff_stream_connector_initialize(stream_connector);
-	stream = ff_stream_connector_connect(stream_connector);
-	ASSERT(stream != NULL, "cannot connect to server");
 
 	s = (char *) ff_calloc(10, sizeof(s[0]));
 	memcpy(s, "0123456789", 10 * sizeof(s[0]));
 	char_array = mrpc_char_array_create(s, 10);
-	result = mrpc_char_array_serialize(char_array, stream);
+	result = mrpc_char_array_serialize(char_array, stream1);
 	ASSERT(result == FF_SUCCESS, "cannot serialize char array");
 	mrpc_char_array_dec_ref(char_array);
 
-	result = ff_stream_flush(stream);
+	result = ff_stream_flush(stream1);
 	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 
-	ff_stream_delete(stream);
-	ff_stream_connector_shutdown(stream_connector);
-	ff_stream_connector_delete(stream_connector);
+	ff_stream_delete(stream1);
 
 	ff_event_wait(data.event);
 	ff_event_delete(data.event);
+	ff_stream_delete(stream2);
 }
 
 static void test_char_array_all()
@@ -355,13 +316,12 @@ static void test_wchar_array_basic()
 struct wchar_array_serialization_data
 {
 	struct ff_event *event;
+	struct ff_stream *stream;
 };
 
 static void wchar_array_serialization_fiberpool_func(void *ctx)
 {
 	struct wchar_array_serialization_data *data;
-	struct ff_arch_net_addr *addr;
-	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_stream *stream;
 	struct mrpc_wchar_array *wchar_array;
 	const wchar_t *s;
@@ -371,13 +331,7 @@ static void wchar_array_serialization_fiberpool_func(void *ctx)
 
 	data = (struct wchar_array_serialization_data *) ctx;
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 4001);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	ff_stream_acceptor_initialize(stream_acceptor);
-	stream = ff_stream_acceptor_accept(stream_acceptor);
-	ASSERT(stream != NULL, "cannot accept connection");
+	stream = data->stream;
 
 	result = mrpc_wchar_array_unserialize(&wchar_array, stream);
 	ASSERT(result == FF_SUCCESS, "cannot unserialize wchar_array");
@@ -388,50 +342,37 @@ static void wchar_array_serialization_fiberpool_func(void *ctx)
 	ASSERT(is_equal, "unexpected value received");
 	mrpc_wchar_array_dec_ref(wchar_array);
 
-	ff_stream_delete(stream);
-	ff_stream_acceptor_shutdown(stream_acceptor);
-	ff_stream_acceptor_delete(stream_acceptor);
-
 	ff_event_set(data->event);
 }
 
 static void test_wchar_array_serialization()
 {
 	struct wchar_array_serialization_data data;
-	struct ff_arch_net_addr *addr;
-	struct ff_stream_connector *stream_connector;
-	struct ff_stream *stream;
+	struct ff_stream *stream1, *stream2;
 	struct mrpc_wchar_array *wchar_array;
 	wchar_t *s;
 	enum ff_result result;
 
+	ff_stream_pipe_create_pair(0x10000, &stream1, &stream2);
 	data.event = ff_event_create(FF_EVENT_MANUAL);
+	data.stream = stream2;
 	ff_core_fiberpool_execute_async(wchar_array_serialization_fiberpool_func, &data);
-
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 4001);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_connector = ff_stream_connector_tcp_create(addr);
-	ff_stream_connector_initialize(stream_connector);
-	stream = ff_stream_connector_connect(stream_connector);
-	ASSERT(stream != NULL, "cannot connect to server");
 
 	s = (wchar_t *) ff_calloc(10, sizeof(s[0]));
 	memcpy(s, L"0123456789", 10 * sizeof(s[0]));
 	wchar_array = mrpc_wchar_array_create(s, 10);
-	result = mrpc_wchar_array_serialize(wchar_array, stream);
+	result = mrpc_wchar_array_serialize(wchar_array, stream1);
 	ASSERT(result == FF_SUCCESS, "cannot serialize wchar array");
 	mrpc_wchar_array_dec_ref(wchar_array);
 
-	result = ff_stream_flush(stream);
+	result = ff_stream_flush(stream1);
 	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 
-	ff_stream_delete(stream);
-	ff_stream_connector_shutdown(stream_connector);
-	ff_stream_connector_delete(stream_connector);
+	ff_stream_delete(stream1);
 
 	ff_event_wait(data.event);
 	ff_event_delete(data.event);
+	ff_stream_delete(stream2);
 }
 
 static void test_wchar_array_all()
@@ -614,13 +555,12 @@ static void test_blob_ref_cnt()
 struct blob_serialization_data
 {
 	struct ff_event *event;
+	struct ff_stream *stream;
 };
 
 static void blob_serialization_fiberpool_func(void *ctx)
 {
 	struct blob_serialization_data *data;
-	struct ff_arch_net_addr *addr;
-	struct ff_stream_acceptor *stream_acceptor;
 	struct ff_stream *stream;
 	struct mrpc_blob *blob;
 	struct ff_stream *blob_stream;
@@ -631,13 +571,7 @@ static void blob_serialization_fiberpool_func(void *ctx)
 
 	data = (struct blob_serialization_data *) ctx;
 
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 4002);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_acceptor = ff_stream_acceptor_tcp_create(addr);
-	ff_stream_acceptor_initialize(stream_acceptor);
-	stream = ff_stream_acceptor_accept(stream_acceptor);
-	ASSERT(stream != NULL, "cannot accept connection");
+	stream = data->stream;
 
 	result = mrpc_blob_unserialize(&blob, stream);
 	ASSERT(result == FF_SUCCESS, "cannot unserialize blob");
@@ -652,33 +586,21 @@ static void blob_serialization_fiberpool_func(void *ctx)
 	ff_stream_delete(blob_stream);
 	mrpc_blob_dec_ref(blob);
 
-	ff_stream_delete(stream);
-	ff_stream_acceptor_shutdown(stream_acceptor);
-	ff_stream_acceptor_delete(stream_acceptor);
-
 	ff_event_set(data->event);
 }
 
 static void test_blob_serialization()
 {
 	struct blob_serialization_data data;
-	struct ff_arch_net_addr *addr;
-	struct ff_stream_connector *stream_connector;
-	struct ff_stream *stream;
+	struct ff_stream *stream1, *stream2;
 	struct mrpc_blob *blob;
 	struct ff_stream *blob_stream;
 	enum ff_result result;
 
+	ff_stream_pipe_create_pair(0x10000, &stream1, &stream2);
 	data.event = ff_event_create(FF_EVENT_MANUAL);
+	data.stream = stream2;
 	ff_core_fiberpool_execute_async(blob_serialization_fiberpool_func, &data);
-
-	addr = ff_arch_net_addr_create();
-	result = ff_arch_net_addr_resolve(addr, L"localhost", 4002);
-	ASSERT(result == FF_SUCCESS, "cannot resolve localhost address");
-	stream_connector = ff_stream_connector_tcp_create(addr);
-	ff_stream_connector_initialize(stream_connector);
-	stream = ff_stream_connector_connect(stream_connector);
-	ASSERT(stream != NULL, "cannot connect to server");
 
 	blob = mrpc_blob_create(10);
 	blob_stream = mrpc_blob_open_stream(blob, MRPC_BLOB_WRITE);
@@ -689,19 +611,18 @@ static void test_blob_serialization()
 	ASSERT(result == FF_SUCCESS, "cannot flush data to blob stream");
 	ff_stream_delete(blob_stream);
 
-	result = mrpc_blob_serialize(blob, stream);
+	result = mrpc_blob_serialize(blob, stream1);
 	ASSERT(result == FF_SUCCESS, "cannot serialize blob");
 	mrpc_blob_dec_ref(blob);
 
-	result = ff_stream_flush(stream);
+	result = ff_stream_flush(stream1);
 	ASSERT(result == FF_SUCCESS, "cannot flush the stream");
 
-	ff_stream_delete(stream);
-	ff_stream_connector_shutdown(stream_connector);
-	ff_stream_connector_delete(stream_connector);
+	ff_stream_delete(stream1);
 
 	ff_event_wait(data.event);
 	ff_event_delete(data.event);
+	ff_stream_delete(stream2);
 }
 
 static void test_blob_all()
