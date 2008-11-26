@@ -1872,7 +1872,7 @@ static void test_distributed_client_create_delete()
 
 	for (i = 0; i < 10; i++)
 	{
-		distributed_client = mrpc_distributed_client_create();
+		distributed_client = mrpc_distributed_client_create(i);
 		ASSERT(distributed_client != NULL, "distributed_client cannot be NULL");
 		mrpc_distributed_client_delete(distributed_client);
 	}
@@ -2016,7 +2016,7 @@ static void test_distributed_client_basic()
 
 	ff_arch_misc_fill_buffer_with_random_data(&state, sizeof(state));
 	controller = distributed_client_basic_controller_create(state);
-	distributed_client = mrpc_distributed_client_create();
+	distributed_client = mrpc_distributed_client_create(4);
 	for (i = 0; i < 3; i++)
 	{
 		int j;

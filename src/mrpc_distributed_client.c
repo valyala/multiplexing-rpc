@@ -9,15 +9,13 @@
 #include "ff/ff_event.h"
 #include "ff/ff_stream_connector.h"
 
-#define CLIENTS_MAP_ORDER 4
+#define CONSISTENT_HASH_UNIFORM_FACTOR_ORDER 7
+
+#define CONSISTENT_HASH_UNIFORM_FACTOR (1l << CONSISTENT_HASH_UNIFORM_FACTOR_ORDER)
 
 #define ACQUIRE_CLIENT_TRY_SLEEP_TIMEOUT 100
 
 #define ACQUIRE_CLIENT_MAX_TRIES_CNT 3
-
-#define CONSISTENT_HASH_ORDER 10
-
-#define CONSISTENT_HASH_UNIFORM_FACTOR 128
 
 #define U64_HASH_START_VALUE 0
 
@@ -187,13 +185,19 @@ end:
 	ff_event_set(distributed_client->stop_event);
 }
 
-struct mrpc_distributed_client *mrpc_distributed_client_create()
+struct mrpc_distributed_client *mrpc_distributed_client_create(int expected_clients_order)
 {
 	struct mrpc_distributed_client *distributed_client;
+	int consistent_hash_order;
+
+	ff_assert(expected_clients_order >= 0);
+
+	consistent_hash_order = expected_clients_order + CONSISTENT_HASH_UNIFORM_FACTOR_ORDER;
+	ff_assert(consistent_hash_order <= 20);
 
 	distributed_client = (struct mrpc_distributed_client *) ff_malloc(sizeof(*distributed_client));
-	distributed_client->clients_map = ff_dictionary_create(CLIENTS_MAP_ORDER, get_client_wrapper_key_hash, is_client_wrapper_equal_keys);
-	distributed_client->consistent_hash = mrpc_consistent_hash_create(CONSISTENT_HASH_ORDER, CONSISTENT_HASH_UNIFORM_FACTOR);
+	distributed_client->clients_map = ff_dictionary_create(expected_clients_order, get_client_wrapper_key_hash, is_client_wrapper_equal_keys);
+	distributed_client->consistent_hash = mrpc_consistent_hash_create(consistent_hash_order, CONSISTENT_HASH_UNIFORM_FACTOR);
 	distributed_client->stop_event = ff_event_create(FF_EVENT_AUTO);
 
 	distributed_client->controller = NULL;

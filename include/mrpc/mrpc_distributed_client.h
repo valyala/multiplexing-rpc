@@ -13,10 +13,10 @@ extern "C" {
 struct mrpc_distributed_client;
 
 /**
- * Creates the distributed client.
+ * Creates the distributed client, which will have around the given (1 << expected_clients_order) clients.
  * Always returns correct result.
  */
-MRPC_API struct mrpc_distributed_client *mrpc_distributed_client_create();
+MRPC_API struct mrpc_distributed_client *mrpc_distributed_client_create(int expected_clients_order);
 
 /**
  * Deletes the distributed client.
