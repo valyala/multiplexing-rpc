@@ -14,6 +14,8 @@ struct mrpc_distributed_client;
 
 /**
  * Creates the distributed client, which will have around the given (1 << expected_clients_order) clients.
+ * The distributed client will refuse to add new clients from client controller, if the number of already
+ * added clients is equal to (1 << (expected_clients_order + 1))
  * Always returns correct result.
  */
 MRPC_API struct mrpc_distributed_client *mrpc_distributed_client_create(int expected_clients_order);

@@ -1928,6 +1928,27 @@ static struct mrpc_distributed_client_controller *distributed_client_basic_contr
 	return controller;
 }
 
+static void test_distributed_client_small()
+{
+	struct mrpc_distributed_client_controller *controller;
+	struct mrpc_distributed_client *distributed_client;
+	uint32_t state;
+
+	ff_arch_misc_fill_buffer_with_random_data(&state, sizeof(state));
+	controller = distributed_client_basic_controller_create(state);
+	distributed_client = mrpc_distributed_client_create(0);
+
+	mrpc_distributed_client_start(distributed_client, controller);
+	mrpc_distributed_client_stop(distributed_client);
+
+	mrpc_distributed_client_start(distributed_client, controller);
+	ff_core_sleep(200);
+	mrpc_distributed_client_stop(distributed_client);
+
+	mrpc_distributed_client_delete(distributed_client);
+	mrpc_distributed_client_controller_delete(controller);
+}
+
 static void test_distributed_client_basic()
 {
 	struct mrpc_distributed_client_controller *controller;
@@ -1970,6 +1991,7 @@ static void test_distributed_client_all()
 {
 	ff_core_initialize(LOG_FILENAME);
 	test_distributed_client_create_delete();
+	test_distributed_client_small();
 	test_distributed_client_basic();
 	ff_core_shutdown();
 }

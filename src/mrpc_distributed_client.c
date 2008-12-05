@@ -7,6 +7,7 @@
 #include "ff/ff_hash.h"
 #include "ff/ff_core.h"
 #include "ff/ff_event.h"
+#include "ff/ff_pool.h"
 #include "ff/ff_stream_connector.h"
 
 #define CONSISTENT_HASH_UNIFORM_FACTOR_ORDER 7
@@ -23,9 +24,11 @@ struct mrpc_distributed_client
 {
 	struct ff_dictionary *clients_map;
 	struct mrpc_consistent_hash *consistent_hash;
+	struct ff_pool *client_wrappers_pool;
 	struct ff_event *stop_event;
 	struct mrpc_distributed_client_controller *controller;
-	int clients_cnt;
+	int max_clients_cnt;
+	int current_clients_cnt;
 };
 
 static uint32_t get_u64_hash(uint64_t key)
@@ -61,6 +64,35 @@ static int is_client_wrapper_equal_keys(const void *key1, const void *key2)
 	return is_equal;
 }
 
+static void *create_client_wrapper(void *ctx)
+{
+	struct mrpc_distributed_client_wrapper *client_wrapper;
+
+	client_wrapper = mrpc_distributed_client_wrapper_create();
+	return client_wrapper;
+}
+
+static void delete_client_wrapper(void *ctx)
+{
+	struct mrpc_distributed_client_wrapper *client_wrapper;
+
+	client_wrapper = (struct mrpc_distributed_client_wrapper *) ctx;
+	mrpc_distributed_client_wrapper_delete(client_wrapper);
+}
+
+static struct mrpc_distributed_client_wrapper *acquire_client_wrapper(struct mrpc_distributed_client *distributed_client)
+{
+	struct mrpc_distributed_client_wrapper *client_wrapper;
+
+	client_wrapper = (struct mrpc_distributed_client_wrapper *) ff_pool_acquire_entry(distributed_client->client_wrappers_pool);
+	return client_wrapper;
+}
+
+static void release_client_wrapper(struct mrpc_distributed_client *distributed_client, struct mrpc_distributed_client_wrapper *client_wrapper)
+{
+	ff_pool_release_entry(distributed_client->client_wrappers_pool, client_wrapper);
+}
+
 static void remove_client_wrapper_entry(const void *key, const void *value, void *ctx)
 {
 	uint64_t *entry_key;
@@ -71,10 +103,13 @@ static void remove_client_wrapper_entry(const void *key, const void *value, void
 	client_wrapper = (struct mrpc_distributed_client_wrapper *) value;
 	distributed_client = (struct mrpc_distributed_client *) ctx;
 
+	ff_assert(distributed_client->current_clients_cnt > 0);
+	ff_assert(distributed_client->current_clients_cnt <= distributed_client->max_clients_cnt);
+
 	ff_free(entry_key);
 	mrpc_distributed_client_wrapper_stop(client_wrapper);
-	mrpc_distributed_client_wrapper_delete(client_wrapper);
-	distributed_client->clients_cnt--;
+	release_client_wrapper(distributed_client, client_wrapper);
+	distributed_client->current_clients_cnt--;
 }
 
 static void remove_all_clients(struct mrpc_distributed_client *distributed_client)
@@ -84,7 +119,7 @@ static void remove_all_clients(struct mrpc_distributed_client *distributed_clien
 
 	mrpc_consistent_hash_remove_all_entries(distributed_client->consistent_hash);
 	ff_dictionary_remove_all_entries(distributed_client->clients_map, remove_client_wrapper_entry, distributed_client);
-	ff_assert(distributed_client->clients_cnt == 0);
+	ff_assert(distributed_client->current_clients_cnt == 0);
 }
 
 static void add_client(struct mrpc_distributed_client *distributed_client, struct ff_stream_connector *stream_connector, uint64_t key)
@@ -96,10 +131,23 @@ static void add_client(struct mrpc_distributed_client *distributed_client, struc
 	ff_assert(distributed_client != NULL);
 	ff_assert(stream_connector != NULL);
 	ff_assert(distributed_client->controller != NULL);
+	ff_assert(distributed_client->current_clients_cnt >= 0);
+	ff_assert(distributed_client->current_clients_cnt <= distributed_client->max_clients_cnt);
+
+	if (distributed_client->current_clients_cnt == distributed_client->max_clients_cnt)
+	{
+		/* the distributed_client already contains the maximum number of clients,
+ 		 * so the current client cannot be added to it
+ 		 */
+		ff_log_warning(L"cannot add new client with key=%llu to the distributed_client=%p, because it already contains maximum number of clients: %d",
+			key, distributed_client, distributed_client->max_clients_cnt);
+		ff_stream_connector_delete(stream_connector);
+		return;
+	}
 
 	entry_key = ff_malloc(sizeof(*entry_key));
 	*entry_key = key;
-	client_wrapper = mrpc_distributed_client_wrapper_create();
+	client_wrapper = acquire_client_wrapper(distributed_client);
 	mrpc_distributed_client_wrapper_start(client_wrapper, stream_connector);
 	result = ff_dictionary_add_entry(distributed_client->clients_map, entry_key, client_wrapper);
 	if (result == FF_SUCCESS)
@@ -108,13 +156,13 @@ static void add_client(struct mrpc_distributed_client *distributed_client, struc
 
 		consistent_hash_key = get_u64_hash(key);
 		mrpc_consistent_hash_add_entry(distributed_client->consistent_hash, consistent_hash_key, client_wrapper);
-		distributed_client->clients_cnt++;
+		distributed_client->current_clients_cnt++;
 	}
 	else
 	{
 		ff_log_warning(L"the client with key=%llu and has been already registered in the distributed_client=%p", key, distributed_client);
 		mrpc_distributed_client_wrapper_stop(client_wrapper);
-		mrpc_distributed_client_wrapper_delete(client_wrapper);
+		release_client_wrapper(distributed_client, client_wrapper);
 		ff_free(entry_key);
 	}
 }
@@ -133,13 +181,16 @@ static void remove_client(struct mrpc_distributed_client *distributed_client, ui
 	{
 		uint32_t consistent_hash_key;
 
+		ff_assert(distributed_client->current_clients_cnt > 0);
+		ff_assert(distributed_client->current_clients_cnt <= distributed_client->max_clients_cnt);
+
 		ff_assert(key == *entry_key);
 		ff_free(entry_key);
 		consistent_hash_key = get_u64_hash(key);
 		mrpc_consistent_hash_remove_entry(distributed_client->consistent_hash, consistent_hash_key);
 		mrpc_distributed_client_wrapper_stop(client_wrapper);
-		mrpc_distributed_client_wrapper_delete(client_wrapper);
-		distributed_client->clients_cnt--;
+		release_client_wrapper(distributed_client, client_wrapper);
+		distributed_client->current_clients_cnt--;
 	}
 	else
 	{
@@ -189,19 +240,23 @@ struct mrpc_distributed_client *mrpc_distributed_client_create(int expected_clie
 {
 	struct mrpc_distributed_client *distributed_client;
 	int consistent_hash_order;
+	int max_clients_cnt;
 
 	ff_assert(expected_clients_order >= 0);
 
 	consistent_hash_order = expected_clients_order + CONSISTENT_HASH_UNIFORM_FACTOR_ORDER;
 	ff_assert(consistent_hash_order <= 20);
+	max_clients_cnt = 1ul << (1 + expected_clients_order);
 
 	distributed_client = (struct mrpc_distributed_client *) ff_malloc(sizeof(*distributed_client));
 	distributed_client->clients_map = ff_dictionary_create(expected_clients_order, get_client_wrapper_key_hash, is_client_wrapper_equal_keys);
 	distributed_client->consistent_hash = mrpc_consistent_hash_create(consistent_hash_order, CONSISTENT_HASH_UNIFORM_FACTOR);
+	distributed_client->client_wrappers_pool = ff_pool_create(max_clients_cnt, create_client_wrapper, distributed_client, delete_client_wrapper);
 	distributed_client->stop_event = ff_event_create(FF_EVENT_AUTO);
 
 	distributed_client->controller = NULL;
-	distributed_client->clients_cnt = 0;
+	distributed_client->max_clients_cnt = max_clients_cnt;
+	distributed_client->current_clients_cnt = 0;
 
 	return distributed_client;
 }
@@ -210,9 +265,10 @@ void mrpc_distributed_client_delete(struct mrpc_distributed_client *distributed_
 {
 	ff_assert(distributed_client != NULL);
 	ff_assert(distributed_client->controller == NULL);
-	ff_assert(distributed_client->clients_cnt == 0);
+	ff_assert(distributed_client->current_clients_cnt == 0);
 
 	ff_event_delete(distributed_client->stop_event);
+	ff_pool_delete(distributed_client->client_wrappers_pool);
 	mrpc_consistent_hash_delete(distributed_client->consistent_hash);
 	ff_dictionary_delete(distributed_client->clients_map);
 	ff_free(distributed_client);
@@ -223,7 +279,7 @@ void mrpc_distributed_client_start(struct mrpc_distributed_client *distributed_c
 	ff_assert(distributed_client != NULL);
 	ff_assert(controller != NULL);
 	ff_assert(distributed_client->controller == NULL);
-	ff_assert(distributed_client->clients_cnt == 0);
+	ff_assert(distributed_client->current_clients_cnt == 0);
 
 	distributed_client->controller = controller;
 	mrpc_distributed_client_controller_initialize(controller);
@@ -237,7 +293,7 @@ void mrpc_distributed_client_stop(struct mrpc_distributed_client *distributed_cl
 
 	mrpc_distributed_client_controller_shutdown(distributed_client->controller);
 	ff_event_wait(distributed_client->stop_event);
-	ff_assert(distributed_client->clients_cnt == 0);
+	ff_assert(distributed_client->current_clients_cnt == 0);
 
 	distributed_client->controller = NULL;
 }
