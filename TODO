@@ -1,0 +1,72 @@
+- refactor mrpc_packet_stream. Remove unnesessary packet types such as START,
+  MIDDLE and SINGLE. The MRPC_PACKET_END (end of stream) will be enough.
+  Client rpc code and server rpc callback should operate by mrpc_packet_stream
+  directly and not by ff_stream interface, because they'll need to perform
+  operations, which isn't available in the ff_stream interface:
+
+    - to be able to change read timeout at any moment, because different
+      requests may require different timeouts.
+
+    - to be able to flush write buffer at any time and multiple times.
+      This way client can send multiple requests to server at the same stream
+      or server can send multiple responses to client at the same stream.
+      This will allow to add possibility of "client rpc stream" and
+      "server push". For example, it will be possible to implement an rpc
+      for establishing tcp connection to remote host:
+
+        method tcp_connect
+        {
+          request
+          {
+            # tcp address where to connect
+            wchar_array addr
+
+            # tcp port where to connect
+            uint32 port
+          }
+
+          response
+          {
+            # result of operation. 0 on success, 1 on error
+            uint32 result
+
+            # stream, which is connected to the tcp address given in the
+            # request. It can be flushed at any time in order to immediately
+            # send data to the connected peer.
+            stream client_stream
+          }
+        }
+
+      Or it will be possible to implement subscription for server-side events:
+
+        method push push_per_second
+        {
+          request
+          {
+            # an interval in seconds between server responses
+            uint32 interval
+          }
+
+          # these responses will be sent to client every interval seconds
+          # (see request). Client can stop server-side events at any time
+          # by destroying the given rpc callback.
+          response
+          {
+            # contains current time at server (since UNIX epoch)
+            uint32 server_time
+          }
+        }
+
+    - to be able to indicate the end of writing to the stream at any time.
+      This way remote side will know that the read stream is finished and
+      won't try to read more data from the stream. Usually client must call
+      this function after all request parameters have been sent, while server
+      must call this function after all response paramters have been sent.
+
+- refactor mrpc_distributed_client. Extract distribution algorithm from
+  the mrpc_distributed_client. Distribution algorithm should be passed as
+  parameter to the mrpc_distributed_client. This way it will be possible
+  to implement different distribution algorithms for different cases.
+  For instance, round-robin or random load balancing among clients added
+  to the mrpc_distributed_client.
+
