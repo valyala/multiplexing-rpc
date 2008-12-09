@@ -7,6 +7,10 @@
     - to be able to change read timeout at any moment, because different
       requests may require different timeouts.
 
+    - to be able to test if read timeout has been exceeded. Only in this case
+      client-server protocol synchronization will be failed, so it will
+      require reestablishing connection to the server.
+
     - to be able to flush write buffer at any time and multiple times.
       This way client can send multiple requests to server at the same stream
       or server can send multiple responses to client at the same stream.
