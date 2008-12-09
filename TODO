@@ -63,6 +63,9 @@
       this function after all request parameters have been sent, while server
       must call this function after all response paramters have been sent.
 
+- extend interface-compiler in order to be able to support new extensions
+  described above such as stream in response and "server push".
+
 - refactor mrpc_distributed_client. Extract distribution algorithm from
   the mrpc_distributed_client. Distribution algorithm should be passed as
   parameter to the mrpc_distributed_client. This way it will be possible
