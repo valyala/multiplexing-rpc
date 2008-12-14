@@ -55,7 +55,7 @@ static struct mrpc_server_stream_processor *acquire_stream_processor(struct mrpc
 	ff_assert(server->active_stream_processors_cnt >= 0);
 	ff_assert(server->active_stream_processors_cnt <= server->max_stream_processors_cnt);
 
-	stream_processor = (struct mrpc_server_stream_processor *) ff_pool_acquire_entry(server->stream_processors_pool);
+	ff_pool_acquire_entry(server->stream_processors_pool, (void **) &stream_processor);
 	stream_processor_id = mrpc_server_stream_processor_get_id(stream_processor);
 	ff_assert(server->active_stream_processors[stream_processor_id] == NULL);
 	server->active_stream_processors[stream_processor_id] = stream_processor;

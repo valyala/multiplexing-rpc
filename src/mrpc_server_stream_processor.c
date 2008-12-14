@@ -66,7 +66,7 @@ static struct mrpc_packet *acquire_server_packet(struct mrpc_server_stream_proce
 	struct mrpc_packet *packet;
 
 	ff_assert(stream_processor->state != STATE_STOPPED);
-	packet = (struct mrpc_packet *) ff_pool_acquire_entry(stream_processor->packets_pool);
+	ff_pool_acquire_entry(stream_processor->packets_pool, (void **) &packet);
 	return packet;
 }
 
@@ -269,7 +269,7 @@ static struct request_stream *acquire_request_stream(struct mrpc_server_stream_p
 	ff_assert(stream_processor->active_request_streams_cnt <= MAX_REQUEST_STREAMS_CNT);
 	ff_assert(stream_processor->state != STATE_STOPPED);
 
-	request_stream = (struct request_stream *) ff_pool_acquire_entry(stream_processor->request_streams_pool);
+	ff_pool_acquire_entry(stream_processor->request_streams_pool, (void **) &request_stream);
 	ff_assert(stream_processor->active_request_streams[request_id] == NULL);
 	mrpc_packet_stream_initialize(request_stream->packet_stream, request_id);
 	stream_processor->active_request_streams[request_id] = request_stream;

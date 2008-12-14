@@ -84,7 +84,7 @@ static struct mrpc_distributed_client_wrapper *acquire_client_wrapper(struct mrp
 {
 	struct mrpc_distributed_client_wrapper *client_wrapper;
 
-	client_wrapper = (struct mrpc_distributed_client_wrapper *) ff_pool_acquire_entry(distributed_client->client_wrappers_pool);
+	ff_pool_acquire_entry(distributed_client->client_wrappers_pool, (void **) &client_wrapper);
 	return client_wrapper;
 }
 
