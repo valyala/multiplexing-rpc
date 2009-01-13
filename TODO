@@ -77,3 +77,7 @@
   For instance, round-robin or random load balancing among clients added
   to the mrpc_distributed_client.
 
+- add flow control per each multiplexed stream in order to avoid problems when one stream can saturate all other streams, because it'll use all free transfer packets for buffering.
+
+- add possibility to use arrays of all available types in the RPC.
+
